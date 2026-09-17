@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // DECISIÓN DE PROTOTIPO: landing simple con enlaces manuales en vez de un
-// redirect automático por rol; con solo dos pantallas construidas (Mesas,
-// Cocina) no vale la pena la lógica de ruteo por rol todavía. Caja llega en
-// la Fase 5.
+// redirect automático por rol; con solo tres pantallas (Mesas, Cocina, Caja)
+// no vale la pena la lógica de ruteo por rol todavía.
 export function HomePage() {
   const { usuario, logout } = useAuth();
   const puedeVerMesas = usuario?.rol === 'MESERO' || usuario?.rol === 'ADMIN';
+  const puedeVerCaja = usuario?.rol === 'CAJERO' || usuario?.rol === 'ADMIN';
 
   return (
     <div className="home-page">
@@ -18,9 +18,9 @@ export function HomePage() {
       <nav className="home-nav">
         {puedeVerMesas && <Link to="/mesas">Ir a Mesas</Link>}
         <Link to="/cocina">Ir a Cocina</Link>
+        {puedeVerCaja && <Link to="/caja">Ir a Caja</Link>}
       </nav>
 
-      <p className="home-nota">La pantalla de Caja llega en la Fase 5 del prototipo.</p>
       <button onClick={logout}>Cerrar sesión</button>
     </div>
   );

@@ -64,6 +64,39 @@ export interface CrearPedidoInput {
   detalles: CrearPedidoDetalleInput[];
 }
 
+export type MedioPago = 'EFECTIVO' | 'TARJETA';
+
+export interface Pago {
+  id: string;
+  pedidoId: string;
+  medio: MedioPago;
+  monto: string;
+  creadoEn: string;
+}
+
+export interface DocumentoFiscal {
+  id: string;
+  pedidoId: string;
+  sedeId: string;
+  tipo: string;
+  consecutivo: number;
+  estadoDian: string;
+  urlXml: string | null;
+  creadoEn: string;
+}
+
+export interface ResultadoPago {
+  pago: Pago;
+  documentoFiscal: DocumentoFiscal;
+  pedido: Pedido;
+}
+
+export interface CrearPagoInput {
+  pedidoId: string;
+  medio: MedioPago;
+  monto: number;
+}
+
 export const listarSedes = (token: string) => apiFetch<Sede[]>('/sedes', {}, token);
 
 export const listarMesas = (sedeId: string, token: string) => apiFetch<Mesa[]>(`/sedes/${sedeId}/mesas`, {}, token);
@@ -78,3 +111,6 @@ export const listarPedidosActivos = (sedeId: string, token: string) =>
 
 export const actualizarEstadoPedido = (id: string, estado: EstadoPedido, token: string) =>
   apiFetch<Pedido>(`/pedidos/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }, token);
+
+export const crearPago = (input: CrearPagoInput, token: string) =>
+  apiFetch<ResultadoPago>('/pagos', { method: 'POST', body: JSON.stringify(input) }, token);

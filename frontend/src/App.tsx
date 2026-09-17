@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { CajaPage } from './pages/Caja'
 import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
@@ -34,6 +35,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CocinaPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/caja"
+            element={
+              <ProtectedRoute roles={['CAJERO', 'ADMIN']}>
+                <CajaPage />
               </ProtectedRoute>
             }
           />

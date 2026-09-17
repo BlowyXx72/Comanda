@@ -12,11 +12,7 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
-
-const formatearCOP = (valor: string | number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
-    Number(valor),
-  );
+import { formatearCOP } from '../utils/formato';
 
 interface ItemCarrito {
   producto: Producto;

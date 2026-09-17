@@ -100,3 +100,20 @@ validación vive en `OrdersModule`.
   toma la primera de `GET /sedes` en `useSedeActual`; no hay selector
   multi-sede en la interfaz — eso pertenece al panel multi-sede consolidado,
   fuera de alcance de este prototipo.
+
+## Cobro y documento fiscal simulado (Fase 5)
+
+- `POST /pagos` solo acepta pedidos en estado `LISTO` y exige que el `monto`
+  coincida exactamente con `pedido.total`: no hay pagos parciales, propinas
+  ni descuentos en este slice.
+- El consecutivo del `DocumentoFiscal` se calcula como
+  `MAX(consecutivo) + 1` **por sede**, dentro de la misma transacción que
+  crea el `Pago`, actualiza el `Pedido` a `PAGADO` y libera la `Mesa`. Para
+  la escala de una demo (un cajero cobrando de a una mesa a la vez) esto es
+  suficiente; en producción, con cajeros concurrentes en la misma sede, se
+  necesitaría una secuencia de base de datos o un lock explícito para evitar
+  una condición de carrera en el consecutivo — marcado como
+  `// TODO PRODUCCION` sería lo siguiente a resolver si esto pasara a un
+  entorno con más de una caja simultánea.
+- `estadoDian` queda fijo en `SIMULADO` y `urlXml` en `null`: no hay
+  generación ni firma de XML, ni radicación ante la DIAN.
