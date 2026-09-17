@@ -83,3 +83,20 @@ validación vive en `OrdersModule`.
 - El aislamiento multi-tenant de `sedes`/`pedidos`/`productos` responde con
   `404` (no `403`) cuando el recurso pertenece a otra cadena, para no
   confirmarle a un usuario ajeno que ese id existe.
+
+## Tiempo real (Fase 4)
+
+- El handshake de Socket.IO exige el JWT (`socket.handshake.auth.token`) y
+  valida, en `sede:unirse`, que la sede pedida sea de la cadena del token
+  antes de unir al cliente a la room `sede:{id}` — mismo aislamiento
+  multi-tenant que ya aplicaba en REST, ahora también en el canal en tiempo
+  real.
+- Se agregó `GET /pedidos?sedeId=` (no estaba en la lista original del §5)
+  para que `/cocina` pueda hidratar el tablero con los pedidos
+  `EN_PREPARACION`/`LISTO` ya existentes al montar, antes de que empiecen a
+  llegar eventos en vivo. El documento de propuesta dice "expón al menos
+  estos endpoints", así que esta extensión se considera dentro de alcance.
+- El frontend asume **una sola sede por cadena** (coherente con el seed) y
+  toma la primera de `GET /sedes` en `useSedeActual`; no hay selector
+  multi-sede en la interfaz — eso pertenece al panel multi-sede consolidado,
+  fuera de alcance de este prototipo.

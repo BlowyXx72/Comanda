@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { Redis } from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { checkTcpPort } from './tcp-check.util.js';
 
 // Consumido por: infraestructura (docker-compose healthcheck futuro, monitoreo manual en la demo).
 // No pertenece a un módulo de negocio: es el chequeo de arranque del prototipo.
@@ -11,15 +11,7 @@ export class HealthController {
   @Get()
   @HttpCode(HttpStatus.OK)
   async check() {
-    const redisHost = process.env.REDIS_HOST ?? 'redis';
-    const redisPort = Number(process.env.REDIS_PORT_INTERNAL ?? 6379);
-
-    const [postgres, redis] = await Promise.all([
-      this.checkPostgres(),
-      // TODO PRODUCCION (Fase 4): reemplazar por un PING real con el cliente
-      // ioredis que use el RealtimeModule, en vez de solo probar el puerto TCP.
-      checkTcpPort(redisHost, redisPort),
-    ]);
+    const [postgres, redis] = await Promise.all([this.checkPostgres(), this.checkRedis()]);
 
     const status = {
       status: postgres && redis ? 'ok' : 'error',
@@ -43,6 +35,28 @@ export class HealthController {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  private async checkRedis(): Promise<boolean> {
+    // Conexión efímera solo para el chequeo: el cliente real y persistente
+    // vive en RealtimeModule (adapter de Socket.IO), no aquí.
+    const client = new Redis({
+      host: process.env.REDIS_HOST ?? 'redis',
+      port: Number(process.env.REDIS_PORT_INTERNAL ?? 6379),
+      lazyConnect: true,
+      connectTimeout: 2000,
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => null,
+    });
+    try {
+      await client.connect();
+      const respuesta = await client.ping();
+      return respuesta === 'PONG';
+    } catch {
+      return false;
+    } finally {
+      client.disconnect();
     }
   }
 }

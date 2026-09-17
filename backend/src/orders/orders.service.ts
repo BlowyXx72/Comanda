@@ -4,8 +4,12 @@ import { CatalogService } from '../catalog/catalog.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { EstadoPedido } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { TablesService } from '../tables/tables.service.js';
 import type { CreatePedidoDto } from './dto/create-pedido.dto.js';
+
+// Órdenes que le interesan al KDS al abrir /cocina (ver GET /pedidos?sedeId=).
+const ESTADOS_ACTIVOS: EstadoPedido[] = ['EN_PREPARACION', 'LISTO'];
 
 // Solo se avanza un estado a la vez, en este orden; PAGADO no se alcanza
 // por PATCH (ver actualizar-estado-pedido.dto.ts).
@@ -26,7 +30,19 @@ export class OrdersService {
     private readonly branchesService: BranchesService,
     private readonly catalogService: CatalogService,
     private readonly tablesService: TablesService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
+
+  // Consumido por: /cocina al montar, para hidratar el tablero antes de que
+  // empiecen a llegar eventos `comanda:nueva`/`pedido:actualizado` en vivo.
+  async listarActivos(sedeId: string, cadenaId: string) {
+    await this.branchesService.obtenerDeCadena(sedeId, cadenaId);
+    return this.prisma.pedido.findMany({
+      where: { sedeId, estado: { in: ESTADOS_ACTIVOS } },
+      include: INCLUDE_PEDIDO,
+      orderBy: { fechaHora: 'asc' },
+    });
+  }
 
   async crear(dto: CreatePedidoDto, usuarioId: string, cadenaId: string) {
     // Idempotencia: el UUID lo generó el cliente, así que un reintento
@@ -58,7 +74,7 @@ export class OrdersService {
       await this.tablesService.ocupar(dto.mesaId, dto.sedeId);
     }
 
-    return this.prisma.pedido.create({
+    const pedido = await this.prisma.pedido.create({
       data: {
         id: dto.id,
         sedeId: dto.sedeId,
@@ -73,6 +89,9 @@ export class OrdersService {
       },
       include: INCLUDE_PEDIDO,
     });
+
+    this.realtimeGateway.emitirComandaNueva(dto.sedeId, pedido);
+    return pedido;
   }
 
   async obtener(id: string, cadenaId: string) {
@@ -92,10 +111,13 @@ export class OrdersService {
       throw new ConflictException(`No se puede pasar de ${pedido.estado} a ${nuevoEstado}`);
     }
 
-    return this.prisma.pedido.update({
+    const actualizado = await this.prisma.pedido.update({
       where: { id },
       data: { estado: nuevoEstado },
       include: INCLUDE_PEDIDO,
     });
+
+    this.realtimeGateway.emitirPedidoActualizado(actualizado.sedeId, actualizado);
+    return actualizado;
   }
 }

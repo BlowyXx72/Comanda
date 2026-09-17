@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
 import { ActualizarEstadoPedidoDto } from './dto/actualizar-estado-pedido.dto.js';
 import { CreatePedidoDto } from './dto/create-pedido.dto.js';
+import { ListarPedidosQueryDto } from './dto/listar-pedidos-query.dto.js';
 import { OrdersService } from './orders.service.js';
 
 @UseGuards(JwtAuthGuard)
@@ -19,6 +20,13 @@ export class OrdersController {
   @Post()
   crear(@Body() dto: CreatePedidoDto, @UsuarioActual() usuario: UsuarioAutenticado) {
     return this.ordersService.crear(dto, usuario.userId, usuario.cadenaId);
+  }
+
+  // Consumido por: /cocina al montar, para hidratar el tablero antes de que
+  // lleguen eventos en vivo (ver RealtimeGateway).
+  @Get()
+  listarActivos(@Query() query: ListarPedidosQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    return this.ordersService.listarActivos(query.sedeId, usuario.cadenaId);
   }
 
   // Consumido por: mesero/cocina/caja para ver el detalle de un pedido.

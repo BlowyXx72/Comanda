@@ -81,3 +81,229 @@
   max-width: 420px;
   color: var(--text);
 }
+
+.home-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.home-nav a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pantalla-info {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text);
+}
+
+/* --- Mesas --- */
+
+.mesas-page,
+.cocina-page {
+  padding: 24px;
+}
+
+.mesas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mesa-card {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.mesa-card--libre {
+  border-color: #12b76a;
+}
+
+.mesa-card--ocupada {
+  border-color: #d92d20;
+  opacity: 0.85;
+}
+
+.mesa-numero {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mesa-estado {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.panel-pedido {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.panel-pedido-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-nota {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.armador-pedido {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 720px) {
+  .armador-pedido {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lista-productos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.producto-boton {
+  font: inherit;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+}
+
+.carrito h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.lista-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-items-estado {
+  font-weight: 600;
+}
+
+.carrito-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.carrito-item-linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.carrito-item-acciones {
+  display: flex;
+  gap: 6px;
+}
+
+.carrito-item-acciones button {
+  font: inherit;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.carrito-item input {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.carrito-total {
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.armador-pedido button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Cocina --- */
+
+.comandas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.comanda-card {
+  padding: 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comanda-card--en_preparacion {
+  border-color: #f79009;
+}
+
+.comanda-card--listo {
+  border-color: #12b76a;
+}
+
+.comanda-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comanda-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  text-transform: uppercase;
+}
