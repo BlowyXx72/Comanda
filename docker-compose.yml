@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: comanda-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - comanda-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: comanda-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: comanda-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: ${BACKEND_PORT}
+      # Nombres/puertos internos de la red docker (distintos del mapeo a localhost de arriba)
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT_INTERNAL: 5432
+      REDIS_HOST: redis
+      REDIS_PORT_INTERNAL: 6379
+    ports:
+      - "${BACKEND_PORT}:3000"
+    volumes:
+      - ./backend:/app
+      - comanda-backend-node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # DECISIÓN DE PROTOTIPO: en Fase 0 no hay schema de Prisma todavía,
+    # así que solo se levanta Nest en modo watch. El "prisma migrate deploy"
+    # se agrega al comando en la Fase 1 cuando exista backend/prisma/schema.prisma.
+    command: sh -c "npm run start:dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: comanda-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: ${FRONTEND_PORT}
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    volumes:
+      - ./frontend:/app
+      - comanda-frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  comanda-postgres-data:
+  comanda-backend-node-modules:
+  comanda-frontend-node-modules:
