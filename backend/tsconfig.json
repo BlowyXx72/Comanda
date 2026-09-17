@@ -18,5 +18,14 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"]
+  },
+  // DECISIÓN DE PROTOTIPO: se fuerza polling porque el watch por eventos del
+  // filesystem no llega de forma confiable a través del volumen bind-mount de
+  // Docker Desktop en Windows; sin esto, `start:dev` no recompila solo al
+  // guardar un archivo desde el host y hay que reiniciar el contenedor a mano.
+  "watchOptions": {
+    "watchFile": "fixedPollingInterval",
+    "watchDirectory": "fixedPollingInterval",
+    "fallbackPolling": "fixedInterval"
   }
 }

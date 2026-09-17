@@ -53,7 +53,9 @@ Marcadas también en el código como `// DECISIÓN DE PROTOTIPO`:
   conecta con un *driver adapter* (`@prisma/adapter-pg`) en
   `backend/src/prisma/prisma.service.ts`.
 - **Socket.IO** como librería de WebSocket sobre el Gateway de NestJS.
-- **JWT** como mecanismo de autenticación.
+- **JWT** como mecanismo de autenticación. El frontend guarda el token en
+  `localStorage` (`frontend/src/auth/AuthContext.tsx`); en producción se
+  evaluaría una cookie httpOnly para no exponerlo a JavaScript del cliente.
 - El **UUID del pedido se genera en el cliente** y viaja en la petición, para
   dejar lista la idempotencia que necesitará el futuro modo offline.
 - Backend y frontend se dockerizan en modo *dev* (hot reload vía volúmenes)

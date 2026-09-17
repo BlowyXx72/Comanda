@@ -12,5 +12,13 @@ export default defineConfig({
     hmr: {
       clientPort: 5173,
     },
+    // DECISIÓN DE PROTOTIPO: se fuerza polling porque los eventos de
+    // filesystem no llegan de forma confiable a través del volumen
+    // bind-mount de Docker Desktop en Windows; sin esto, guardar un archivo
+    // en el host no dispara HMR.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
   },
 })
