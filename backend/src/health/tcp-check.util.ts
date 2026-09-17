@@ -1,10 +1,10 @@
 import { Socket } from 'node:net';
 
 /**
- * DECISIÓN DE PROTOTIPO (Fase 0): comprueba solo que el puerto TCP responde,
- * sin autenticarse contra el servicio real. Se reemplaza en fases siguientes
- * por una consulta real: Prisma (`SELECT 1`) para Postgres en la Fase 1 y un
- * PING de ioredis para Redis en la Fase 4, cuando esos clientes ya existan.
+ * DECISIÓN DE PROTOTIPO: comprueba solo que el puerto TCP responde, sin
+ * autenticarse contra el servicio real. Se usa hoy únicamente para Redis; se
+ * reemplaza en la Fase 4 por un PING real del cliente ioredis del
+ * RealtimeModule. El chequeo de Postgres ya usa Prisma (`SELECT 1`).
  */
 export function checkTcpPort(
   host: string,

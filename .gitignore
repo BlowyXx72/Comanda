@@ -10,8 +10,8 @@ dist/
 build/
 *.tsbuildinfo
 
-# Prisma
-backend/prisma/migrations/dev.db
+# Prisma (código generado del cliente; se regenera con `npm install` vía postinstall)
+backend/src/generated/
 
 # Logs
 *.log

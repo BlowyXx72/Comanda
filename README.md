@@ -17,7 +17,8 @@ dockerizados con hot-reload.
 
 ```bash
 cp .env.example .env
-docker compose up
+docker compose up -d
+docker compose exec backend npx prisma db seed
 ```
 
 Esto levanta:
@@ -28,6 +29,15 @@ Esto levanta:
 | Redis | `localhost:6379` | Caché / Pub-Sub para el WebSocket |
 | Backend (NestJS) | http://localhost:3000 | API REST + Gateway WebSocket |
 | Frontend (React) | http://localhost:5173 | Interfaz web |
+
+Las migraciones de Prisma (`prisma migrate deploy`) corren automáticamente
+cada vez que arranca el contenedor del backend; el seed (`prisma db seed`) es
+un paso aparte y solo hace falta correrlo una vez (o de nuevo si quieres
+resetear los datos de demo — el script es idempotente, borra y recrea todo).
+
+Usuarios de prueba creados por el seed (contraseña de cada uno junto al
+correo): `admin@demo.com` / `admin123`, `cajero@demo.com` / `cajero123`,
+`mesero@demo.com` / `mesero123`.
 
 Verifica que todo esté sano:
 

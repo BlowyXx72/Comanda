@@ -46,7 +46,12 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 
 Marcadas también en el código como `// DECISIÓN DE PROTOTIPO`:
 
-- **Prisma** como ORM (el documento no fijaba una elección de ORM).
+- **Prisma** como ORM (el documento no fijaba una elección de ORM). Se usa
+  Prisma 7, que requiere Node ≥ 22 y separa la configuración en dos archivos:
+  `backend/prisma/schema.prisma` (modelos) y `backend/prisma.config.ts`
+  (conexión para `migrate`/`db seed`); el cliente en tiempo de ejecución se
+  conecta con un *driver adapter* (`@prisma/adapter-pg`) en
+  `backend/src/prisma/prisma.service.ts`.
 - **Socket.IO** como librería de WebSocket sobre el Gateway de NestJS.
 - **JWT** como mecanismo de autenticación.
 - El **UUID del pedido se genera en el cliente** y viaja en la petición, para

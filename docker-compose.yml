@@ -39,9 +39,8 @@ services:
       - .env
     environment:
       PORT: ${BACKEND_PORT}
-      # Nombres/puertos internos de la red docker (distintos del mapeo a localhost de arriba)
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT_INTERNAL: 5432
+      # Redis se sigue chequeando en /health por TCP crudo (ver TODO PRODUCCION
+      # en health.controller.ts); Postgres ya se resuelve vía DATABASE_URL/Prisma.
       REDIS_HOST: redis
       REDIS_PORT_INTERNAL: 6379
     ports:
@@ -54,10 +53,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # DECISIÓN DE PROTOTIPO: en Fase 0 no hay schema de Prisma todavía,
-    # así que solo se levanta Nest en modo watch. El "prisma migrate deploy"
-    # se agrega al comando en la Fase 1 cuando exista backend/prisma/schema.prisma.
-    command: sh -c "npm run start:dev"
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
 
   frontend:
     build:

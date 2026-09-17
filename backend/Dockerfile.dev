@@ -1,8 +1,16 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
+# El schema debe existir antes de `npm install` porque el postinstall corre `prisma generate`.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+# DECISIÓN DE PROTOTIPO: valor de relleno solo para que `prisma generate`
+# resuelva la variable en tiempo de build (no se conecta a ninguna base de
+# datos). docker-compose sobreescribe esto en tiempo de ejecución con el
+# DATABASE_URL real del .env.
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 RUN npm install
 
 COPY . .
