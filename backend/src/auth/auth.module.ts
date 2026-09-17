@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller.js';
@@ -6,6 +6,10 @@ import { AuthService } from './auth.service.js';
 import { RolesGuard } from './guards/roles.guard.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
+// Global: JwtAuthGuard/RolesGuard se usan en controladores de otros módulos
+// (Catalog, Branches, Orders, ...) que no necesitan reimportar AuthModule
+// solo para que Passport resuelva AuthModuleOptions.
+@Global()
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -19,6 +23,6 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard],
-  exports: [JwtModule, RolesGuard],
+  exports: [JwtModule, PassportModule, RolesGuard],
 })
 export class AuthModule {}

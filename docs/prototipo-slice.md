@@ -71,3 +71,15 @@ ABIERTO → EN_PREPARACION → LISTO → PAGADO
 
 No se permiten saltos hacia atrás ni saltos que se salten un estado; la
 validación vive en `OrdersModule`.
+
+- `POST /pedidos` crea el pedido directo en `EN_PREPARACION`, sin pasar por
+  `ABIERTO`: en el flujo del mesero, "armar el pedido" ocurre en el carrito
+  del frontend y "enviar comanda" es la única llamada al backend, así que ese
+  único POST ya representa la comanda entrando a cocina.
+- `PATCH /pedidos/:id/estado` solo permite `ABIERTO`/`EN_PREPARACION`/`LISTO`
+  como destino; `PAGADO` queda reservado para `POST /pagos` (Fase 5), que
+  además de cambiar el estado registra el pago, genera el documento fiscal y
+  libera la mesa.
+- El aislamiento multi-tenant de `sedes`/`pedidos`/`productos` responde con
+  `404` (no `403`) cuando el recurso pertenece a otra cadena, para no
+  confirmarle a un usuario ajeno que ese id existe.
