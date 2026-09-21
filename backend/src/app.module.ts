@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { TablesModule } from './tables/tables.module.js';
 
 @Module({
@@ -19,6 +20,7 @@ import { TablesModule } from './tables/tables.module.js';
     TablesModule,
     OrdersModule,
     PaymentsModule,
+    ReportsModule,
     HealthModule,
   ],
   controllers: [AppController],

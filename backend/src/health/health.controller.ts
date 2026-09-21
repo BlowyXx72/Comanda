@@ -1,13 +1,16 @@
 import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Redis } from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 // Consumido por: infraestructura (docker-compose healthcheck futuro, monitoreo manual en la demo).
 // No pertenece a un módulo de negocio: es el chequeo de arranque del prototipo.
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @ApiOperation({ summary: 'Verifica conexión real a Postgres (Prisma) y Redis (PING)' })
   @Get()
   @HttpCode(HttpStatus.OK)
   async check() {

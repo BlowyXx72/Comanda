@@ -50,10 +50,20 @@ duplicados por UUID.
 
 ## Módulos del backend (monolito modular)
 
-`AuthModule`, `TenantsModule`, `BranchesModule`, `UsersModule`,
+Módulos que existen de verdad: `AuthModule`, `BranchesModule`,
 `CatalogModule`, `TablesModule`, `OrdersModule`, `PaymentsModule`,
-`RealtimeModule`. Deben quedar desacoplados entre sí (import solo lo que cada
-uno expone explícitamente) aunque se desplieguen juntos.
+`RealtimeModule`, `ReportsModule` (este último no estaba en la lista
+original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
+el documento y no encajaba en ningún módulo existente). Deben quedar
+desacoplados entre sí (import solo lo que cada uno expone explícitamente)
+aunque se desplieguen juntos.
+
+`TenantsModule` y `UsersModule` de la propuesta original **no se separaron**
+en módulos propios: `Cadena` y `Usuario` se manejan directo con Prisma desde
+`AuthModule` (login) y `prisma/seed.ts` (datos de demo), porque este
+prototipo no tiene ningún endpoint de gestión de cadenas/usuarios que
+justificara el módulo aparte. Si esa gestión se necesita más adelante, ahí
+sí vale la pena separarlos.
 
 ## Eventos WebSocket
 

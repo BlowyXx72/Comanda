@@ -29,6 +29,7 @@ Esto levanta:
 | Redis | `localhost:6379` | Caché / Pub-Sub para el WebSocket |
 | Backend (NestJS) | http://localhost:3000 | API REST + Gateway WebSocket |
 | Frontend (React) | http://localhost:5173 | Interfaz web |
+| Swagger | http://localhost:3000/api/docs | Documentación interactiva de la API |
 
 Las migraciones de Prisma (`prisma migrate deploy`) corren automáticamente
 cada vez que arranca el contenedor del backend; el seed (`prisma db seed`) es
@@ -46,10 +47,23 @@ curl http://localhost:3000/health
 # { "status": "ok", "dependencies": { "postgres": "up", "redis": "up" }, ... }
 ```
 
-> **Estado de la Fase 0:** el chequeo de `/health` valida que los puertos TCP
-> de Postgres y Redis respondan. A partir de la Fase 1 (cuando exista el
-> schema de Prisma y las migraciones) y la Fase 4 (cliente de Redis del
-> Gateway), este chequeo pasará a usar los clientes reales.
+`/health` valida Postgres con una consulta real vía Prisma y Redis con un
+`PING` real vía `ioredis` (ver `backend/src/health/health.controller.ts`).
+
+## Flujo de la demo
+
+Con dos (o tres) pestañas del navegador abiertas en http://localhost:5173:
+
+1. Entra con `mesero@demo.com` → `/mesas`, toca una mesa libre, arma el
+   pedido con productos del catálogo y presiona **"Enviar comanda"**.
+2. En otra pestaña, entra con cualquier usuario → `/cocina`: la comanda
+   aparece **al instante, sin recargar** (WebSocket).
+3. En `/cocina`, presiona **"Marcar LISTO"**.
+4. En una tercera pestaña, entra con `cajero@demo.com` → `/caja`: la mesa
+   aparece en "Listos para cobrar" en vivo. Presiona **"Cobrar"**, elige el
+   medio de pago y confirma: se genera el documento fiscal simulado
+   (consecutivo por sede) y la mesa vuelve a **LIBRE** — visible de inmediato
+   en la pestaña de `/mesas`, sin recargar.
 
 ## Estructura del repositorio
 
@@ -68,10 +82,11 @@ Este prototipo es la materia de la asignatura, así que cada pieza de
 infraestructura corresponde a un concepto telemático concreto:
 
 - **HTTP + API REST** — el backend expone endpoints REST convencionales
-  (`/sedes`, `/productos`, `/pedidos`, `/pagos`, ...) para todas las
-  operaciones que no requieren empuje de servidor a cliente: login, consultas
-  de catálogo, creación de pedidos, cobro. En local corre sobre HTTP plano;
-  **en producción iría sobre HTTPS/TLS 1.3 + HTTP/2** para cifrar el
+  (`/sedes`, `/productos`, `/pedidos`, `/pagos`, `/reportes/ventas`, ...)
+  para todas las operaciones que no requieren empuje de servidor a cliente:
+  login, consultas de catálogo, creación de pedidos, cobro. Documentados de
+  forma interactiva en `/api/docs` (Swagger). En local corre sobre HTTP
+  plano; **en producción iría sobre HTTPS/TLS 1.3 + HTTP/2** para cifrar el
   transporte y multiplexar peticiones.
 - **WebSocket (Socket.IO)** — el flujo estrella del producto (comanda
   aparece en cocina sin recargar) no se puede resolver con *polling* sin
@@ -116,6 +131,7 @@ infraestructura corresponde a un concepto telemático concreto:
 
 ## Plan de fases
 
-Ver el historial de commits: cada fase (`Fase 0` scaffolding, `Fase 1` datos,
-`Fase 2` auth, `Fase 3` REST, `Fase 4` tiempo real, `Fase 5` cobro, `Fase 6`
-pulido) se entrega en un commit independiente.
+Las 7 fases del prototipo (`Fase 0` scaffolding, `Fase 1` datos, `Fase 2`
+auth, `Fase 3` REST, `Fase 4` tiempo real, `Fase 5` cobro, `Fase 6` pulido)
+ya están completas, cada una en un commit independiente — ver el historial
+de `git log` para el detalle de qué trajo cada una.

@@ -117,3 +117,19 @@ validación vive en `OrdersModule`.
   entorno con más de una caja simultánea.
 - `estadoDian` queda fijo en `SIMULADO` y `urlXml` en `null`: no hay
   generación ni firma de XML, ni radicación ante la DIAN.
+
+## Pulido (Fase 6)
+
+- `GET /reportes/ventas` (no estaba en la lista original del §5, pero el
+  documento dice "expón al menos estos endpoints") sigue el mismo espíritu
+  que `GET /pedidos?sedeId=` de la Fase 4: una extensión mínima y directa,
+  no una funcionalidad nueva. El "día" se calcula en UTC por simplicidad; en
+  producción habría que usar la zona horaria de cada sede. Solo lo puede
+  consultar CAJERO/ADMIN.
+- `ReportsModule` no estaba en la lista de módulos del backend (§3 /
+  `CLAUDE.md`); se agregó porque el endpoint lo pide el documento y no
+  encajaba de forma natural en ninguno de los módulos existentes.
+- Swagger (`/api/docs`) usa el plugin oficial `@nestjs/swagger` en
+  `nest-cli.json` (`compilerOptions.plugins`) para inferir los esquemas de
+  los DTOs automáticamente a partir de los decoradores de `class-validator`,
+  en vez de anotar cada campo a mano con `@ApiProperty()`.
