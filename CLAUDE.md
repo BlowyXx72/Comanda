@@ -1,9 +1,16 @@
 # Comanda — contexto persistente para Claude Code
 
-Prototipo local (asignatura Servicios Telemáticos) de "Comanda Central": SaaS
-multi-sede para micro-cadenas de restaurantes. Este repo implementa un
-**vertical slice**, no el producto completo de 19 servicios. Ver
-[`docs/prototipo-slice.md`](docs/prototipo-slice.md) para el alcance exacto.
+Prototipo local (asignatura Servicios Telemáticos, docente Mauricio Ochoa;
+estudiantes Dikersson Alexis Cañón Vanegas y Miguel Jiménez) de "Comanda
+Central": SaaS multi-sede para micro-cadenas de restaurantes (2 a 8 sedes).
+Este repo implementa un **vertical slice**, no el producto completo de 19
+servicios. Ver [`docs/prototipo-slice.md`](docs/prototipo-slice.md) para el
+alcance exacto, incluyendo el estado de cada uno de los 8 casos de uso
+(CU-01 a CU-08) de la propuesta.
+
+Los documentos fuente completos de la propuesta y de la sustentación están en
+[`docs/propuesta/`](docs/propuesta/) (PDF + HTML de las slides). Cualquier
+afirmación sobre "qué pide la propuesta" debe verificarse ahí, no inventarse.
 
 ## Regla de oro
 
@@ -74,9 +81,22 @@ justificación de por qué WebSocket y no polling.
 
 ## Fuera de alcance explícito (no implementar de verdad)
 
-DIAN real, Rappi, menú QR, domicilios web, panel multi-sede consolidado,
-offline/PWA, réplica de lectura. Dejar como stubs marcados
-`// TODO PRODUCCIÓN` si se necesita un punto de extensión.
+DIAN real, Rappi, menú QR (`GET /menu/{cadena}/{sede}` público), domicilios
+web, panel multi-sede consolidado, offline/PWA (IndexedDB + `POST /sync`),
+réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de
+la propuesta (§5.1: CDN, Nginx, balanceo entre instancias, cola de mensajes +
+workers asíncronos, almacén de objetos, monitoreo/respaldos, SSH/NTP/SMTP/
+Syslog) — el prototipo es una sola instancia de cada pieza. Dejar como stubs
+marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista
+completa y razonada en `docs/prototipo-slice.md`.
+
+El ER de la propuesta (§6.2) tiene entidades que este prototipo no
+implementa: `Cliente`, `Insumo`, `MovimientoInventario`, `Receta` — no hay
+registro de comensales ni gestión de inventario/recetas. Tampoco se usa
+`Sede.rangoNumeracion` de verdad: el campo existe en el schema, pero el
+consecutivo del `DocumentoFiscal` es un `MAX+1` simple por sede
+(`PaymentsService`), no un número tomado de un rango pre-asignado. Detalle en
+`docs/prototipo-slice.md`.
 
 ## Flujo de trabajo
 

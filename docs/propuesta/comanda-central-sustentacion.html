@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comanda — Sustentación</title>
+<style>
+:root{
+  --coal:#17110E;
+  --coal2:#211815;
+  --coal3:#2C201A;
+  --edge:#3A2A22;
+  --ember-deep:#A83814;
+  --ember:#E2621F;
+  --flame:#F5A03A;
+  --glow:#FFC978;
+  --paper:#F6EDDF;
+  --paper-ink:#2A1D17;
+  --hot:#FFF3E6;
+  --ash:#C9B8AC;
+  --smoke:#8E7C72;
+  --serif:"Constantia","Iowan Old Style","Palatino Linotype","Book Antiqua","Georgia",serif;
+  --sans:"Segoe UI","Helvetica Neue",system-ui,-apple-system,Arial,sans-serif;
+  --mono:"Consolas","SFMono-Regular","Menlo","DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0B0806;color:var(--hot);font-family:var(--sans);overflow:hidden}
+body.notes-on{overflow:auto}
+
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+#deck{width:1280px;height:720px;position:relative;transform-origin:center center;
+      background:var(--coal);box-shadow:0 40px 120px rgba(0,0,0,.75);overflow:hidden}
+#deck::before{content:"";position:absolute;top:-260px;left:-200px;width:900px;height:760px;
+  background:radial-gradient(closest-side,rgba(226,98,31,.20),rgba(226,98,31,0) 70%);
+  pointer-events:none;transition:opacity .9s ease, background .9s ease}
+#deck::after{content:"";position:absolute;bottom:-320px;right:-220px;width:820px;height:700px;
+  background:radial-gradient(closest-side,rgba(168,56,20,.16),rgba(168,56,20,0) 70%);pointer-events:none}
+body[data-net="off"] #deck::before{
+  background:radial-gradient(closest-side,rgba(245,160,58,.36),rgba(245,160,58,0) 70%)}
+
+.slide{position:absolute;inset:0;padding:82px 80px 66px;display:none;flex-direction:column;z-index:2}
+.slide.on{display:flex}
+
+/* riel */
+#rail{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:20px;
+  padding:0 26px;border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:13px;
+  color:var(--smoke);z-index:6;background:rgba(23,17,14,.9)}
+#rail .sec{color:var(--ash)}
+#rail .spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--glow);box-shadow:0 0 10px var(--flame)}
+body[data-net="off"] .dot{background:var(--ember);box-shadow:0 0 14px var(--ember)}
+body[data-net="off"] #netlabel{color:var(--flame)}
+#timer{font-variant-numeric:tabular-nums}
+#timer.warn{color:var(--flame)}
+#timer.over{color:var(--ember)}
+#bar{position:absolute;bottom:0;left:0;height:3px;width:0;z-index:7;
+  background:linear-gradient(90deg,var(--ember-deep),var(--flame));transition:width .3s ease}
+
+/* tipografía */
+h1{font-family:var(--serif);font-size:104px;line-height:.94;letter-spacing:-.025em;font-weight:600;
+   background:linear-gradient(96deg,var(--glow) 6%,var(--flame) 38%,var(--ember) 82%);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-family:var(--serif);font-size:44px;line-height:1.08;letter-spacing:-.015em;font-weight:600;
+   color:var(--hot);margin-bottom:10px}
+h3{font-size:19px;font-weight:600;color:var(--hot)}
+.kicker{font-size:15px;color:var(--flame);margin-bottom:16px;letter-spacing:.01em}
+.lede{font-size:22px;line-height:1.5;color:var(--ash);max-width:72ch}
+p,li{font-size:19px;line-height:1.5;color:var(--ash)}
+.small{font-size:16px;color:var(--smoke);line-height:1.5}
+.mono{font-family:var(--mono)}
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px}
+.rule{height:2px;margin:8px 0 4px;
+  background:linear-gradient(90deg,var(--ember) 0%,rgba(226,98,31,.25) 34%,rgba(226,98,31,0) 72%)}
+
+.cols{display:grid;gap:20px}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c4{grid-template-columns:repeat(4,1fr)}
+.c5{grid-template-columns:repeat(5,1fr)}
+
+.panel{background:linear-gradient(180deg,var(--coal3),var(--coal2));border:1px solid var(--edge);
+  border-radius:4px;padding:18px 20px}
+.panel h3{margin-bottom:8px}
+.panel .small{font-size:15px}
+.panel.hot{border-color:#6E3A19;box-shadow:inset 0 1px 0 rgba(245,160,58,.18)}
+
+/* comanda en papel */
+.ticket{background:var(--paper);color:var(--paper-ink);border-radius:2px;padding:17px 19px;position:relative;
+  border-top:3px dashed #C6B49E;box-shadow:0 10px 26px rgba(0,0,0,.34)}
+.ticket h3{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--paper-ink);margin-bottom:7px}
+.ticket p{font-size:15px;line-height:1.45;color:#4B382E}
+.ticket::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:7px;background:var(--paper);
+  -webkit-mask:radial-gradient(6px 7px at 6px -1px,transparent 98%,#000) repeat-x 0 0/12px 7px;
+          mask:radial-gradient(6px 7px at 6px -1px,transparent 98%,#000) repeat-x 0 0/12px 7px}
+
+.num{font-family:var(--serif);font-size:62px;line-height:1;letter-spacing:-.03em;color:var(--hot)}
+.num.hot{background:linear-gradient(100deg,var(--glow),var(--ember));-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.numlab{font-size:15px;color:var(--smoke);margin-top:10px;line-height:1.35;max-width:22ch}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:2px;
+  border:1px solid var(--edge);color:var(--smoke)}
+.tag.hot{color:var(--flame);border-color:#6E3A19}
+.tag.stop{color:#E58C6B;border-color:#7A3320}
+
+table{width:100%;border-collapse:collapse;font-size:16px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--edge);vertical-align:top;color:var(--ash)}
+th{font-family:var(--mono);font-size:13px;color:var(--smoke);font-weight:400}
+td.us,th.us{background:rgba(226,98,31,.09)}
+th.us{color:var(--flame)}
+
+.steps{display:flex;gap:0}
+.step{flex:1;padding:14px 14px;border-left:1px solid var(--edge)}
+.step:first-child{border-left:0;padding-left:0}
+.step .n{font-family:var(--serif);font-size:24px;color:var(--ember);display:block;margin-bottom:6px;line-height:1}
+.step p{font-size:15px;line-height:1.38}
+
+.stack{display:flex;flex-direction:column;gap:9px}
+.layer{border:1px solid var(--edge);border-left:3px solid var(--ember-deep);
+  background:linear-gradient(90deg,var(--coal3),rgba(33,24,21,.4));padding:11px 18px;display:flex;gap:16px;align-items:baseline}
+.layer b{font-size:17px;font-weight:600;min-width:238px;color:var(--hot)}
+.layer span{font-size:15px;color:var(--smoke)}
+.layer.hot{border-left-color:var(--flame)}
+
+ul{list-style:none}
+li.b{padding-left:20px;position:relative;font-size:17px;line-height:1.5;margin-bottom:8px}
+li.b::before{content:"";position:absolute;left:0;top:11px;width:9px;height:2px;
+  background:linear-gradient(90deg,var(--ember),rgba(226,98,31,.2))}
+
+/* portada */
+#s1{justify-content:center;padding-left:100px}
+#s1 .brand{font-family:var(--mono);font-size:14px;color:var(--smoke);margin-bottom:30px}
+#s1 .sub{margin-top:30px;font-size:25px;color:var(--hot);max-width:46ch;line-height:1.42}
+#s1 .meta{position:absolute;left:100px;bottom:58px;font-family:var(--mono);font-size:13px;
+  color:var(--smoke);line-height:1.8}
+
+/* demo */
+#demo{display:grid;grid-template-columns:1.02fr 1fr;gap:30px;align-items:start}
+#queuebox{border:1px solid var(--edge);background:linear-gradient(180deg,var(--coal3),var(--coal2));
+  padding:17px 19px;height:300px;display:flex;flex-direction:column}
+#queuehead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:13px}
+#qcount{font-family:var(--serif);font-size:46px;line-height:1;color:var(--flame)}
+#qlist{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:14px}
+.qrow{display:flex;gap:11px;align-items:center;padding:6px 9px;background:rgba(12,8,6,.5);
+  border-left:2px solid var(--ember);color:var(--ash)}
+.qrow.sync{border-left-color:var(--glow);color:var(--smoke)}
+.qrow.dup{border-left-color:#7A3320}
+.qrow .st{margin-left:auto;font-size:12px;color:var(--flame)}
+.qrow.sync .st{color:var(--glow)}
+.qrow.dup .st{color:#E58C6B}
+button.act{font-family:var(--mono);font-size:15px;padding:11px 19px;border-radius:2px;cursor:pointer;
+  background:transparent;color:var(--hot);border:1px solid var(--edge)}
+button.act:hover{border-color:var(--ember);color:var(--flame)}
+button.act:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+button.act[disabled]{opacity:.32;cursor:default;border-color:var(--edge);color:var(--hot)}
+#banner{margin-top:15px;font-family:var(--mono);font-size:15px;padding:11px 15px;
+  border:1px solid var(--edge);color:var(--smoke)}
+body[data-net="off"] #banner{border-color:#6E3A19;color:var(--flame)}
+
+#notes{display:none;position:fixed;left:0;right:0;bottom:0;max-height:44vh;overflow:auto;z-index:20;
+  background:#100B09;border-top:1px solid var(--edge);padding:18px 26px 22px}
+body.notes-on #notes{display:block}
+#notes h4{font-family:var(--mono);font-size:13px;color:var(--flame);margin-bottom:9px;font-weight:400}
+#notes p{font-size:17px;line-height:1.58;max-width:92ch;color:var(--ash)}
+#help{position:fixed;right:14px;bottom:12px;font-family:var(--mono);font-size:12px;color:#5B463C;z-index:20}
+
+
+/* mapa de infraestructura */
+#smap{padding:64px 44px 46px}
+#smap h2{font-size:34px;margin-bottom:4px}
+#smap .kicker{margin-bottom:10px;font-size:14px}
+#smap .body{gap:12px;justify-content:flex-start}
+.mapa{display:grid;grid-template-columns:190px 84px 1fr 176px;gap:11px;align-items:start}
+.zone{border:1px solid var(--edge);border-radius:4px;padding:10px 11px;
+  background:linear-gradient(180deg,var(--coal3),var(--coal2))}
+.zone.hot{border-color:#6E3A19}
+.zone h4{font-family:var(--mono);font-size:11px;font-weight:400;color:var(--flame);margin-bottom:8px}
+.bk{border:1px solid var(--edge);border-radius:3px;padding:6px 9px;margin-bottom:6px;background:rgba(11,8,6,.45)}
+.bk:last-child{margin-bottom:0}
+.bk b{display:block;font-size:13px;line-height:1.2;color:var(--hot);font-weight:600}
+.bk span{display:block;font-size:11px;line-height:1.35;color:var(--smoke);margin-top:3px}
+.svcgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.svc{border:1px solid var(--edge);border-radius:3px;padding:6px 7px;background:rgba(11,8,6,.45)}
+.svc b{display:block;font-size:11.5px;line-height:1.2;color:var(--hot);font-weight:600}
+.svc span{display:block;font-size:10px;line-height:1.3;color:var(--smoke);margin-top:2px}
+.svc.rt{border-color:#6E3A19;grid-column:span 2}
+.datag{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.midcol{display:flex;flex-direction:column;align-items:center;gap:7px;padding-top:52px;text-align:center}
+.cloud{width:78px;height:52px;border:1px solid #6E3A19;border-radius:26px;display:grid;place-items:center;
+  font-size:12px;color:var(--flame);background:rgba(226,98,31,.08)}
+.wire{font-family:var(--mono);font-size:9.5px;color:var(--smoke);line-height:1.5}
+.flow{display:flex;align-items:center;justify-content:center;gap:5px;color:var(--ember);font-size:13px}
+.strip{border:1px solid var(--edge);border-radius:4px;padding:8px 12px;display:flex;gap:22px;
+  align-items:center;background:linear-gradient(90deg,var(--coal3),rgba(33,24,21,.4))}
+.strip b{font-size:12px;color:var(--hot);font-weight:600}
+.strip span{font-size:11.5px;color:var(--smoke)}
+.leyenda{display:flex;gap:26px;align-items:center;font-size:11px;color:var(--smoke);font-family:var(--mono)}
+.ln{display:inline-block;width:26px;height:0;border-top:2px solid var(--ash);margin-right:7px;vertical-align:middle}
+.ln.int{border-color:var(--ember)}
+.ln.rt{border-top-style:dashed;border-color:var(--flame)}
+.ln.ext{border-top-style:dashed;border-color:var(--smoke)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  html,body{overflow:visible;background:#fff}
+  #stage{position:static;display:block}
+  #deck{width:100%;height:auto;transform:none!important;box-shadow:none}
+  #rail,#bar,#help,#notes{display:none}
+  .slide{display:flex!important;position:relative;inset:auto;height:19cm;page-break-after:always}
+}
+</style>
+</head>
+<body data-net="on">
+
+<div id="stage">
+  <div id="deck">
+
+    <div id="rail">
+      <span class="sec" id="secname">Comanda</span>
+      <span class="spacer"></span>
+      <span class="chip"><span class="dot"></span><span id="netlabel">Sedes en línea</span></span>
+      <span id="timer">15:00</span>
+      <span id="pager">1 / 15</span>
+    </div>
+
+    <!-- 1 -->
+    <section class="slide on" id="s1" data-sec="Portada">
+      <div class="brand">Servicios Telemáticos · Propuesta de proyecto</div>
+      <h1>Comanda</h1>
+      <div class="sub">Una sola plataforma para controlar todas las sedes de un restaurante, incluso cuando una sede pierde la conexión a internet.</div>
+      <div class="meta">
+        Plataforma web multi-sede de venta y control para micro-cadenas de restaurantes<br>
+        Presentado en el documento de propuesta como Comanda Central · Bogotá D.C. · Docente: Mauricio Ochoa
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide" id="s2" data-sec="El problema">
+      <div class="kicker">Micro-cadenas de 2 a 8 sedes en Bogotá y su área metropolitana</div>
+      <h2>El dueño opera con información fragmentada</h2>
+      <div class="body">
+        <div class="cols c4">
+          <div class="ticket"><h3>Ventas dispersas</h3><p>Cada sede registra en su propio sistema local. Consolidar el día es trabajo manual.</p></div>
+          <div class="ticket"><h3>Pedidos en otro portal</h3><p>Las plataformas de domicilio quedan aparte. Alguien re-digita a mano.</p></div>
+          <div class="ticket"><h3>Exigencia fiscal</h3><p>La facturación electrónica exige validación en línea ante la DIAN.</p></div>
+          <div class="ticket"><h3>Sin internet, sin caja</h3><p>Gran parte del software del mercado deja de operar. Eso son ventas perdidas.</p></div>
+        </div>
+        <p class="lede" style="margin-top:24px">Es un segmento desatendido: las soluciones robustas le quedan costosas y las económicas están pensadas para una única sede.</p>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" id="s3" data-sec="La solución">
+      <div class="kicker">Un servicio telemático, no un software instalado</div>
+      <h2>Las sedes son clientes de un servidor central</h2>
+      <div class="body">
+        <svg viewBox="0 0 1120 296" width="100%" height="296" role="img" aria-label="Sedes y clientes remotos conectados por internet a un servidor central en la nube">
+          <defs>
+            <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 z" fill="#E2621F"/>
+            </marker>
+            <linearGradient id="hot" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#2C201A"/><stop offset="1" stop-color="#20140F"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="38" width="252" height="200" fill="#211815" stroke="#3A2A22"/>
+          <text x="26" y="70" fill="#FFF3E6" font-size="19" font-family="Constantia,Georgia,serif" font-weight="600">Sedes (2 a 8)</text>
+          <text x="26" y="102" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Caja POS · navegador</text>
+          <text x="26" y="128" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Tablets de meseros</text>
+          <text x="26" y="154" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Pantalla de cocina</text>
+          <text x="26" y="180" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Impresora de comandas</text>
+          <text x="26" y="212" fill="#F5A03A" font-size="15" font-family="Consolas,monospace">Caché local · modo offline</text>
+          <line x1="266" y1="138" x2="382" y2="138" stroke="#E2621F" stroke-width="2" marker-end="url(#ar)"/>
+          <text x="272" y="126" fill="#8E7C72" font-size="13" font-family="Consolas,monospace">HTTPS / WSS</text>
+          <rect x="392" y="16" width="338" height="244" fill="url(#hot)" stroke="#6E3A19"/>
+          <text x="414" y="50" fill="#F5A03A" font-size="19" font-family="Constantia,Georgia,serif" font-weight="600">Servidor central en la nube</text>
+          <text x="414" y="84" fill="#C9B8AC" font-size="16" font-family="Segoe UI,sans-serif">Proxy inverso · CDN</text>
+          <text x="414" y="110" fill="#C9B8AC" font-size="16" font-family="Segoe UI,sans-serif">API REST + WebSocket</text>
+          <text x="414" y="136" fill="#C9B8AC" font-size="16" font-family="Segoe UI,sans-serif">Cola y trabajadores asíncronos</text>
+          <text x="414" y="162" fill="#C9B8AC" font-size="16" font-family="Segoe UI,sans-serif">PostgreSQL + réplica · Redis</text>
+          <text x="414" y="188" fill="#C9B8AC" font-size="16" font-family="Segoe UI,sans-serif">Almacén de objetos</text>
+          <text x="414" y="220" fill="#8E7C72" font-size="15" font-family="Segoe UI,sans-serif">Monitoreo y respaldos</text>
+          <line x1="738" y1="88" x2="854" y2="88" stroke="#E2621F" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="738" y1="206" x2="854" y2="206" stroke="#E2621F" stroke-width="2" marker-end="url(#ar)"/>
+          <rect x="864" y="32" width="250" height="112" fill="#211815" stroke="#3A2A22"/>
+          <text x="882" y="62" fill="#FFF3E6" font-size="18" font-family="Constantia,Georgia,serif" font-weight="600">Clientes remotos</text>
+          <text x="882" y="90" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Comensal: menú QR, sin app</text>
+          <text x="882" y="116" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Dueño: panel consolidado</text>
+          <rect x="864" y="156" width="250" height="104" fill="#211815" stroke="#3A2A22"/>
+          <text x="882" y="186" fill="#FFF3E6" font-size="18" font-family="Constantia,Georgia,serif" font-weight="600">Servicios externos</text>
+          <text x="882" y="214" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">DIAN vía proveedor</text>
+          <text x="882" y="240" fill="#8E7C72" font-size="16" font-family="Segoe UI,sans-serif">Rappi (API)</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" id="s4" data-sec="Benchmark">
+      <div class="kicker">Precios verificados a agosto de 2026</div>
+      <h2>Las tres comparten la misma debilidad</h2>
+      <div class="body">
+        <table>
+          <tr><th style="width:118px"></th><th>Gestro</th><th>Fudo</th><th>Siigo POS Gastrobar</th><th class="us">Comanda</th></tr>
+          <tr><th>Costo mensual</th>
+            <td>$79.000 una sede · desde $169.000 con tres o más</td>
+            <td>desde $62.900 · Rappi como add-on de $38.900</td>
+            <td>desde $87.494 · exige contratar Siigo Nube</td>
+            <td class="us">$79.000 por sede, todo incluido</td></tr>
+          <tr><th>Tecnología</th>
+            <td>Nube por navegador · DIAN vía Taxxa · multi-KDS</td>
+            <td>Nube multiplataforma · carta QR · Rappi, DiDi, Justo</td>
+            <td>Nube · integración contable nativa · mesas e inventario</td>
+            <td class="us">PWA con caché local · PostgreSQL multi-tenant · WebSocket</td></tr>
+          <tr><th>Limitación</th>
+            <td><span class="tag stop">sin offline</span> la multi-sede eleva el plan</td>
+            <td><span class="tag stop">sin offline</span> si se cae internet se detiene la venta</td>
+            <td><span class="tag stop">sin offline</span> exige software contable adicional</td>
+            <td class="us"><span class="tag hot">por desarrollar</span> requiere habilitación DIAN y aprobación de Rappi</td></tr>
+        </table>
+        <p class="lede">Dependen de conexión permanente y tratan la multi-sede como un plan superior, no como el centro del diseño. Nos diferenciamos exactamente en esos dos puntos.</p>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" id="s5" data-sec="Servicios">
+      <div class="kicker">19 servicios en cinco bloques</div>
+      <h2>Qué hace la plataforma</h2>
+      <div class="body">
+        <div class="cols c5">
+          <div class="panel"><h3>En la sede</h3><p class="small">POS web (PWA)<br>Caja<br>Mesas<br>Comandas<br>Pantalla de cocina</p></div>
+          <div class="panel"><h3>Para el comensal</h3><p class="small">Menú digital por QR<br>Pedido de domicilio desde la web de la cadena</p></div>
+          <div class="panel"><h3>Integraciones</h3><p class="small">Pedidos de plataformas<br>Rappi por API<br>Documento equivalente electrónico<br>Proveedor tecnológico DIAN</p></div>
+          <div class="panel"><h3>Administración</h3><p class="small">Panel multi-sede<br>Reportes de ventas<br>Catálogo y productos<br>Inventario<br>Usuarios y roles</p></div>
+          <div class="panel hot"><h3>Plataforma</h3><p class="small">Operación offline<br>Sincronización automática<br>Notificaciones y tiempo real</p></div>
+        </div>
+        <p class="small" style="font-size:17px">Cada servicio tiene definido qué API usa, qué componente lo ejecuta, qué base de datos toca, con qué protocolo se comunica y si funciona o no sin conexión.</p>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" id="s6" data-sec="Flujo de una venta">
+      <div class="kicker">Del pedido en la mesa al documento fiscal</div>
+      <h2>La caja nunca espera a un servicio externo</h2>
+      <div class="body">
+        <div class="steps">
+          <div class="step"><span class="n">1</span><p>El mesero toma el pedido en la tablet</p><span class="tag">POST /pedidos</span></div>
+          <div class="step"><span class="n">2</span><p>Se guarda en una transacción y se publica el evento</p><span class="tag">PostgreSQL</span></div>
+          <div class="step"><span class="n">3</span><p>La comanda aparece en cocina al instante</p><span class="tag hot">WebSocket</span></div>
+          <div class="step"><span class="n">4</span><p>Cocina marca listo y el mesero se entera igual de rápido</p><span class="tag hot">WebSocket</span></div>
+          <div class="step"><span class="n">5</span><p>El cajero cierra la cuenta y registra el pago</p><span class="tag">POST /pagos</span></div>
+          <div class="step"><span class="n">6</span><p>El documento fiscal se encola y se transmite aparte</p><span class="tag hot">asíncrono</span></div>
+        </div>
+        <div class="rule"></div>
+        <p class="lede">Si la DIAN o el proveedor tecnológico responden lento, el cliente ya se fue con su comida. La transmisión fiscal ocurre en segundo plano, con cola y reintentos.</p>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide" id="s7" data-sec="Arquitectura">
+      <div class="kicker">De la sede a la base de datos</div>
+      <h2>Arquitectura telemática</h2>
+      <div class="body">
+        <div class="stack">
+          <div class="layer"><b>Sedes locales</b><span>Caja PWA, tablets, pantalla de cocina · router con respaldo automático 4G</span></div>
+          <div class="layer hot"><b>Internet</b><span>HTTPS con TLS 1.3 sobre HTTP/2 · WebSocket seguro</span></div>
+          <div class="layer"><b>Proxy inverso (Nginx)</b><span>Entrada única: terminación TLS, compresión, límite de tasa y balanceo</span></div>
+          <div class="layer"><b>Servidores de aplicación ×2</b><span>API REST y servidor WebSocket · tolerancia a fallos y escalado horizontal</span></div>
+          <div class="layer"><b>Módulos de negocio</b><span>Auth · Catálogo · Pedidos · Pagos · Inventario · Facturación · Rappi · Sincronización</span></div>
+          <div class="layer"><b>Datos</b><span>PostgreSQL primario y réplica de lectura · Redis (caché y Pub/Sub) · almacén de objetos</span></div>
+          <div class="layer hot"><b>Cola y trabajadores</b><span>Hablan con la DIAN y con Rappi fuera del flujo de la venta</span></div>
+        </div>
+        <p class="small" style="font-size:17px">El CDN entrega imágenes de menú y archivos de la PWA desde nodos cercanos, y absorbe cerca del 90% del tráfico del origen.</p>
+      </div>
+    </section>
+
+
+    <!-- mapa -->
+    <section class="slide" id="smap" data-sec="Mapa de la plataforma">
+      <div class="kicker">Todos los bloques y cómo se conectan entre sí</div>
+      <h2>Mapa de la infraestructura</h2>
+      <div class="body">
+        <div class="mapa">
+
+          <div class="zone">
+            <h4>Clientes y usuarios</h4>
+            <div class="bk"><b>Comensal</b><span>Escanea el QR, consulta el menú, pide domicilio</span></div>
+            <div class="bk"><b>Sede / restaurante</b><span>POS (PWA), mesas, caja, modo offline</span></div>
+            <div class="bk"><b>Cocina (KDS)</b><span>Recibe comandas en tiempo real</span></div>
+            <div class="bk"><b>Administrador</b><span>Panel multi-sede, reportes, catálogo</span></div>
+          </div>
+
+          <div class="midcol">
+            <div class="flow">→</div>
+            <div class="cloud">Internet</div>
+            <div class="wire">HTTPS · TLS 1.3<br>HTTP/2 · WSS</div>
+            <div class="wire" style="color:var(--flame)">Router local<br>+ respaldo 4G/LTE</div>
+            <div class="flow">→</div>
+          </div>
+
+          <div class="zone hot">
+            <h4>Infraestructura en la nube (producción)</h4>
+            <div class="svcgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">
+              <div class="svc"><b>CDN</b><span>Contenido estático e imágenes</span></div>
+              <div class="svc"><b>Nginx</b><span>Proxy inverso, TLS, límite de tasa, balanceo</span></div>
+              <div class="svc"><b>API Gateway</b><span>Autenticación, enrutamiento, monitoreo</span></div>
+            </div>
+            <h4 style="margin-top:2px">Servicios de aplicación</h4>
+            <div class="svcgrid">
+              <div class="svc"><b>Auth</b><span>Usuarios y roles</span></div>
+              <div class="svc"><b>Sedes</b><span>Cadenas y sedes</span></div>
+              <div class="svc"><b>Catálogo</b><span>Productos y menú</span></div>
+              <div class="svc"><b>Pedidos</b><span>Pedidos y comandas</span></div>
+              <div class="svc"><b>Mesas</b><span>Estado del salón</span></div>
+              <div class="svc"><b>Pagos</b><span>Caja y cierre</span></div>
+              <div class="svc"><b>Inventario</b><span>Insumos y recetas</span></div>
+              <div class="svc"><b>Facturación</b><span>Documento electrónico</span></div>
+              <div class="svc"><b>Rappi</b><span>Integración externa</span></div>
+              <div class="svc"><b>Notificaciones</b><span>Correo y eventos</span></div>
+              <div class="svc"><b>Reportes</b><span>Analítica multi-sede</span></div>
+              <div class="svc"><b>Sincronización</b><span>Cola offline</span></div>
+              <div class="svc rt"><b>Servidor WebSocket</b><span>Tiempo real entre caja, cocina y meseros</span></div>
+              <div class="svc rt"><b>Cola y trabajadores</b><span>Tareas asíncronas hacia DIAN y Rappi</span></div>
+            </div>
+          </div>
+
+          <div class="zone">
+            <h4>Servicios externos</h4>
+            <div class="bk"><b>DIAN</b><span>Vía proveedor tecnológico · validación en línea</span></div>
+            <div class="bk"><b>Rappi</b><span>API de aliados · recepción de pedidos</span></div>
+            <div class="bk"><b>Otros</b><span>Pasarelas de pago, correo (SMTP)</span></div>
+            <div class="wire" style="margin-top:8px;text-align:left">HTTPS · REST / SOAP</div>
+          </div>
+        </div>
+
+        <div class="zone" style="padding:9px 12px">
+          <h4>Capa de datos</h4>
+          <div class="datag">
+            <div class="svc"><b>PostgreSQL</b><span>Transaccional, ACID, multi-tenant</span></div>
+            <div class="svc"><b>Réplica de lectura</b><span>Consultas analíticas y reportes</span></div>
+            <div class="svc"><b>Redis</b><span>Caché, sesiones, Pub/Sub</span></div>
+            <div class="svc"><b>Cola de mensajes</b><span>Eventos y trabajos diferidos</span></div>
+            <div class="svc"><b>Almacén de objetos</b><span>XML fiscales e imágenes</span></div>
+          </div>
+        </div>
+
+        <div class="strip">
+          <b>Monitoreo, seguridad y operación</b>
+          <span>Logs y métricas · Respaldos diarios · Gestión de secretos · SSH con llaves · Row Level Security</span>
+        </div>
+
+        <div class="leyenda">
+          <span><i class="ln"></i>Tráfico de usuarios (HTTPS)</span>
+          <span><i class="ln int"></i>Comunicación interna (REST)</span>
+          <span><i class="ln rt"></i>Tiempo real (WebSocket)</span>
+          <span><i class="ln ext"></i>Servicios externos</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" id="s8" data-sec="Infraestructura">
+      <div class="kicker">Un componente lógico no equivale a un servidor físico</div>
+      <h2>Dos infraestructuras distintas</h2>
+      <div class="body">
+        <div class="cols c2">
+          <div class="panel">
+            <h3>Para desarrollar</h3>
+            <ul style="margin-top:12px">
+              <li class="b">PC del desarrollador con Docker Compose</li>
+              <li class="b">API, PostgreSQL y Redis en contenedores locales</li>
+              <li class="b">Frontend PWA en servidor de desarrollo</li>
+              <li class="b">Git y GitHub · colección de pruebas de API</li>
+              <li class="b">Un VPS pequeño con HTTPS para la beta</li>
+            </ul>
+            <p class="small" style="margin-top:14px">Una PWA con Service Worker solo funciona bajo HTTPS: el certificado no es opcional, es requisito del navegador.</p>
+          </div>
+          <div class="panel hot">
+            <h3>Para producción</h3>
+            <ul style="margin-top:12px">
+              <li class="b"><span class="tag">contenedor</span> proxy inverso, workers y servicios de negocio</li>
+              <li class="b"><span class="tag">máquina</span> los dos servidores de aplicación</li>
+              <li class="b"><span class="tag hot">administrado</span> PostgreSQL con réplica y Redis</li>
+              <li class="b"><span class="tag hot">por consumo</span> CDN y almacén de objetos</li>
+              <li class="b"><span class="tag">incluido</span> monitoreo, logs centralizados y respaldos diarios</li>
+            </ul>
+            <p class="small" style="margin-top:14px">La base de datos y la caché conviene contratarlas administradas: ahí el proveedor asume respaldos, réplica y parches.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" id="s9" data-sec="Servicios y despliegue">
+      <div class="kicker">Diseño lógico de responsabilidades</div>
+      <h2>Monolito modular primero, microservicios después</h2>
+      <div class="body">
+        <div class="cols c4" style="gap:13px">
+          <div class="panel"><h3 style="font-size:17px">Identidad</h3><p class="small">Auth · Usuarios y roles · Cadenas · Sedes</p></div>
+          <div class="panel"><h3 style="font-size:17px">Operación</h3><p class="small">Catálogo · Pedidos · Mesas · Pagos · Inventario</p></div>
+          <div class="panel"><h3 style="font-size:17px">Integración</h3><p class="small">Facturación DIAN · Rappi · Notificaciones</p></div>
+          <div class="panel"><h3 style="font-size:17px">Plataforma</h3><p class="small">Sincronización · Reportes · Tiempo real</p></div>
+        </div>
+        <div class="rule"></div>
+        <div class="cols c3" style="gap:16px">
+          <div class="panel hot"><h3 style="font-size:17px">Trabajadores asíncronos</h3><p class="small">Se separan porque no pueden bloquear la caja esperando a un tercero</p></div>
+          <div class="panel hot"><h3 style="font-size:17px">Servidor WebSocket</h3><p class="small">Se separa porque mantiene 180 conexiones persistentes abiertas</p></div>
+          <div class="panel hot"><h3 style="font-size:17px">Reportes</h3><p class="small">Se separa porque consulta la réplica y no debe frenar las cajas</p></div>
+        </div>
+        <p class="lede">A media transacción por segundo, partir el sistema en catorce servicios daría latencia entre servicios y transacciones distribuidas donde hoy hay una sola transacción ACID. Las fronteras quedan dibujadas para extraer cualquiera cuando tenga una razón real para escalar solo.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" id="s10" data-sec="APIs y protocolos">
+      <div class="kicker">Interfaces internas y externas</div>
+      <h2>APIs y protocolos</h2>
+      <div class="body">
+        <div class="cols c2" style="gap:30px">
+          <div>
+            <h3 style="font-size:20px;margin-bottom:12px">API interna, REST sobre HTTPS</h3>
+            <table style="font-size:15px">
+              <tr><td class="mono">POST /auth/login</td><td>Auth</td></tr>
+              <tr><td class="mono">GET&nbsp;&nbsp;/productos</td><td>Catálogo · se cachea en la sede</td></tr>
+              <tr><td class="mono">GET&nbsp;&nbsp;/menu/{cadena}/{sede}</td><td>Público, sin autenticación</td></tr>
+              <tr><td class="mono">POST /pedidos</td><td>Pedidos · viaja con su UUID</td></tr>
+              <tr><td class="mono">POST /pagos</td><td>Pagos · encola el documento fiscal</td></tr>
+              <tr><td class="mono">GET&nbsp;&nbsp;/reportes/ventas</td><td>Reportes · réplica de lectura</td></tr>
+              <tr><td class="mono">POST /sync</td><td>Sincronización · idempotente</td></tr>
+            </table>
+            <p class="small" style="margin-top:13px">El identificador de la cadena se toma del token, nunca de un parámetro que envíe el cliente.</p>
+          </div>
+          <div>
+            <h3 style="font-size:20px;margin-bottom:12px">Protocolos y por qué los usamos</h3>
+            <table style="font-size:15px">
+              <tr><td style="width:148px"><span class="tag">HTTPS · TLS 1.3</span></td><td>Todo el tráfico cifrado; menos latencia en el saludo inicial</td></tr>
+              <tr><td><span class="tag">HTTP/2</span></td><td>El menú QR trae muchas imágenes pequeñas, multiplexadas en una conexión</td></tr>
+              <tr><td><span class="tag hot">WebSocket</span></td><td>La cocina no recarga la página: el servidor empuja el evento</td></tr>
+              <tr><td><span class="tag">DNS</span></td><td>Subdominio por cadena, aislamiento visible para el cliente</td></tr>
+              <tr><td><span class="tag">SSH</span></td><td>Solo con llaves públicas, sin acceso por contraseña</td></tr>
+              <tr><td><span class="tag">NTP</span></td><td>La marca de tiempo fiscal tiene valor legal y ordena eventos entre sedes</td></tr>
+              <tr><td><span class="tag">SMTP · syslog</span></td><td>Comprobantes al comensal y registro centralizado</td></tr>
+            </table>
+          </div>
+        </div>
+        <p class="small" style="font-size:16px">Externas: DIAN a través de proveedor tecnológico autorizado y la API de aliados de Rappi con OAuth 2.0. Ambas diseñadas contra documentación oficial, todavía sin credenciales de producción.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide" id="s11" data-sec="Base de datos">
+      <div class="kicker">PostgreSQL como almacén principal</div>
+      <h2>Datos y aislamiento entre clientes</h2>
+      <div class="body">
+        <div class="cols c2" style="gap:30px">
+          <div>
+            <h3 style="font-size:20px;margin-bottom:12px">Por qué relacional</h3>
+            <ul>
+              <li class="b">Una venta afecta pedido, detalle, pago, documento fiscal e inventario a la vez: se confirma completa o no se confirma</li>
+              <li class="b">La numeración fiscal debe ser consecutiva y sin huecos por sede, y las restricciones lo garantizan</li>
+              <li class="b">Los reportes por sede, producto, canal y franja horaria son consultas SQL naturales</li>
+              <li class="b">Nueve mil transacciones diarias no justifican una base distribuida NoSQL, y adoptarla sacrificaría la consistencia que el caso fiscal exige</li>
+            </ul>
+            <p class="small" style="margin-top:14px">Redis para sesiones, menús calientes y el canal Pub/Sub que alimenta los WebSocket. Almacén de objetos para los XML fiscales y las imágenes.</p>
+          </div>
+          <div class="panel hot">
+            <h3>Multi-tenant</h3>
+            <p class="small" style="margin:10px 0 16px">Una sola instalación atiende a muchas cadenas con sus datos aislados.</p>
+            <div style="font-family:var(--mono);font-size:15px;line-height:2;color:var(--ash)">
+              Cadena A &nbsp;→&nbsp; Sede 1 · Sede 2 · Sede 3<br>
+              Cadena B &nbsp;→&nbsp; Sede 1 · Sede 2
+            </div>
+            <div class="rule" style="margin:18px 0"></div>
+            <p class="small">Columna <span class="mono">cadena_id</span> más Row Level Security de PostgreSQL. La restricción vive en el motor, no en el código: aunque un desarrollador olvide un filtro, la base filtra igual.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide" id="s12" data-sec="Seguridad">
+      <div class="kicker">Definido en el proyecto</div>
+      <h2>Seguridad</h2>
+      <div class="body">
+        <div class="cols c4" style="gap:14px">
+          <div class="panel"><h3 style="font-size:17px">Cifrado</h3><p class="small">TLS 1.3 extremo a extremo en POS, menú QR, panel y APIs</p></div>
+          <div class="panel"><h3 style="font-size:17px">Roles</h3><p class="small">Un mesero no anula ventas ni ve el consolidado del dueño</p></div>
+          <div class="panel"><h3 style="font-size:17px">Límite de tasa</h3><p class="small">En el proxy inverso, contra fuerza bruta y abuso de la API</p></div>
+          <div class="panel"><h3 style="font-size:17px">Aislamiento</h3><p class="small">Row Level Security a nivel del motor de base de datos</p></div>
+          <div class="panel"><h3 style="font-size:17px">Acceso SSH</h3><p class="small">Solo llaves públicas, sin acceso por contraseña</p></div>
+          <div class="panel"><h3 style="font-size:17px">Respaldos</h3><p class="small">Diarios con retención; cinco años para documentos fiscales</p></div>
+          <div class="panel"><h3 style="font-size:17px">Registro</h3><p class="small">Logs y métricas centralizados para diagnóstico y auditoría</p></div>
+          <div class="panel"><h3 style="font-size:17px">Credenciales</h3><p class="small">Secretos fuera del repositorio, en variables de entorno</p></div>
+        </div>
+        <p class="small" style="font-size:17px">Si le roban la tablet a un mesero: la sesión es por rol, el token tiene vida corta y se revoca desde el panel, y en el dispositivo solo hay la operación pendiente de esa sede.</p>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="slide" id="s13" data-sec="Modo offline">
+      <div class="kicker">12:40, hora pico, se cae el internet en una sede</div>
+      <h2>La sede sigue vendiendo</h2>
+      <div class="body">
+        <div id="demo">
+          <div>
+            <div id="queuebox">
+              <div id="queuehead">
+                <div>
+                  <div id="qcount">0</div>
+                  <div class="small" id="qlabel">ventas pendientes de sincronizar</div>
+                </div>
+                <div class="tag" id="qmode">Caja en línea</div>
+              </div>
+              <div id="qlist"></div>
+            </div>
+            <div style="display:flex;gap:11px;margin-top:15px">
+              <button class="act" id="btnoff">Cortar la conexión</button>
+              <button class="act" id="btnon" disabled>Restablecer la conexión</button>
+            </div>
+            <div id="banner">El POS opera contra el servidor central. Cada venta se registra en línea.</div>
+          </div>
+          <div>
+            <ul>
+              <li class="b">La PWA ya está cargada: el POS no depende de la red para seguir funcionando</li>
+              <li class="b">Cada venta se guarda en IndexedDB con un identificador único generado <b style="color:var(--hot)">en la sede</b></li>
+              <li class="b">El consecutivo fiscal sale del rango pre-asignado a esa sede, así dos sedes nunca lo repiten</li>
+              <li class="b">Al volver la conexión la cola se envía por lotes y el servidor compara los identificadores</li>
+              <li class="b">Si una respuesta se perdió y la sede reenvía, llega el mismo identificador y el servidor no duplica la venta</li>
+            </ul>
+            <div class="rule" style="margin:18px 0"></div>
+            <p class="small" style="font-size:17px">Eso es idempotencia, y es lo que hace que reintentar sea seguro. Sin internet no carga el menú QR ni entran pedidos de Rappi: lo que se protege es la sala y la caja, que es donde está el dinero.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="slide" id="s14" data-sec="Escalabilidad">
+      <div class="kicker">Escenario de dimensionamiento al cierre del año 1</div>
+      <h2>El reto no es el volumen</h2>
+      <div class="body">
+        <div class="cols c5">
+          <div><div class="num">60</div><div class="numlab">sedes de 20 cadenas clientes</div></div>
+          <div><div class="num">9.000</div><div class="numlab">ventas por día en todo el sistema</div></div>
+          <div><div class="num hot">~300</div><div class="numlab">usuarios concurrentes en la hora pico</div></div>
+          <div><div class="num">1.000</div><div class="numlab">sesiones concurrentes de diseño, margen ×3</div></div>
+          <div><div class="num">2</div><div class="numlab">transacciones por segundo en ráfaga</div></div>
+        </div>
+        <div class="rule"></div>
+        <div class="cols c2" style="gap:30px">
+          <p class="lede">Dos transacciones por segundo las mueve cualquier servidor moderno. El reto real de este sistema es la disponibilidad y la sincronización.</p>
+          <p class="lede">Por eso el requisito que le ponemos al restaurante no es contratar más megas: con menos de 100 kbps por sede basta. Es instalar un router con conmutación automática a 4G.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 -->
+    <section class="slide" id="s15" data-sec="Cierre">
+      <div class="kicker">Modelo de negocio</div>
+      <h2>$79.000 por sede al mes, todo incluido</h2>
+      <div class="body">
+        <div class="cols c3">
+          <div class="ticket"><h3>Sin plan superior</h3><p>La multi-sede es el centro del diseño, no una función que se desbloquea pagando más.</p></div>
+          <div class="ticket"><h3>Sin add-on</h3><p>La integración con plataformas de domicilio viene incluida.</p></div>
+          <div class="ticket"><h3>Sin software extra</h3><p>No exigimos contratar un sistema contable aparte.</p></div>
+        </div>
+        <div class="rule" style="margin-top:28px"></div>
+        <p style="font-size:27px;line-height:1.42;max-width:58ch;margin-top:8px;color:var(--ash)">La operación offline no es una función que un competidor pueda agregar después. Obliga a rediseñar el cliente, la numeración fiscal y la sincronización desde el principio.</p>
+        <p style="font-family:var(--serif);font-size:31px;line-height:1.35;max-width:52ch;color:var(--flame)">Es una barrera de entrada técnica, no una casilla de una lista de características.</p>
+      </div>
+    </section>
+
+  </div>
+  <div id="bar"></div>
+</div>
+
+<div id="notes"><h4 id="notetime"></h4><div id="notebody"></div></div>
+<div id="help">← → avanzar · N notas · T cronómetro · R reiniciar demo · F pantalla completa</div>
+
+<script>
+(function(){
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var i = 0, total = slides.length, deck = document.getElementById('deck');
+
+  function fit(){
+    var s = Math.min(window.innerWidth/1280, window.innerHeight/720) * 0.97;
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  function go(n){
+    if(n < 0 || n >= total) return;
+    slides[i].classList.remove('on');
+    i = n;
+    slides[i].classList.add('on');
+    document.getElementById('pager').textContent = (i+1) + ' / ' + total;
+    document.getElementById('secname').textContent = slides[i].dataset.sec;
+    document.getElementById('bar').style.width = ((i+1)/total*100) + '%';
+    renderNotes();
+  }
+
+  var left = 15*60, running = false, tid = null, tEl = document.getElementById('timer');
+  function paint(){
+    var m = Math.floor(Math.abs(left)/60), s = Math.abs(left)%60;
+    tEl.textContent = (left<0?'-':'') + m + ':' + (s<10?'0':'') + s;
+    tEl.className = left < 0 ? 'over' : (left <= 180 ? 'warn' : '');
+  }
+  function toggleTimer(){
+    if(running){ clearInterval(tid); running = false; }
+    else { tid = setInterval(function(){ left--; paint(); }, 1000); running = true; }
+  }
+  paint();
+
+  var notes = [
+    "Empieza por la escena, no por el producto. \u00abSon las 12:40 de un martes en Bogot\u00e1. Un restaurante con tres sedes est\u00e1 en plena hora de almuerzo. En una de ellas se cae el internet. Con el software que hoy usa la mayor\u00eda de restaurantes en Colombia, la caja se detiene. No es una molestia: son ventas perdidas.\u00bb Pausa de dos segundos. Si el docente tiene el documento a la mano, aclara de una: el proyecto es el mismo, la marca se acort\u00f3 a Comanda.",
+    "Nuestro cliente es una micro-cadena de 2 a 8 sedes. Tiene una necesidad que el restaurante de una sola sede no tiene: consolidar la operaci\u00f3n de varios puntos. Y est\u00e1 desatendido porque las soluciones robustas le quedan costosas y las econ\u00f3micas est\u00e1n pensadas para una sola sede. Recorre los cuatro dolores sin leerlos textualmente.",
+    "Es un servicio telem\u00e1tico puro: no hay servidor dentro del restaurante. Las sedes, los comensales y el administrador se conectan por internet a un servidor central que registra cada venta, la valida fiscalmente, mantiene sincronizadas las sedes y entrega un panel consolidado en tiempo real. El comensal entra por QR desde el navegador, sin instalar nada.",
+    "Precios verificados a agosto de 2026. Son productos serios, todos en la nube. Pero comparten la misma debilidad estructural para nuestro segmento. Reconoce t\u00fa mismo nuestra limitaci\u00f3n: Comanda todav\u00eda no existe en el mercado, requiere desarrollo, habilitaci\u00f3n DIAN y aprobaci\u00f3n de Rappi. Esa honestidad suma.",
+    "Cinco bloques. En la sede: POS, caja, mesas, comandas y cocina. Comensal: men\u00fa QR y domicilio web. Integraciones: plataformas y documento equivalente electr\u00f3nico. Administraci\u00f3n: panel, reportes, cat\u00e1logo, inventario, usuarios. Y la plataforma misma: offline, sincronizaci\u00f3n y tiempo real.",
+    "Recorre el flujo con verbos. Al llegar al paso 6, subraya la decisi\u00f3n de dise\u00f1o: la caja nunca espera a un servicio externo. Si la DIAN responde lento, el cliente ya se fue con su comida.",
+    "De arriba abajo. Las sedes salen por internet con respaldo 4G. Todo entra por un proxy inverso Nginx que hace TLS 1.3, HTTP/2, l\u00edmite de tasa y balanceo. Detr\u00e1s, dos servidores de aplicaci\u00f3n: dos por tolerancia a fallos y para escalar horizontal. Debajo, tres almacenes con prop\u00f3sitos distintos. Y una cola con trabajadores que hablan con la DIAN y con Rappi.",
+    "Es la foto completa: cuatro zonas. A la izquierda qui\u00e9n usa el sistema. En el centro, internet con el respaldo 4G de cada sede. En la nube, la entrada por CDN, Nginx y gateway, los servicios de aplicaci\u00f3n y, abajo, la capa de datos. A la derecha, los dos servicios externos. No recorras caja por caja: se\u00f1ala las cuatro zonas, di que el WebSocket y la cola est\u00e1n resaltados porque son procesos separados, y sigue.",
+    "Distingue las dos infraestructuras. Para desarrollar basta el PC con Docker Compose y un VPS con HTTPS para la beta. Menciona que una PWA con Service Worker no funciona sin HTTPS: es requisito del navegador. Para producci\u00f3n, aclara que componente l\u00f3gico no es igual a servidor f\u00edsico.",
+    "Justifica la decisi\u00f3n: los microservicios resuelven problemas de organizaci\u00f3n y de escala independiente que a media transacci\u00f3n por segundo no tenemos. Lo que s\u00ed separamos desde el d\u00eda uno son tres procesos, cada uno por una raz\u00f3n concreta. Cuando un m\u00f3dulo tenga raz\u00f3n real para escalar solo, se extrae.",
+    "No leas la tabla entera: se\u00f1ala tres o cuatro. El punto que debes decir s\u00ed o s\u00ed: el identificador de la cadena se toma del token, nunca de un par\u00e1metro del cliente. Si preguntan por WebSocket contra polling: con polling cada tres segundos, 180 terminales generar\u00edan 60 peticiones por segundo solo para preguntar si hay novedades.",
+    "Cuatro razones para PostgreSQL: ACID, exigencia fiscal, anal\u00edtica y multi-tenant. Descarta NoSQL de forma expl\u00edcita. Y en multi-tenant, la frase clave: la restricci\u00f3n vive en el motor, no en el c\u00f3digo. Aunque un desarrollador olvide un filtro, PostgreSQL filtra igual.",
+    "Recorre r\u00e1pido: cifrado, roles, l\u00edmite de tasa, aislamiento, SSH solo con llaves, respaldos con retenci\u00f3n de cinco a\u00f1os para lo fiscal. Ten lista la respuesta de la tablet robada.",
+    "BAJA EL RITMO. Esta es tu diapositiva. Narra la l\u00ednea de tiempo y pulsa 'Cortar la conexi\u00f3n' mientras hablas: el fondo se calienta y la cola empieza a llenarse. Luego 'Restablecer la conexi\u00f3n' y se\u00f1ala el duplicado descartado. Los dos detalles t\u00e9cnicos: el UUID lo genera la sede, no el servidor; y los rangos de numeraci\u00f3n evitan consecutivos repetidos. Cierra reconociendo los l\u00edmites del modo offline.",
+    "Da las cifras sin leerlas todas. La conclusi\u00f3n es contraintuitiva y hay que decirla claro: la carga es baja, el reto es disponibilidad y sincronizaci\u00f3n. Por eso el requisito no es m\u00e1s ancho de banda sino conexi\u00f3n que no se caiga.",
+    "No somos los m\u00e1s baratos del papel: una hora de caja detenida en el almuerzo cuesta m\u00e1s que la diferencia mensual. Vendemos continuidad de operaci\u00f3n. Termina con la barrera de entrada t\u00e9cnica y qu\u00e9date callado. No agregues 'bueno, eso ser\u00eda'."
+  ];
+  var marks = ["0:00","0:45","1:55","2:50","3:55","4:45","5:45","6:30","7:10","8:05","9:10","10:25","11:25","12:00","13:30","14:15"];
+  function renderNotes(){
+    document.getElementById('notetime').textContent = 'Diapositiva ' + (i+1) + ' · minuto ' + marks[i];
+    document.getElementById('notebody').innerHTML = '<p>' + notes[i] + '</p>';
+  }
+  renderNotes();
+
+  var platos = ["Bandeja paisa","Ajiaco santafere\u00f1o","Menu del dia","Sancocho","Cazuela de frijoles","Trucha al ajillo","Lomo al trapo","Arroz con pollo","Changua","Mojarra frita"];
+  var q = [], gen = null, seq = 0;
+  var qcount = document.getElementById('qcount'), qlist = document.getElementById('qlist'),
+      qmode = document.getElementById('qmode'), qlabel = document.getElementById('qlabel'),
+      banner = document.getElementById('banner'),
+      bOff = document.getElementById('btnoff'), bOn = document.getElementById('btnon');
+
+  function uuid(){
+    var h = "0123456789abcdef", s = "";
+    for(var k=0;k<8;k++) s += h[Math.floor(Math.random()*16)];
+    return s;
+  }
+  function draw(){
+    qcount.textContent = q.filter(function(r){return r.st==='pend';}).length;
+    qlist.innerHTML = q.slice(-6).map(function(r){
+      var cls = r.st === 'sync' ? 'sync' : (r.st === 'dup' ? 'dup' : 'pend');
+      var txt = r.st === 'sync' ? 'sincronizada' : (r.st === 'dup' ? 'duplicado descartado' : 'en cola');
+      return '<div class="qrow ' + cls + '"><span>#' + r.n + '</span><span>' + r.uuid +
+             '</span><span style="color:var(--smoke)">' + r.plato + '</span><span class="st">' + txt + '</span></div>';
+    }).join('');
+  }
+  function goOffline(){
+    document.body.dataset.net = 'off';
+    document.getElementById('netlabel').textContent = 'SIN CONEXI\u00d3N';
+    qmode.textContent = 'Caja sin conexi\u00f3n'; qmode.className = 'tag hot';
+    banner.textContent = 'Sin internet. Las ventas se guardan en IndexedDB con su UUID y su consecutivo del rango de la sede.';
+    bOff.disabled = true; bOn.disabled = false;
+    gen = setInterval(function(){
+      seq++;
+      q.push({n:1240+seq, uuid:uuid(), plato:platos[Math.floor(Math.random()*platos.length)], st:'pend'});
+      draw();
+    }, 850);
+  }
+  function goOnline(){
+    clearInterval(gen); gen = null;
+    document.body.dataset.net = 'on';
+    document.getElementById('netlabel').textContent = 'Sedes en l\u00ednea';
+    bOn.disabled = true;
+    banner.textContent = 'Conexi\u00f3n restablecida. La cola se env\u00eda por lotes a POST /sync.';
+    qlabel.textContent = 'enviando la cola y comparando identificadores';
+    var pend = q.filter(function(r){return r.st === 'pend';}), k = 0;
+    var flush = setInterval(function(){
+      if(k >= pend.length){
+        clearInterval(flush);
+        if(pend.length){
+          var dupe = pend[pend.length-1];
+          q.push({n:dupe.n, uuid:dupe.uuid, plato:dupe.plato, st:'dup'});
+          draw();
+        }
+        qmode.textContent = 'Caja en l\u00ednea'; qmode.className = 'tag';
+        qlabel.textContent = 'cola vac\u00eda · nada se perdi\u00f3, nada se duplic\u00f3';
+        banner.textContent = 'El servidor compar\u00f3 los UUID, descart\u00f3 el reenv\u00edo repetido y dispar\u00f3 el documento fiscal y el inventario.';
+        bOff.disabled = false;
+        return;
+      }
+      pend[k].st = 'sync'; k++; draw();
+    }, 260);
+  }
+  function resetDemo(){
+    clearInterval(gen); gen = null; q = []; seq = 0;
+    document.body.dataset.net = 'on';
+    document.getElementById('netlabel').textContent = 'Sedes en l\u00ednea';
+    qmode.textContent = 'Caja en l\u00ednea'; qmode.className = 'tag';
+    qlabel.textContent = 'ventas pendientes de sincronizar';
+    banner.textContent = 'El POS opera contra el servidor central. Cada venta se registra en l\u00ednea.';
+    bOff.disabled = false; bOn.disabled = true;
+    draw();
+  }
+  bOff.addEventListener('click', goOffline);
+  bOn.addEventListener('click', goOnline);
+  draw();
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); go(i+1); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); go(i-1); }
+    else if(e.key === 'Home'){ go(0); }
+    else if(e.key === 'End'){ go(total-1); }
+    else if(e.key === 'n' || e.key === 'N'){ document.body.classList.toggle('notes-on'); }
+    else if(e.key === 't' || e.key === 'T'){ toggleTimer(); }
+    else if(e.key === 'r' || e.key === 'R'){ resetDemo(); }
+    else if(e.key === 'f' || e.key === 'F'){
+      if(document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    }
+  });
+  deck.addEventListener('click', function(e){
+    if(e.target.tagName === 'BUTTON') return;
+    if(i === 13) return;
+    go(i+1);
+  });
+})();
+</script>
+</body>
+</html>

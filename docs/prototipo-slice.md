@@ -4,6 +4,12 @@ Este documento existe para poder sustentar, en la exposición, la diferencia ent
 lo que dice la propuesta completa de **Comanda Central** (19 servicios) y lo que
 realmente corre en este prototipo local (un *vertical slice*).
 
+Los documentos fuente completos (propuesta y guion de sustentación) están en
+[`docs/propuesta/`](propuesta/): `comanda-central-propuesta.pdf` (documento
+oficial de la asignatura) y `comanda-central-sustentacion.html` (slides +
+notas del orador, se abre directo en el navegador). Todo lo que este archivo
+dice sobre "qué pide la propuesta" viene de ahí.
+
 ## Vertical slice implementado
 
 Flujo demostrado end-to-end, en local, con dos pestañas del navegador:
@@ -14,9 +20,23 @@ Flujo demostrado end-to-end, en local, con dos pestañas del navegador:
 4. Caja cobra, genera un documento fiscal **simulado** con consecutivo por sede
    (**CU-02**, versión simulada, sin DIAN real) y libera la mesa.
 
-Módulos de backend que participan: `AuthModule`, `TenantsModule`, `BranchesModule`,
-`UsersModule`, `CatalogModule`, `TablesModule`, `OrdersModule`, `PaymentsModule`,
-`RealtimeModule`.
+Módulos de backend que participan: `AuthModule`, `BranchesModule`,
+`CatalogModule`, `TablesModule`, `OrdersModule`, `PaymentsModule`,
+`RealtimeModule`, `ReportsModule`. (`TenantsModule`/`UsersModule` de la
+propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
+
+## Los 8 casos de uso de la propuesta (§3.1) y su estado aquí
+
+| Caso de uso | Estado en el prototipo |
+|---|---|
+| CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
+| CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede, pero no se transmite a la DIAN. |
+| CU-03 Menú QR | **No implementado.** No hay `GET /menu/{cadena}/{sede}` público ni vista de comensal. |
+| CU-04 Domicilio web | **No implementado.** |
+| CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
+| CU-06 Panel multi-sede | **No implementado.** El frontend asume una sola sede (ver `useSedeActual`); no hay vista consolidada entre cadenas/sedes. |
+| CU-07 Operación sin conexión | **No implementado.** Solo se tomó la idea de idempotencia (UUID del cliente en `Pedido`); no hay IndexedDB, cola local ni `POST /sync`. |
+| CU-08 Catálogo centralizado | **No aplica a esta escala.** Con una sola sede por cadena en el seed, no hay nada que propagar entre sedes. |
 
 ## Explícitamente fuera de alcance (stubs marcados en código)
 
@@ -27,20 +47,56 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - Integración real con la **DIAN** (facturación electrónica) — el documento fiscal
   es simulado, `estado_dian` siempre queda en `SIMULADO`, `url_xml` siempre `null`.
 - Integración con **Rappi** u otras plataformas de domicilios.
-- **Menú QR** público para clientes.
+- **Menú QR** público para clientes (`GET /menu/{cadena}/{sede}` de la
+  propuesta, slide 10, no existe en este backend).
 - **Domicilios web** propios.
-- **Panel multi-sede consolidado** (reportes cruzando varias sedes).
-- **Modo offline / PWA** en el cliente del mesero.
-- **Réplica de lectura** de base de datos.
+- **Panel multi-sede consolidado** (reportes cruzando varias sedes/cadenas).
+- **Modo offline / PWA** en el cliente del mesero (IndexedDB, cola local,
+  `POST /sync`) — solo se tomó la idea de idempotencia por UUID, no el modo
+  offline en sí.
+- **Réplica de lectura** de base de datos (la propuesta la usa específicamente
+  para separar los reportes de la carga transaccional; aquí `ReportsService`
+  lee de la misma instancia que todo lo demás).
 - **Row Level Security (RLS)** de PostgreSQL para aislamiento multi-tenant — en
   el prototipo el aislamiento por `cadena_id` se aplica a nivel de aplicación
   (filtros explícitos en cada query), no a nivel de motor de base de datos.
-- **HTTPS/TLS y WSS** — en local todo corre sobre HTTP/WS sin cifrado; en
+- **HTTPS/TLS 1.3 y WSS** — en local todo corre sobre HTTP/WS sin cifrado; en
   producción esto sería obligatorio (ver README, sección "Servicios
   telemáticos usados y por qué").
-- **DNS / subdominio por cadena** para multi-tenant en producción — en el
-  prototipo el tenant se resuelve por el `cadena_id` embebido en el JWT, no por
-  subdominio.
+- **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
+  `lacadena.comandacentral.co`) — en el prototipo el tenant se resuelve por el
+  `cadena_id` embebido en el JWT, no por subdominio.
+- **Infraestructura de alta disponibilidad** de la propuesta (§5.1): CDN,
+  proxy inverso Nginx con límite de tasa, dos servidores de aplicación
+  balanceados, cola de mensajes + trabajadores asíncronos para DIAN/Rappi,
+  almacén de objetos separado, monitoreo y respaldos. El prototipo es una
+  sola instancia de cada pieza (un backend, un Postgres, un Redis) porque el
+  volumen de una demo no lo justifica.
+- **SSH (solo con llaves), NTP, SMTP y Syslog centralizado** (§5.2 de la
+  propuesta) — protocolos de operación de servidores de producción; no
+  aplican a un prototipo que corre en Docker local.
+
+## Diferencias con el ER completo de la propuesta (§6.2)
+
+El ER de la propuesta tiene más entidades y campos que el `schema.prisma` de
+este prototipo (ver `backend/prisma/schema.prisma`). Diferencias, todas
+intencionales por alcance:
+
+- **No existen `Cliente`, `Insumo`, `MovimientoInventario` ni `Receta`.** No
+  hay registro de comensales (el pedido solo referencia `mesaId`/`usuarioId`,
+  nunca un cliente) ni gestión de inventario/recetas — vender un producto no
+  descuenta ningún insumo. Ninguno de los dos hace parte del *vertical slice*.
+- **`Pedido.canal`** solo acepta `SALON` (enum `CanalPedido`); la propuesta
+  contempla también domicilio y plataformas, coherente con que CU-04/CU-05 no
+  están implementados.
+- **`DocumentoFiscal`** no tiene el campo `CUDE/CUFE` del ER (el identificador
+  real que asigna la DIAN): no aplica a un documento simulado.
+- **`Sede.rangoNumeracion`** existe en el schema (columna de texto, ver
+  `backend/prisma/schema.prisma`) pero **no se usa de verdad**: el
+  consecutivo del `DocumentoFiscal` es un `MAX(consecutivo) + 1` simple por
+  sede (`PaymentsService.pagar`), no un número tomado del rango pre-asignado
+  que describe la propuesta (§6.3). El campo quedó como recordatorio de la
+  intención original, pendiente si se retoma el proyecto.
 
 ## Decisiones de prototipo (no vienen del documento original)
 
