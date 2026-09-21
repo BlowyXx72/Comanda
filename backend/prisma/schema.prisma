@@ -130,12 +130,12 @@ model Pedido {
   fechaHora DateTime     @default(now()) @map("fecha_hora")
   total     Decimal      @default(0) @db.Decimal(10, 2)
 
-  sede               Sede              @relation(fields: [sedeId], references: [id])
-  mesa               Mesa?             @relation(fields: [mesaId], references: [id])
-  usuario            Usuario           @relation(fields: [usuarioId], references: [id])
-  detalles           PedidoDetalle[]
-  pagos              Pago[]
-  documentosFiscales DocumentoFiscal[]
+  sede            Sede             @relation(fields: [sedeId], references: [id])
+  mesa            Mesa?            @relation(fields: [mesaId], references: [id])
+  usuario         Usuario          @relation(fields: [usuarioId], references: [id])
+  detalles        PedidoDetalle[]
+  pagos           Pago[]
+  documentoFiscal DocumentoFiscal?
 
   @@map("pedidos")
 }
@@ -167,8 +167,10 @@ model Pago {
 }
 
 model DocumentoFiscal {
-  id       String @id @default(uuid())
-  pedidoId String @map("pedido_id")
+  id String @id @default(uuid())
+  // @unique porque un pedido genera a lo sumo un documento fiscal (1:1, igual
+  // que en el ER de la propuesta): antes esto era Pedido 1:N sin querer.
+  pedidoId String @unique @map("pedido_id")
   // Denormalizado desde pedido.sedeId: el consecutivo es por sede, no por pedido,
   // así que necesitamos la sede aquí directamente para la restricción de unicidad.
   sedeId   String @map("sede_id")
