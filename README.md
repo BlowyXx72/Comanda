@@ -50,6 +50,46 @@ curl http://localhost:3000/health
 `/health` valida Postgres con una consulta real vía Prisma y Redis con un
 `PING` real vía `ioredis` (ver `backend/src/health/health.controller.ts`).
 
+## Ver la base de datos (Prisma Studio)
+
+No se levanta solo con `docker compose up`. Para verla/editarla a mano:
+
+```bash
+docker compose exec -d backend npx prisma studio --port 5555 --browser none
+```
+
+`prisma studio` solo escucha en `127.0.0.1` dentro del contenedor (y no
+tiene una bandera para cambiarlo), así que el puerto publicado en
+`docker-compose.yml` (`5556`) no llega directo a él. Hace falta un pequeño
+proxy HTTP en el medio, que además reescribe el encabezado `Host` (Studio
+rechaza con 403 cualquier request cuyo `Host` no coincida con el puerto en
+el que arrancó):
+
+```bash
+docker compose exec -d backend node -e "
+const http = require('http');
+http.createServer((req, res) => {
+  const options = {
+    hostname: '127.0.0.1',
+    port: 5555,
+    path: req.url,
+    method: req.method,
+    headers: { ...req.headers, host: 'localhost:5555', origin: 'http://localhost:5555' },
+  };
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res);
+  });
+  proxyReq.on('error', () => res.destroy());
+  req.pipe(proxyReq);
+}).listen(5556, '0.0.0.0', () => console.log('proxy listo'));
+"
+```
+
+Abre **http://localhost:5556**. Alternativa sin este rodeo: cualquier
+cliente de Postgres (DBeaver, TablePlus, pgAdmin, la extensión de Postgres
+de VSCode) conectado a `localhost:5432` con las credenciales del `.env`.
+
 ## Flujo de la demo
 
 Con dos (o tres) pestañas del navegador abiertas en http://localhost:5173:

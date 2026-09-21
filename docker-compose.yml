@@ -45,6 +45,12 @@ services:
       REDIS_PORT_INTERNAL: 6379
     ports:
       - "${BACKEND_PORT}:3000"
+      # DECISIÓN DE PROTOTIPO: puerto de Prisma Studio (GUI para ver/editar
+      # la base de datos). Solo se usa cuando alguien lo levanta a mano (ver
+      # README); no se inicia solo. `prisma studio` solo escucha en
+      # 127.0.0.1 dentro del contenedor, así que se expone vía un pequeño
+      # proxy TCP en Node (ver README) en vez del puerto de Studio directo.
+      - "5556:5556"
     volumes:
       - ./backend:/app
       - comanda-backend-node-modules:/app/node_modules
