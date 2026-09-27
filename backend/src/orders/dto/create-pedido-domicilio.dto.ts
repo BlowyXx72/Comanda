@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNotEmpty, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsDefined, IsNotEmpty, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
 import { CreatePedidoDetalleDto } from './create-pedido-detalle.dto.js';
 
 export class ClienteDomicilioDto {
@@ -33,6 +33,9 @@ export class CreatePedidoDomicilioDto {
   @IsUUID()
   sedeId!: string;
 
+  // Sin @IsDefined, ValidateNested deja pasar un cliente ausente y Prisma
+  // termina respondiendo 500 en vez de 400.
+  @IsDefined()
   @ValidateNested()
   @Type(() => ClienteDomicilioDto)
   cliente!: ClienteDomicilioDto;
