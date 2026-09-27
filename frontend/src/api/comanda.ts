@@ -166,3 +166,12 @@ export interface PedidoDomicilioCreado {
 
 export const crearPedidoDomicilio = (input: CrearPedidoDomicilioInput) =>
   apiFetch<PedidoDomicilioCreado>('/public/pedidos/domicilio', { method: 'POST', body: JSON.stringify(input) });
+
+// --- Operación sin conexión (CU-07): el mesero vacía su cola local ---
+
+export type ResultadoSync =
+  | { id: string; resultado: 'CREADO' | 'DUPLICADO' }
+  | { id: string; resultado: 'RECHAZADO'; motivo: string };
+
+export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
+  apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);

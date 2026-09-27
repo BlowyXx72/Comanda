@@ -48,11 +48,22 @@ export class OrdersService {
   }
 
   async crear(dto: CreatePedidoDto, usuarioId: string, cadenaId: string) {
+    const { pedido } = await this.crearConResultado(dto, usuarioId, cadenaId);
+    return pedido;
+  }
+
+  // Igual que crear(), pero avisa si el pedido ya existía. Lo usa POST /sync
+  // (SyncModule) para reportar duplicados al vaciar la cola offline (CU-07).
+  async crearConResultado(dto: CreatePedidoDto, usuarioId: string, cadenaId: string) {
     // Idempotencia: el UUID lo generó el cliente, así que un reintento
     // (p. ej. tras perder la respuesta por la red) no debe duplicar el pedido.
     const existente = await this.prisma.pedido.findUnique({ where: { id: dto.id }, include: INCLUDE_PEDIDO });
     if (existente) {
-      return existente;
+      // Un UUID de otra cadena no se confirma ni se devuelve.
+      if (existente.sede.cadenaId !== cadenaId) {
+        throw new NotFoundException(`Pedido ${dto.id} no encontrado`);
+      }
+      return { pedido: existente, duplicado: true };
     }
 
     await this.branchesService.obtenerDeCadena(dto.sedeId, cadenaId);
@@ -79,7 +90,7 @@ export class OrdersService {
     });
 
     this.realtimeGateway.emitirComandaNueva(dto.sedeId, pedido);
-    return pedido;
+    return { pedido, duplicado: false };
   }
 
   // Pedido de domicilio web (CU-04): sin mesa ni usuario interno, con un

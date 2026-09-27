@@ -10,6 +10,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PublicMenuModule } from './public-menu/public-menu.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { SyncModule } from './sync/sync.module.js';
 import { TablesModule } from './tables/tables.module.js';
 
 @Module({
@@ -24,6 +25,7 @@ import { TablesModule } from './tables/tables.module.js';
     ReportsModule,
     HealthModule,
     PublicMenuModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],

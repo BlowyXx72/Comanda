@@ -415,3 +415,30 @@
 .menu-publico-domicilio .login-form {
   max-width: none;
 }
+
+/* --- Operación sin conexión (CU-07) --- */
+
+.banner-offline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #d97706;
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.banner-offline--sincronizando {
+  border-color: var(--accent);
+  background: rgba(170, 59, 255, 0.1);
+}
+
+.banner-offline--rechazo {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  font-weight: normal;
+}
