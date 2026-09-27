@@ -114,3 +114,24 @@ export const actualizarEstadoPedido = (id: string, estado: EstadoPedido, token: 
 
 export const crearPago = (input: CrearPagoInput, token: string) =>
   apiFetch<ResultadoPago>('/pagos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+// --- Menú público (CU-03): sin token, lo consume la vista del comensal ---
+
+export interface ProductoMenu {
+  id: string;
+  nombre: string;
+  precio: string;
+}
+
+export interface CategoriaMenu {
+  categoria: string;
+  productos: ProductoMenu[];
+}
+
+export interface MenuPublico {
+  sede: { id: string; nombre: string; direccion: string };
+  categorias: CategoriaMenu[];
+}
+
+export const obtenerMenuPublico = (cadenaId: string, sedeId: string) =>
+  apiFetch<MenuPublico>(`/menu/${cadenaId}/${sedeId}`);

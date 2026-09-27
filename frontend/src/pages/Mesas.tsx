@@ -1,3 +1,4 @@
+import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   crearPedido,
@@ -13,6 +14,15 @@ import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
 import { formatearCOP } from '../utils/formato';
+
+// DECISIÓN DE PROTOTIPO: el QR se genera en el navegador con `qrcode.react`
+// (la propuesta pide el QR por mesa, no cómo generarlo). Apunta a la vista
+// pública del menú; VITE_PUBLIC_URL permite usar la IP de la red local para
+// escanearlo con un teléfono real (ver .env.example).
+const PUBLIC_URL = import.meta.env.VITE_PUBLIC_URL || window.location.origin;
+
+const urlMenuMesa = (cadenaId: string, sedeId: string, numeroMesa: number) =>
+  `${PUBLIC_URL}/menu/${cadenaId}/${sedeId}?mesa=${numeroMesa}`;
 
 interface ItemCarrito {
   producto: Producto;
@@ -31,6 +41,7 @@ export function MesasPage() {
   const [carrito, setCarrito] = useState<Record<string, ItemCarrito>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mostrarQr, setMostrarQr] = useState(false);
 
   const cargarMesas = async () => {
     if (!token || !sede) return;
@@ -136,7 +147,27 @@ export function MesasPage() {
 
   return (
     <div className="mesas-page">
-      <h1>Mesas — {sede.nombre}</h1>
+      <div className="panel-pedido-header">
+        <h1>Mesas — {sede.nombre}</h1>
+        <button onClick={() => setMostrarQr((v) => !v)}>{mostrarQr ? 'Ocultar QR' : 'Códigos QR del menú'}</button>
+      </div>
+
+      {mostrarQr && (
+        <div className="qr-grid">
+          {mesas.map((mesa) => {
+            const url = urlMenuMesa(sede.cadenaId, sede.id, mesa.numero);
+            return (
+              <div key={mesa.id} className="qr-card">
+                <strong>Mesa {mesa.numero}</strong>
+                <QRCodeSVG value={url} size={140} />
+                <a href={url} target="_blank" rel="noreferrer">
+                  Abrir menú
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mesas-grid">
         {mesas.map((mesa) => (

@@ -6,6 +6,7 @@ import { CajaPage } from './pages/Caja'
 import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
+import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/menu/:cadenaId/:sedeId" element={<MenuPublicoPage />} />
           <Route
             path="/"
             element={
