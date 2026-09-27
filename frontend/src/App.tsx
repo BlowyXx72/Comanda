@@ -7,6 +7,7 @@ import { CatalogoPage } from './pages/Catalogo'
 import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
+import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
 import { PanelPage } from './pages/Panel'
 import { SedeProvider } from './sede/SedeContext'
@@ -20,6 +21,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/menu/:cadenaId/:sedeId" element={<MenuPublicoPage />} />
             <Route
               path="/"
               element={

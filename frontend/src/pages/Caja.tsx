@@ -4,7 +4,7 @@ import { crearPago, listarPedidosActivos, type MedioPago, type Pedido, type Resu
 import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
-import { formatearCOP } from '../utils/formato';
+import { etiquetaPedido, formatearCOP } from '../utils/formato';
 
 export function CajaPage() {
   const { token } = useAuth();
@@ -80,9 +80,14 @@ export function CajaPage() {
           {listos.map((pedido) => (
             <div key={pedido.id} className="comanda-card comanda-card--listo">
               <div className="comanda-card-header">
-                <strong>{pedido.mesa ? `Mesa ${pedido.mesa.numero}` : 'Sin mesa'}</strong>
+                <strong>{etiquetaPedido(pedido)}</strong>
                 <span className="comanda-badge">{formatearCOP(pedido.total)}</span>
               </div>
+              {pedido.cliente && (
+                <p className="panel-nota">
+                  {pedido.cliente.nombre} · {pedido.cliente.telefono} · {pedido.cliente.direccion}
+                </p>
+              )}
               <ul className="lista-items">
                 {pedido.detalles.map((detalle) => (
                   <li key={detalle.id}>
@@ -103,7 +108,7 @@ export function CajaPage() {
             {enPreparacion.map((pedido) => (
               <div key={pedido.id} className="comanda-card comanda-card--en_preparacion">
                 <div className="comanda-card-header">
-                  <strong>{pedido.mesa ? `Mesa ${pedido.mesa.numero}` : 'Sin mesa'}</strong>
+                  <strong>{etiquetaPedido(pedido)}</strong>
                   <span className="comanda-badge">{pedido.estado}</span>
                 </div>
               </div>
@@ -115,7 +120,7 @@ export function CajaPage() {
       {pedidoACobrar && (
         <div className="panel-pedido">
           <div className="panel-pedido-header">
-            <h2>Cobrar {pedidoACobrar.mesa ? `Mesa ${pedidoACobrar.mesa.numero}` : ''}</h2>
+            <h2>Cobrar {etiquetaPedido(pedidoACobrar)}</h2>
             <button onClick={() => setPedidoACobrar(null)}>Cerrar</button>
           </div>
           <p className="carrito-total">Total: {formatearCOP(pedidoACobrar.total)}</p>

@@ -31,11 +31,11 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 |---|---|
 | CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
 | CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede, pero no se transmite a la DIAN. |
-| CU-03 Menú QR | **No implementado.** No hay `GET /menu/{cadena}/{sede}` público ni vista de comensal. |
-| CU-04 Domicilio web | **No implementado.** |
+| CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
+| CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; sin rate limiting (`// TODO PRODUCCIÓN`). |
 | CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
-| CU-07 Operación sin conexión | **No implementado.** Solo se tomó la idea de idempotencia (UUID del cliente en `Pedido`); no hay IndexedDB, cola local ni `POST /sync`. |
+| CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
 | CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
 
 ## Explícitamente fuera de alcance (stubs marcados en código)
@@ -47,13 +47,10 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - Integración real con la **DIAN** (facturación electrónica) — el documento fiscal
   es simulado, `estado_dian` siempre queda en `SIMULADO`, `url_xml` siempre `null`.
 - Integración con **Rappi** u otras plataformas de domicilios.
-- **Menú QR** público para clientes (`GET /menu/{cadena}/{sede}` de la
-  propuesta, slide 10, no existe en este backend).
-- **Domicilios web** propios.
-- **Panel multi-sede consolidado** (reportes cruzando varias sedes/cadenas).
-- **Modo offline / PWA** en el cliente del mesero (IndexedDB, cola local,
-  `POST /sync`) — solo se tomó la idea de idempotencia por UUID, no el modo
-  offline en sí.
+- **Límite de tasa** en los endpoints públicos del menú QR y del domicilio
+  web (CU-03/CU-04): hoy cualquiera puede llamarlos sin freno.
+- **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
+  pedidos; cobrar requiere red.
 - **Réplica de lectura** de base de datos (la propuesta la usa específicamente
   para separar los reportes de la carga transaccional; aquí `ReportsService`
   lee de la misma instancia que todo lo demás).
@@ -82,13 +79,14 @@ El ER de la propuesta tiene más entidades y campos que el `schema.prisma` de
 este prototipo (ver `backend/prisma/schema.prisma`). Diferencias, todas
 intencionales por alcance:
 
-- **No existen `Cliente`, `Insumo`, `MovimientoInventario` ni `Receta`.** No
-  hay registro de comensales (el pedido solo referencia `mesaId`/`usuarioId`,
-  nunca un cliente) ni gestión de inventario/recetas — vender un producto no
-  descuenta ningún insumo. Ninguno de los dos hace parte del *vertical slice*.
-- **`Pedido.canal`** solo acepta `SALON` (enum `CanalPedido`); la propuesta
-  contempla también domicilio y plataformas, coherente con que CU-04/CU-05 no
-  están implementados.
+- **No existen `Insumo`, `MovimientoInventario` ni `Receta`.** No hay
+  gestión de inventario/recetas — vender un producto no descuenta ningún
+  insumo. No hace parte del *vertical slice*.
+- **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
+  (nombre, teléfono, dirección); un pedido en mesa sigue sin cliente.
+- **`Pedido.canal`** acepta `SALON` y `DOMICILIO` (enum `CanalPedido`); el
+  canal de plataformas no existe, coherente con que CU-05 no está
+  implementado.
 - **`DocumentoFiscal`** no tiene el campo `CUDE/CUFE` del ER (el identificador
   real que asigna la DIAN): no aplica a un documento simulado.
 - Desde la **Fase 8**, `Sede.rangoInicio`/`rangoFin`/`siguienteConsecutivo`
@@ -111,7 +109,7 @@ Marcadas también en el código como `// DECISIÓN DE PROTOTIPO`:
   `localStorage` (`frontend/src/auth/AuthContext.tsx`); en producción se
   evaluaría una cookie httpOnly para no exponerlo a JavaScript del cliente.
 - El **UUID del pedido se genera en el cliente** y viaja en la petición, para
-  dejar lista la idempotencia que necesitará el futuro modo offline.
+  hacer idempotentes los reintentos y el `POST /sync` del modo offline.
 - Backend y frontend se dockerizan en modo *dev* (hot reload vía volúmenes)
   desde la Fase 0, para que todo el prototipo se levante con `docker compose up`
   sin depender de instalaciones locales de Node.

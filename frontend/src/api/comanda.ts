@@ -59,13 +59,24 @@ export interface Pedido {
   id: string;
   sedeId: string;
   mesaId: string | null;
-  usuarioId: string;
+  // null en pedidos de domicilio (los crea un Cliente, no un Usuario).
+  usuarioId: string | null;
+  clienteId?: string | null;
   canal: string;
   estado: EstadoPedido;
   fechaHora: string;
   total: string;
   mesa?: Mesa | null;
+  cliente?: Cliente | null;
   detalles: PedidoDetalle[];
+}
+
+export interface Cliente {
+  id: string;
+  cadenaId: string;
+  nombre: string;
+  telefono: string;
+  direccion: string;
 }
 
 export interface CrearPedidoDetalleInput {
@@ -167,3 +178,53 @@ export const obtenerReporteConsolidado = (token: string, desde?: string, hasta?:
   const query = params.toString();
   return apiFetch<ReporteConsolidado>(`/reportes/consolidado${query ? `?${query}` : ''}`, {}, token);
 };
+
+// --- Menú público (CU-03): sin token, lo consume la vista del comensal ---
+
+export interface ProductoMenu {
+  id: string;
+  nombre: string;
+  precio: string;
+}
+
+export interface CategoriaMenu {
+  categoria: string;
+  productos: ProductoMenu[];
+}
+
+export interface MenuPublico {
+  sede: { id: string; nombre: string; direccion: string };
+  categorias: CategoriaMenu[];
+}
+
+export const obtenerMenuPublico = (cadenaId: string, sedeId: string) =>
+  apiFetch<MenuPublico>(`/menu/${cadenaId}/${sedeId}`);
+
+// --- Domicilio web (CU-04): sin token, lo envía el cliente desde el menú público ---
+
+export interface CrearPedidoDomicilioInput {
+  id: string;
+  cadenaId: string;
+  sedeId: string;
+  cliente: { nombre: string; telefono: string; direccion: string };
+  detalles: CrearPedidoDetalleInput[];
+}
+
+export interface PedidoDomicilioCreado {
+  id: string;
+  estado: EstadoPedido;
+  total: string;
+  fechaHora: string;
+}
+
+export const crearPedidoDomicilio = (input: CrearPedidoDomicilioInput) =>
+  apiFetch<PedidoDomicilioCreado>('/public/pedidos/domicilio', { method: 'POST', body: JSON.stringify(input) });
+
+// --- Operación sin conexión (CU-07): el mesero vacía su cola local ---
+
+export type ResultadoSync =
+  | { id: string; resultado: 'CREADO' | 'DUPLICADO' }
+  | { id: string; resultado: 'RECHAZADO'; motivo: string };
+
+export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
+  apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);

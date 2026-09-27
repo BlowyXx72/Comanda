@@ -3,6 +3,7 @@ import { actualizarEstadoPedido, listarPedidosActivos, type Pedido } from '../ap
 import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
+import { etiquetaPedido } from '../utils/formato';
 
 export function CocinaPage() {
   const { token } = useAuth();
@@ -59,9 +60,10 @@ export function CocinaPage() {
         {pedidosOrdenados.map((pedido) => (
           <div key={pedido.id} className={`comanda-card comanda-card--${pedido.estado.toLowerCase()}`}>
             <div className="comanda-card-header">
-              <strong>{pedido.mesa ? `Mesa ${pedido.mesa.numero}` : 'Sin mesa'}</strong>
+              <strong>{etiquetaPedido(pedido)}</strong>
               <span className="comanda-badge">{pedido.estado}</span>
             </div>
+            {pedido.cliente && <p className="panel-nota">{pedido.cliente.nombre}</p>}
             <ul className="lista-items">
               {pedido.detalles.map((detalle) => (
                 <li key={detalle.id}>
