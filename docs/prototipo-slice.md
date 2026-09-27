@@ -152,10 +152,15 @@ validación vive en `OrdersModule`.
   `EN_PREPARACION`/`LISTO` ya existentes al montar, antes de que empiecen a
   llegar eventos en vivo. El documento de propuesta dice "expón al menos
   estos endpoints", así que esta extensión se considera dentro de alcance.
-- El frontend asume **una sola sede por cadena** (coherente con el seed) y
-  toma la primera de `GET /sedes` en `useSedeActual`; no hay selector
-  multi-sede en la interfaz — eso pertenece al panel multi-sede consolidado,
-  fuera de alcance de este prototipo.
+- Desde la Fase 7, el seed crea **3 sedes** por cadena (antes 1) y el
+  frontend tiene un selector de sede (`SedeContext` +
+  `SelectorSedeGlobal`, visible solo para ADMIN). MESERO/CAJERO no ven el
+  selector: operan siempre en la última sede elegida en ese navegador,
+  guardada en `localStorage` (`comanda.sedeId`) — el schema de `Usuario` no
+  tiene una sede asignada, así que no hay forma de resolverla del lado del
+  backend; ver `CLAUDE.md`. `useSedeActual` conserva su firma de antes
+  (`{ sede, cargando, error }`) como fachada de solo lectura sobre
+  `SedeContext`.
 
 ## Cobro y documento fiscal simulado (Fase 5)
 

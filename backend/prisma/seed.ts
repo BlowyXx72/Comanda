@@ -24,15 +24,17 @@ async function main() {
     data: { nit: '900123456-7', nombre: 'Demo', plan: 'BASICO' },
   });
 
-  const sede = await prisma.sede.create({
-    data: {
-      cadenaId: cadena.id,
-      nombre: 'Sede Centro',
-      direccion: 'Cra 10 # 20-30, Bogotá',
-      // DECISIÓN DE PROTOTIPO: formato ilustrativo, no corresponde a un rango de numeración DIAN real.
-      rangoNumeracion: 'SETP990000001-SETP990500000',
-    },
-  });
+  // DECISIÓN DE PROTOTIPO (Fase 7): 3 sedes en vez de 1, para poder demostrar
+  // el panel multi-sede (CU-06) y el catálogo centralizado (CU-08). El
+  // formato del rango de numeración sigue siendo ilustrativo, no corresponde
+  // a un rango DIAN real (ver Fase 8 para el uso real del consecutivo).
+  const sedes = await Promise.all(
+    [
+      { nombre: 'Sede Centro', direccion: 'Cra 10 # 20-30, Bogotá', rangoNumeracion: 'SETP990000001-SETP990500000' },
+      { nombre: 'Sede Norte', direccion: 'Cl 140 # 15-20, Bogotá', rangoNumeracion: 'SETP990500001-SETP991000000' },
+      { nombre: 'Sede Chapinero', direccion: 'Cra 13 # 60-10, Bogotá', rangoNumeracion: 'SETP991000001-SETP991500000' },
+    ].map((datos) => prisma.sede.create({ data: { cadenaId: cadena.id, ...datos } })),
+  );
 
   await prisma.usuario.createMany({
     data: [
@@ -70,15 +72,17 @@ async function main() {
     ],
   });
 
-  await prisma.mesa.createMany({
-    data: Array.from({ length: 6 }, (_, i) => ({
-      sedeId: sede.id,
-      numero: i + 1,
-      estado: 'LIBRE' as const,
-    })),
-  });
+  for (const s of sedes) {
+    await prisma.mesa.createMany({
+      data: Array.from({ length: 6 }, (_, i) => ({
+        sedeId: s.id,
+        numero: i + 1,
+        estado: 'LIBRE' as const,
+      })),
+    });
+  }
 
-  console.log('Seed completado: 1 cadena, 1 sede, 3 usuarios, 8 productos, 6 mesas.');
+  console.log(`Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, 8 productos, ${sedes.length * 6} mesas.`);
 }
 
 main()

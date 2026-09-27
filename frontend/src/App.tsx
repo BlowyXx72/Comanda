@@ -7,48 +7,53 @@ import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { MesasPage } from './pages/Mesas'
+import { SedeProvider } from './sede/SedeContext'
+import { SelectorSedeGlobal } from './sede/SelectorSedeGlobal'
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mesas"
-            element={
-              <ProtectedRoute roles={['MESERO', 'ADMIN']}>
-                <MesasPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cocina"
-            element={
-              <ProtectedRoute>
-                <CocinaPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/caja"
-            element={
-              <ProtectedRoute roles={['CAJERO', 'ADMIN']}>
-                <CajaPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <SedeProvider>
+        <SelectorSedeGlobal />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mesas"
+              element={
+                <ProtectedRoute roles={['MESERO', 'ADMIN']}>
+                  <MesasPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cocina"
+              element={
+                <ProtectedRoute>
+                  <CocinaPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/caja"
+              element={
+                <ProtectedRoute roles={['CAJERO', 'ADMIN']}>
+                  <CajaPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </SedeProvider>
     </AuthProvider>
   )
 }
