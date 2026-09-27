@@ -25,15 +25,19 @@ async function main() {
   });
 
   // DECISIÓN DE PROTOTIPO (Fase 7): 3 sedes en vez de 1, para poder demostrar
-  // el panel multi-sede (CU-06) y el catálogo centralizado (CU-08). El
-  // formato del rango de numeración sigue siendo ilustrativo, no corresponde
-  // a un rango DIAN real (ver Fase 8 para el uso real del consecutivo).
+  // el panel multi-sede (CU-06) y el catálogo centralizado (CU-08).
+  // Fase 8: cada sede recibe un rango de numeración fiscal que no se solapa
+  // con el de las demás (§6.3 de la propuesta); `siguienteConsecutivo`
+  // arranca en `rangoInicio`, así que el primer documento fiscal de cada
+  // sede usa exactamente ese número.
   const sedes = await Promise.all(
     [
-      { nombre: 'Sede Centro', direccion: 'Cra 10 # 20-30, Bogotá', rangoNumeracion: 'SETP990000001-SETP990500000' },
-      { nombre: 'Sede Norte', direccion: 'Cl 140 # 15-20, Bogotá', rangoNumeracion: 'SETP990500001-SETP991000000' },
-      { nombre: 'Sede Chapinero', direccion: 'Cra 13 # 60-10, Bogotá', rangoNumeracion: 'SETP991000001-SETP991500000' },
-    ].map((datos) => prisma.sede.create({ data: { cadenaId: cadena.id, ...datos } })),
+      { nombre: 'Sede Centro', direccion: 'Cra 10 # 20-30, Bogotá', rangoInicio: 1, rangoFin: 1000 },
+      { nombre: 'Sede Norte', direccion: 'Cl 140 # 15-20, Bogotá', rangoInicio: 1001, rangoFin: 2000 },
+      { nombre: 'Sede Chapinero', direccion: 'Cra 13 # 60-10, Bogotá', rangoInicio: 2001, rangoFin: 3000 },
+    ].map(({ rangoInicio, ...datos }) =>
+      prisma.sede.create({ data: { cadenaId: cadena.id, rangoInicio, siguienteConsecutivo: rangoInicio, ...datos } }),
+    ),
   );
 
   await prisma.usuario.createMany({

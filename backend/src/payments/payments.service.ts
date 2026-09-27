@@ -34,19 +34,30 @@ export class PaymentsService {
     }
 
     const resultado = await this.prisma.$transaction(async (tx) => {
+      // Fase 8: el consecutivo sale de un UPDATE atómico sobre la sede
+      // (`siguiente_consecutivo = siguiente_consecutivo + 1 RETURNING ...`),
+      // no de un MAX+1. Postgres toma el lock de fila en el UPDATE, así que
+      // dos cajas cobrando a la vez en la misma sede quedan serializadas: la
+      // segunda espera a que la primera confirme (o revierta) antes de leer
+      // el valor. Ya no hace falta una secuencia ni un lock explícito aparte.
+      const sedeActualizada = await tx.sede.update({
+        where: { id: pedido.sedeId },
+        data: { siguienteConsecutivo: { increment: 1 } },
+      });
+      const consecutivo = sedeActualizada.siguienteConsecutivo - 1;
+
+      if (consecutivo > sedeActualizada.rangoFin) {
+        // Lanzar dentro de la transacción la revierte por completo, así que
+        // el incremento de arriba también se deshace: un rango agotado no
+        // sigue avanzando el contador en cada intento fallido.
+        throw new ConflictException(
+          `La sede agotó su rango de numeración fiscal (${sedeActualizada.rangoInicio}-${sedeActualizada.rangoFin})`,
+        );
+      }
+
       const pago = await tx.pago.create({
         data: { pedidoId: pedido.id, medio: dto.medio, monto },
       });
-
-      // TODO PRODUCCION: MAX+1 dentro de la transacción alcanza para una
-      // caja cobrando de a una mesa a la vez (el caso de esta demo); con
-      // varias cajas concurrentes en la misma sede haría falta una secuencia
-      // de base de datos o un lock explícito para no repetir consecutivo.
-      const { _max } = await tx.documentoFiscal.aggregate({
-        where: { sedeId: pedido.sedeId },
-        _max: { consecutivo: true },
-      });
-      const consecutivo = (_max.consecutivo ?? 0) + 1;
 
       const documentoFiscal = await tx.documentoFiscal.create({
         data: {

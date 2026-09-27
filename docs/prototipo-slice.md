@@ -91,12 +91,10 @@ intencionales por alcance:
   están implementados.
 - **`DocumentoFiscal`** no tiene el campo `CUDE/CUFE` del ER (el identificador
   real que asigna la DIAN): no aplica a un documento simulado.
-- **`Sede.rangoNumeracion`** existe en el schema (columna de texto, ver
-  `backend/prisma/schema.prisma`) pero **no se usa de verdad**: el
-  consecutivo del `DocumentoFiscal` es un `MAX(consecutivo) + 1` simple por
-  sede (`PaymentsService.pagar`), no un número tomado del rango pre-asignado
-  que describe la propuesta (§6.3). El campo quedó como recordatorio de la
-  intención original, pendiente si se retoma el proyecto.
+- Desde la **Fase 8**, `Sede.rangoInicio`/`rangoFin`/`siguienteConsecutivo`
+  implementan de verdad el rango de numeración pre-asignado por sede que
+  describe la propuesta (§6.3) — ver la sección "Numeración fiscal por sede
+  (Fase 8)" más abajo.
 
 ## Decisiones de prototipo (no vienen del documento original)
 
@@ -167,17 +165,35 @@ validación vive en `OrdersModule`.
 - `POST /pagos` solo acepta pedidos en estado `LISTO` y exige que el `monto`
   coincida exactamente con `pedido.total`: no hay pagos parciales, propinas
   ni descuentos en este slice.
-- El consecutivo del `DocumentoFiscal` se calcula como
-  `MAX(consecutivo) + 1` **por sede**, dentro de la misma transacción que
-  crea el `Pago`, actualiza el `Pedido` a `PAGADO` y libera la `Mesa`. Para
-  la escala de una demo (un cajero cobrando de a una mesa a la vez) esto es
-  suficiente; en producción, con cajeros concurrentes en la misma sede, se
-  necesitaría una secuencia de base de datos o un lock explícito para evitar
-  una condición de carrera en el consecutivo — marcado como
-  `// TODO PRODUCCION` sería lo siguiente a resolver si esto pasara a un
-  entorno con más de una caja simultánea.
+- El consecutivo del `DocumentoFiscal` sale de un `UPDATE` atómico sobre la
+  `Sede` (ver "Numeración fiscal por sede (Fase 8)" más abajo), dentro de la
+  misma transacción que crea el `Pago`, actualiza el `Pedido` a `PAGADO` y
+  libera la `Mesa`.
 - `estadoDian` queda fijo en `SIMULADO` y `urlXml` en `null`: no hay
   generación ni firma de XML, ni radicación ante la DIAN.
+
+## Numeración fiscal por sede (Fase 8)
+
+- `Sede` tiene `rangoInicio`, `rangoFin` y `siguienteConsecutivo` (antes solo
+  existía `rangoNumeracion`, un campo de texto sin uso real — ver
+  `CLAUDE.md`). El seed le asigna a cada una de las 3 sedes demo un rango que
+  no se solapa con el de las otras (1–1000, 1001–2000, 2001–3000), tal como
+  pide la propuesta en §6.3 ("a cada sede se le pre-asigna un rango de
+  numeración propio").
+- `PaymentsService.pagar` toma el consecutivo con
+  `tx.sede.update({ data: { siguienteConsecutivo: { increment: 1 } } })`
+  dentro de la transacción: Postgres bloquea la fila de la sede al hacer el
+  `UPDATE`, así que dos cajeros cobrando a la vez en la misma sede quedan
+  serializados (el segundo espera a que el primero confirme o revierta antes
+  de leer el valor) — reemplaza el `MAX(consecutivo) + 1` de la Fase 5, que
+  sí tenía una condición de carrera real entre cajas concurrentes.
+- Si el consecutivo calculado supera `rangoFin`, `pagar` lanza `409
+  Conflict` y, como la excepción ocurre dentro de la transacción, el
+  incremento también se revierte (el contador no sigue avanzando en cada
+  intento fallido una vez agotado el rango).
+- Lo que la propuesta sí pide y este prototipo no implementa: qué pasa
+  cuando una sede agota su rango en producción (pedir uno nuevo, o ampliarlo)
+  — no hay endpoint de administración para eso, queda `// TODO PRODUCCIÓN`.
 
 ## Pulido (Fase 6)
 

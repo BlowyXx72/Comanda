@@ -5,7 +5,9 @@ export interface Sede {
   cadenaId: string;
   nombre: string;
   direccion: string;
-  rangoNumeracion: string;
+  rangoInicio: number;
+  rangoFin: number;
+  siguienteConsecutivo: number;
 }
 
 export type EstadoMesa = 'LIBRE' | 'OCUPADA';

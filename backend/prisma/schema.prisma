@@ -63,12 +63,22 @@ model Cadena {
 }
 
 model Sede {
-  id              String @id @default(uuid())
-  cadenaId        String @map("cadena_id")
-  nombre          String
-  direccion       String
-  // Rango de numeración fiscal asignado a la sede, usado para el consecutivo del DocumentoFiscal
-  rangoNumeracion String @map("rango_numeracion")
+  id        String @id @default(uuid())
+  cadenaId  String @map("cadena_id")
+  nombre    String
+  direccion String
+
+  // Rango de numeración fiscal pre-asignado a la sede (§6.3 de la propuesta):
+  // cada sede tiene su propio [rangoInicio, rangoFin] para que dos sedes (o
+  // una sede sin conexión) nunca generen el mismo consecutivo. Reemplaza el
+  // campo de texto `rangoNumeracion` de la Fase 0-6, que existía pero no se
+  // usaba de verdad (ver docs/prototipo-slice.md).
+  rangoInicio          Int @map("rango_inicio")
+  rangoFin             Int @map("rango_fin")
+  // Próximo consecutivo a asignar; avanza atómicamente (UPDATE ... increment)
+  // dentro de la transacción de PaymentsService.pagar, sin condición de
+  // carrera entre cajas concurrentes de la misma sede.
+  siguienteConsecutivo Int @map("siguiente_consecutivo")
 
   cadena             Cadena            @relation(fields: [cadenaId], references: [id])
   mesas              Mesa[]
@@ -92,8 +102,8 @@ model Usuario {
 }
 
 model Producto {
-  id        String @id @default(uuid())
-  cadenaId  String @map("cadena_id")
+  id        String  @id @default(uuid())
+  cadenaId  String  @map("cadena_id")
   nombre    String
   precio    Decimal @db.Decimal(10, 2)
   categoria String
@@ -167,7 +177,7 @@ model Pago {
 }
 
 model DocumentoFiscal {
-  id String @id @default(uuid())
+  id       String @id @default(uuid())
   // @unique porque un pedido genera a lo sumo un documento fiscal (1:1, igual
   // que en el ER de la propuesta): antes esto era Pedido 1:N sin querer.
   pedidoId String @unique @map("pedido_id")

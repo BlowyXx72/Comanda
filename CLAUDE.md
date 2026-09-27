@@ -92,11 +92,14 @@ completa y razonada en `docs/prototipo-slice.md`.
 
 El ER de la propuesta (§6.2) tiene entidades que este prototipo no
 implementa: `Cliente`, `Insumo`, `MovimientoInventario`, `Receta` — no hay
-registro de comensales ni gestión de inventario/recetas. Tampoco se usa
-`Sede.rangoNumeracion` de verdad: el campo existe en el schema, pero el
-consecutivo del `DocumentoFiscal` es un `MAX+1` simple por sede
-(`PaymentsService`), no un número tomado de un rango pre-asignado. Detalle en
+registro de comensales ni gestión de inventario/recetas. Detalle en
 `docs/prototipo-slice.md`.
+
+Desde la Fase 8, `Sede` sí usa un rango de numeración fiscal real
+(`rangoInicio`/`rangoFin`/`siguienteConsecutivo`, §6.3 de la propuesta): el
+consecutivo del `DocumentoFiscal` sale de un `UPDATE ... increment` atómico
+sobre la sede dentro de la transacción de `PaymentsService.pagar`, no de un
+`MAX+1`.
 
 ## Flujo de trabajo
 
