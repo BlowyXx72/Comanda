@@ -5,10 +5,11 @@ import { RealtimeModule } from '../realtime/realtime.module.js';
 import { TablesModule } from '../tables/tables.module.js';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
+import { PublicOrdersController } from './public-orders.controller.js';
 
 @Module({
   imports: [BranchesModule, CatalogModule, TablesModule, RealtimeModule],
-  controllers: [OrdersController],
+  controllers: [OrdersController, PublicOrdersController],
   providers: [OrdersService],
   exports: [OrdersService],
 })

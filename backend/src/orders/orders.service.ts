@@ -6,6 +6,8 @@ import type { EstadoPedido } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { TablesService } from '../tables/tables.service.js';
+import type { CreatePedidoDetalleDto } from './dto/create-pedido-detalle.dto.js';
+import type { CreatePedidoDomicilioDto } from './dto/create-pedido-domicilio.dto.js';
 import type { CreatePedidoDto } from './dto/create-pedido.dto.js';
 
 // Órdenes que le interesan al KDS al abrir /cocina (ver GET /pedidos?sedeId=).
@@ -18,6 +20,7 @@ const ORDEN_ESTADOS: EstadoPedido[] = ['ABIERTO', 'EN_PREPARACION', 'LISTO', 'PA
 const INCLUDE_PEDIDO = {
   sede: true,
   mesa: true,
+  cliente: true,
   detalles: { include: { producto: true } },
 } satisfies Prisma.PedidoInclude;
 
@@ -53,22 +56,7 @@ export class OrdersService {
     }
 
     await this.branchesService.obtenerDeCadena(dto.sedeId, cadenaId);
-
-    const productos = await Promise.all(
-      dto.detalles.map((detalle) => this.catalogService.obtenerDeCadena(detalle.productoId, cadenaId)),
-    );
-
-    let total = new Prisma.Decimal(0);
-    const detallesData = dto.detalles.map((detalle, i) => {
-      const producto = productos[i];
-      total = total.plus(producto.precio.times(detalle.cantidad));
-      return {
-        productoId: producto.id,
-        cantidad: detalle.cantidad,
-        precioUnitario: producto.precio,
-        notas: detalle.notas,
-      };
-    });
+    const { total, detallesData } = await this.armarDetalles(dto.detalles, cadenaId);
 
     if (dto.mesaId) {
       await this.tablesService.ocupar(dto.mesaId, dto.sedeId);
@@ -92,6 +80,61 @@ export class OrdersService {
 
     this.realtimeGateway.emitirComandaNueva(dto.sedeId, pedido);
     return pedido;
+  }
+
+  // Pedido de domicilio web (CU-04): sin mesa ni usuario interno, con un
+  // Cliente. Llega a cocina por el mismo evento `comanda:nueva` que un pedido
+  // de salón.
+  async crearDomicilio(dto: CreatePedidoDomicilioDto) {
+    const existente = await this.prisma.pedido.findUnique({ where: { id: dto.id }, include: INCLUDE_PEDIDO });
+    if (existente) {
+      return existente;
+    }
+
+    await this.branchesService.obtenerDeCadena(dto.sedeId, dto.cadenaId);
+    const { total, detallesData } = await this.armarDetalles(dto.detalles, dto.cadenaId);
+
+    const pedido = await this.prisma.pedido.create({
+      data: {
+        id: dto.id,
+        sede: { connect: { id: dto.sedeId } },
+        canal: 'DOMICILIO',
+        // Mismo criterio que crear(): nace directo en EN_PREPARACION.
+        estado: 'EN_PREPARACION',
+        total,
+        // DECISIÓN DE PROTOTIPO: se crea un Cliente nuevo por pedido en vez de
+        // buscarlo por teléfono; no hay cuentas de cliente ni historial en
+        // este prototipo, así que deduplicarlos no aporta nada todavía.
+        cliente: { create: { cadena: { connect: { id: dto.cadenaId } }, ...dto.cliente } },
+        detalles: { create: detallesData },
+      },
+      include: INCLUDE_PEDIDO,
+    });
+
+    this.realtimeGateway.emitirComandaNueva(dto.sedeId, pedido);
+    return pedido;
+  }
+
+  // Valida que cada producto sea de la cadena y congela su precio vigente en
+  // el detalle. Compartido por los pedidos de salón y de domicilio.
+  private async armarDetalles(detalles: CreatePedidoDetalleDto[], cadenaId: string) {
+    const productos = await Promise.all(
+      detalles.map((detalle) => this.catalogService.obtenerDeCadena(detalle.productoId, cadenaId)),
+    );
+
+    let total = new Prisma.Decimal(0);
+    const detallesData = detalles.map((detalle, i) => {
+      const producto = productos[i];
+      total = total.plus(producto.precio.times(detalle.cantidad));
+      return {
+        productoId: producto.id,
+        cantidad: detalle.cantidad,
+        precioUnitario: producto.precio,
+        notas: detalle.notas,
+      };
+    });
+
+    return { total, detallesData };
   }
 
   async obtener(id: string, cadenaId: string) {

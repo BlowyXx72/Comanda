@@ -42,13 +42,24 @@ export interface Pedido {
   id: string;
   sedeId: string;
   mesaId: string | null;
-  usuarioId: string;
+  // null en pedidos de domicilio (los crea un Cliente, no un Usuario).
+  usuarioId: string | null;
+  clienteId?: string | null;
   canal: string;
   estado: EstadoPedido;
   fechaHora: string;
   total: string;
   mesa?: Mesa | null;
+  cliente?: Cliente | null;
   detalles: PedidoDetalle[];
+}
+
+export interface Cliente {
+  id: string;
+  cadenaId: string;
+  nombre: string;
+  telefono: string;
+  direccion: string;
 }
 
 export interface CrearPedidoDetalleInput {
@@ -135,3 +146,23 @@ export interface MenuPublico {
 
 export const obtenerMenuPublico = (cadenaId: string, sedeId: string) =>
   apiFetch<MenuPublico>(`/menu/${cadenaId}/${sedeId}`);
+
+// --- Domicilio web (CU-04): sin token, lo envía el cliente desde el menú público ---
+
+export interface CrearPedidoDomicilioInput {
+  id: string;
+  cadenaId: string;
+  sedeId: string;
+  cliente: { nombre: string; telefono: string; direccion: string };
+  detalles: CrearPedidoDetalleInput[];
+}
+
+export interface PedidoDomicilioCreado {
+  id: string;
+  estado: EstadoPedido;
+  total: string;
+  fechaHora: string;
+}
+
+export const crearPedidoDomicilio = (input: CrearPedidoDomicilioInput) =>
+  apiFetch<PedidoDomicilioCreado>('/public/pedidos/domicilio', { method: 'POST', body: JSON.stringify(input) });

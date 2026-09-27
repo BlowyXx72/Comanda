@@ -399,3 +399,19 @@
   border: 1px solid var(--border);
   border-radius: 6px;
 }
+
+.menu-publico-item {
+  align-items: center;
+}
+
+.menu-publico-item small {
+  color: var(--text);
+}
+
+.menu-publico-domicilio {
+  margin-top: 28px;
+}
+
+.menu-publico-domicilio .login-form {
+  max-width: none;
+}

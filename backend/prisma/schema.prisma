@@ -23,7 +23,8 @@ enum EstadoMesa {
 
 enum CanalPedido {
   SALON
-  // TODO PRODUCCION: DOMICILIO, RAPPI, QR cuando existan esos canales
+  DOMICILIO
+  // TODO PRODUCCION: RAPPI, QR cuando existan esos canales
 }
 
 enum EstadoPedido {
@@ -58,6 +59,7 @@ model Cadena {
   sedes     Sede[]
   usuarios  Usuario[]
   productos Producto[]
+  clientes  Cliente[]
 
   @@map("cadenas")
 }
@@ -124,7 +126,10 @@ model Pedido {
   id        String       @id @default(uuid())
   sedeId    String       @map("sede_id")
   mesaId    String?      @map("mesa_id")
-  usuarioId String       @map("usuario_id")
+  // Opcional desde Fase 8B: un pedido de domicilio lo crea el cliente desde
+  // la web, no un usuario interno; en ese caso va clienteId.
+  usuarioId String?      @map("usuario_id")
+  clienteId String?      @map("cliente_id")
   canal     CanalPedido  @default(SALON)
   estado    EstadoPedido @default(ABIERTO)
   fechaHora DateTime     @default(now()) @map("fecha_hora")
@@ -132,12 +137,28 @@ model Pedido {
 
   sede            Sede             @relation(fields: [sedeId], references: [id])
   mesa            Mesa?            @relation(fields: [mesaId], references: [id])
-  usuario         Usuario          @relation(fields: [usuarioId], references: [id])
+  usuario         Usuario?         @relation(fields: [usuarioId], references: [id])
+  cliente         Cliente?         @relation(fields: [clienteId], references: [id])
   detalles        PedidoDetalle[]
   pagos           Pago[]
   documentoFiscal DocumentoFiscal?
 
   @@map("pedidos")
+}
+
+// Entidad Cliente del ER de la propuesta (§6.2), usada por los pedidos de
+// domicilio web (CU-04).
+model Cliente {
+  id        String @id @default(uuid())
+  cadenaId  String @map("cadena_id")
+  nombre    String
+  telefono  String
+  direccion String
+
+  cadena  Cadena   @relation(fields: [cadenaId], references: [id])
+  pedidos Pedido[]
+
+  @@map("clientes")
 }
 
 model PedidoDetalle {
