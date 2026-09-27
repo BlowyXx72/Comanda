@@ -34,9 +34,9 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-03 Menú QR | **No implementado.** No hay `GET /menu/{cadena}/{sede}` público ni vista de comensal. |
 | CU-04 Domicilio web | **No implementado.** |
 | CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
-| CU-06 Panel multi-sede | **No implementado.** El frontend asume una sola sede (ver `useSedeActual`); no hay vista consolidada entre cadenas/sedes. |
+| CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
 | CU-07 Operación sin conexión | **No implementado.** Solo se tomó la idea de idempotencia (UUID del cliente en `Pedido`); no hay IndexedDB, cola local ni `POST /sync`. |
-| CU-08 Catálogo centralizado | **No aplica a esta escala.** Con una sola sede por cadena en el seed, no hay nada que propagar entre sedes. |
+| CU-08 Catálogo centralizado | **No implementado todavía.** Desde la Fase 7 hay 3 sedes por cadena (sí habría algo que propagar), pero no existe un endpoint para crear/editar productos — el catálogo se carga solo desde el seed (ver Fase 10). |
 
 ## Explícitamente fuera de alcance (stubs marcados en código)
 
@@ -194,6 +194,30 @@ validación vive en `OrdersModule`.
 - Lo que la propuesta sí pide y este prototipo no implementa: qué pasa
   cuando una sede agota su rango en producción (pedir uno nuevo, o ampliarlo)
   — no hay endpoint de administración para eso, queda `// TODO PRODUCCIÓN`.
+
+## Panel multi-sede consolidado (Fase 9, CU-06)
+
+- `GET /reportes/consolidado?desde=&hasta=` (solo ADMIN, `@Roles('ADMIN')`
+  sobre el `@Roles('CAJERO', 'ADMIN')` del controlador) agrupa los pagos de
+  **todas** las sedes de la cadena por sede, día y canal. Sin `desde`/`hasta`
+  el rango es "hoy" (mismo criterio UTC que `GET /reportes/ventas`).
+  Agrupar por `Pedido.canal` sin asumir qué valores existen es deliberado:
+  hoy solo hay `SALON`, pero si la Parte 2 agrega `DOMICILIO` (Fase 8B),
+  aparece solo como otra fila, sin tocar este código.
+- Tiempo real: todo socket autenticado se une, al conectarse, a la room
+  `cadena:{cadenaId}` (además de la room `sede:{id}` a la que se une con
+  `sede:unirse`). `PaymentsService.pagar` emite `venta:registrada` a esa room
+  después de cada cobro exitoso, así que `/panel` se actualiza solo, sin
+  recargar ni hacer polling — mismo patrón que `comanda:nueva`/
+  `pedido:actualizado` por sede.
+- Frontend: página `/panel`, protegida con `roles={['ADMIN']}` en
+  `ProtectedRoute` (ver `App.tsx`); no depende de `SedeContext` porque ya
+  muestra las 3 sedes a la vez (cada fila trae su propio nombre de sede desde
+  el backend).
+- Sigue leyendo de la misma base transaccional que todo lo demás: la réplica
+  de lectura que la propuesta pide específicamente para separar reportes del
+  tráfico de venta (§5.1) queda `// TODO PRODUCCIÓN`; a la escala de esta
+  demo (unas pocas sedes, tráfico bajo) no hace falta.
 
 ## Pulido (Fase 6)
 

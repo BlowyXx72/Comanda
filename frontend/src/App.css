@@ -311,6 +311,35 @@
   cursor: not-allowed;
 }
 
+/* --- Panel (Fase 9) --- */
+
+.panel-page {
+  padding: 24px;
+}
+
+.panel-rango {
+  color: var(--text);
+  margin: 4px 0 16px;
+}
+
+.panel-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.panel-tabla th,
+.panel-tabla td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-tabla tfoot td {
+  font-weight: 600;
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+}
+
 /* --- Cocina --- */
 
 .comandas-grid {

@@ -7,6 +7,7 @@ import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { MesasPage } from './pages/Mesas'
+import { PanelPage } from './pages/Panel'
 import { SedeProvider } from './sede/SedeContext'
 import { SelectorSedeGlobal } from './sede/SelectorSedeGlobal'
 
@@ -47,6 +48,14 @@ function App() {
               element={
                 <ProtectedRoute roles={['CAJERO', 'ADMIN']}>
                   <CajaPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/panel"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <PanelPage />
                 </ProtectedRoute>
               }
             />

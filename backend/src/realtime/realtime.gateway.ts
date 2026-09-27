@@ -14,6 +14,7 @@ import type { JwtPayload } from '../auth/jwt-payload.interface.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const nombreRoomSede = (sedeId: string) => `sede:${sedeId}`;
+const nombreRoomCadena = (cadenaId: string) => `cadena:${cadenaId}`;
 
 // Canal en tiempo real por sede (ver README, "Servicios telemáticos usados y
 // por qué"): el mesero envía la comanda por REST (OrdersService), y este
@@ -40,6 +41,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       if (!token) throw new Error('Falta token');
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       client.data.cadenaId = payload.cadenaId;
+      // Fase 9: a diferencia de `sede:unirse` (que exige elegir una sede),
+      // todo socket autenticado se une de una vez a la room de su propia
+      // cadena — ahí solo se emiten agregados de venta (`venta:registrada`),
+      // que no filtran nada específico de una sede en particular.
+      await client.join(nombreRoomCadena(payload.cadenaId));
     } catch {
       this.logger.warn(`Conexión WebSocket rechazada (token inválido): ${client.id}`);
       client.disconnect(true);
@@ -69,5 +75,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   // mesero y caja.
   emitirPedidoActualizado(sedeId: string, pedido: unknown) {
     this.server.to(nombreRoomSede(sedeId)).emit('pedido:actualizado', pedido);
+  }
+
+  // Llamado por PaymentsService después de cada cobro. Lo escucha el panel
+  // consolidado del dueño (/panel, Fase 9, CU-06) para actualizarse en vivo
+  // sin tener que recargar ni hacer polling.
+  emitirVentaRegistrada(cadenaId: string, venta: unknown) {
+    this.server.to(nombreRoomCadena(cadenaId)).emit('venta:registrada', venta);
   }
 }

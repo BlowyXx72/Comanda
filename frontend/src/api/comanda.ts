@@ -116,3 +116,28 @@ export const actualizarEstadoPedido = (id: string, estado: EstadoPedido, token: 
 
 export const crearPago = (input: CrearPagoInput, token: string) =>
   apiFetch<ResultadoPago>('/pagos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+// Fase 9 (CU-06): panel consolidado del dueño.
+export interface FilaReporteConsolidado {
+  sedeId: string;
+  sedeNombre: string;
+  fecha: string;
+  canal: string;
+  cantidadPedidos: number;
+  totalVentas: string;
+}
+
+export interface ReporteConsolidado {
+  desde: string;
+  hasta: string;
+  filas: FilaReporteConsolidado[];
+  totalGeneral: string;
+}
+
+export const obtenerReporteConsolidado = (token: string, desde?: string, hasta?: string) => {
+  const params = new URLSearchParams();
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  const query = params.toString();
+  return apiFetch<ReporteConsolidado>(`/reportes/consolidado${query ? `?${query}` : ''}`, {}, token);
+};

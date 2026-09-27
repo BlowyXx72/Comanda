@@ -8,6 +8,7 @@ export function HomePage() {
   const { usuario, logout } = useAuth();
   const puedeVerMesas = usuario?.rol === 'MESERO' || usuario?.rol === 'ADMIN';
   const puedeVerCaja = usuario?.rol === 'CAJERO' || usuario?.rol === 'ADMIN';
+  const puedeVerPanel = usuario?.rol === 'ADMIN';
 
   return (
     <div className="home-page">
@@ -19,6 +20,7 @@ export function HomePage() {
         {puedeVerMesas && <Link to="/mesas">Ir a Mesas</Link>}
         <Link to="/cocina">Ir a Cocina</Link>
         {puedeVerCaja && <Link to="/caja">Ir a Caja</Link>}
+        {puedeVerPanel && <Link to="/panel">Ir a Panel</Link>}
       </nav>
 
       <button onClick={logout}>Cerrar sesión</button>

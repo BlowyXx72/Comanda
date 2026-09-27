@@ -87,6 +87,13 @@ export class PaymentsService {
     });
 
     this.realtimeGateway.emitirPedidoActualizado(pedido.sedeId, resultado.pedido);
+    this.realtimeGateway.emitirVentaRegistrada(cadenaId, {
+      sedeId: resultado.pedido.sedeId,
+      pedidoId: resultado.pedido.id,
+      canal: resultado.pedido.canal,
+      total: resultado.pedido.total,
+      fechaHora: resultado.pago.creadoEn,
+    });
     return resultado;
   }
 }
