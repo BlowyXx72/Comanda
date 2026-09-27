@@ -42,9 +42,14 @@ export function MesasPage() {
     setPedidosActivos(pedidosRes);
   };
 
+  const cargarProductos = () => {
+    if (!token) return;
+    listarProductos(token).then(setProductos).catch(() => undefined);
+  };
+
   useEffect(() => {
     if (!token || !sede) return;
-    listarProductos(token).then(setProductos).catch(() => undefined);
+    cargarProductos();
     cargarMesas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, sede]);
@@ -54,6 +59,9 @@ export function MesasPage() {
     sedeId: sede?.id ?? null,
     onComandaNueva: () => cargarMesas(),
     onPedidoActualizado: () => cargarMesas(),
+    // Fase 10 (CU-08): ADMIN crea/edita/desactiva un producto desde
+    // /catalogo y el mesero ve el catálogo actualizado sin recargar.
+    onCatalogoActualizado: () => cargarProductos(),
   });
 
   const pedidoDeMesa = (mesa: Mesa) => pedidosActivos.find((p) => p.mesaId === mesa.id);

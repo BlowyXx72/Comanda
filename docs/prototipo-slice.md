@@ -36,7 +36,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
 | CU-07 Operación sin conexión | **No implementado.** Solo se tomó la idea de idempotencia (UUID del cliente en `Pedido`); no hay IndexedDB, cola local ni `POST /sync`. |
-| CU-08 Catálogo centralizado | **No implementado todavía.** Desde la Fase 7 hay 3 sedes por cadena (sí habría algo que propagar), pero no existe un endpoint para crear/editar productos — el catálogo se carga solo desde el seed (ver Fase 10). |
+| CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
 
 ## Explícitamente fuera de alcance (stubs marcados en código)
 
@@ -218,6 +218,35 @@ validación vive en `OrdersModule`.
   de lectura que la propuesta pide específicamente para separar reportes del
   tráfico de venta (§5.1) queda `// TODO PRODUCCIÓN`; a la escala de esta
   demo (unas pocas sedes, tráfico bajo) no hace falta.
+
+## Catálogo centralizado (Fase 10, CU-08)
+
+- `Producto.activo` (`Boolean @default(true)`) reemplaza el borrado físico:
+  `DELETE /productos/:id` es una baja lógica (`activo = false`), no un
+  `DELETE` de la fila. Necesario porque `PedidoDetalle` de pedidos ya
+  pagados sigue apuntando al producto — borrarlo de verdad rompería el
+  historial.
+- `GET /productos` (cualquier rol autenticado) solo devuelve productos
+  activos. ADMIN puede pedir `?incluirInactivos=true` para ver también los
+  desactivados (para poder reactivarlos desde `/catalogo`); el backend
+  ignora ese parámetro si quien lo pide no es ADMIN, no solo lo oculta en la
+  interfaz.
+- `POST` / `PATCH` / `DELETE /productos/:id` están detrás de `@Roles('ADMIN')`
+  (el `GET` queda abierto a cualquier rol autenticado, igual que antes).
+- `OrdersService.crear` rechaza con `409 Conflict` un pedido que incluya un
+  producto ya desactivado, aunque `GET /productos` ya no lo liste: cubre al
+  mesero con el catálogo desactualizado en pantalla (o una llamada directa a
+  la API) mientras ADMIN lo daba de baja.
+- Tiempo real: `CatalogService` emite `catalogo:actualizado` (`{ productoId,
+  accion }`) a la room `cadena:{cadenaId}` después de crear/editar/desactivar
+  un producto. `useComandaSocket` (ya usado por `/mesas` para
+  `comanda:nueva`/`pedido:actualizado`) ganó un callback opcional
+  `onCatalogoActualizado` para escucharlo por la misma conexión, en vez de
+  abrir un socket aparte solo para esto.
+- Frontend: página `/catalogo` (solo ADMIN) para crear, editar y
+  desactivar/reactivar productos. No necesita escuchar el propio evento que
+  emite: como quien edita ahí es la misma persona que ve el resultado, cada
+  mutación simplemente recarga la tabla.
 
 ## Pulido (Fase 6)
 

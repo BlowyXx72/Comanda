@@ -21,6 +21,7 @@ export function HomePage() {
         <Link to="/cocina">Ir a Cocina</Link>
         {puedeVerCaja && <Link to="/caja">Ir a Caja</Link>}
         {puedeVerPanel && <Link to="/panel">Ir a Panel</Link>}
+        {puedeVerPanel && <Link to="/catalogo">Ir a Catálogo</Link>}
       </nav>
 
       <button onClick={logout}>Cerrar sesión</button>

@@ -26,6 +26,21 @@ export interface Producto {
   // Prisma serializa Decimal como string en el JSON.
   precio: string;
   categoria: string;
+  // Fase 10 (CU-08): baja lógica del catálogo centralizado.
+  activo: boolean;
+}
+
+export interface CrearProductoInput {
+  nombre: string;
+  precio: number;
+  categoria: string;
+}
+
+export interface ActualizarProductoInput {
+  nombre?: string;
+  precio?: number;
+  categoria?: string;
+  activo?: boolean;
 }
 
 export interface PedidoDetalle {
@@ -103,7 +118,18 @@ export const listarSedes = (token: string) => apiFetch<Sede[]>('/sedes', {}, tok
 
 export const listarMesas = (sedeId: string, token: string) => apiFetch<Mesa[]>(`/sedes/${sedeId}/mesas`, {}, token);
 
-export const listarProductos = (token: string) => apiFetch<Producto[]>('/productos', {}, token);
+export const listarProductos = (token: string, incluirInactivos = false) =>
+  apiFetch<Producto[]>(`/productos${incluirInactivos ? '?incluirInactivos=true' : ''}`, {}, token);
+
+// Fase 10 (CU-08): catálogo centralizado, gestionado desde /catalogo (ADMIN).
+export const crearProducto = (input: CrearProductoInput, token: string) =>
+  apiFetch<Producto>('/productos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const actualizarProducto = (id: string, input: ActualizarProductoInput, token: string) =>
+  apiFetch<Producto>(`/productos/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token);
+
+export const desactivarProducto = (id: string, token: string) =>
+  apiFetch<Producto>(`/productos/${id}`, { method: 'DELETE' }, token);
 
 export const crearPedido = (input: CrearPedidoInput, token: string) =>
   apiFetch<Pedido>('/pedidos', { method: 'POST', body: JSON.stringify(input) }, token);

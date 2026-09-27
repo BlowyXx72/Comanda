@@ -107,6 +107,10 @@ model Producto {
   nombre    String
   precio    Decimal @db.Decimal(10, 2)
   categoria String
+  // Fase 10 (CU-08): baja lógica desde el catálogo centralizado. Un producto
+  // desactivado no aparece en GET /productos (mesero) pero sigue existiendo
+  // para los PedidoDetalle históricos que ya lo referencian.
+  activo    Boolean @default(true)
 
   cadena   Cadena          @relation(fields: [cadenaId], references: [id])
   detalles PedidoDetalle[]

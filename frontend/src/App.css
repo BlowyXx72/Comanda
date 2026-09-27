@@ -340,6 +340,60 @@
   border-bottom: none;
 }
 
+/* --- Catálogo (Fase 10) --- */
+
+.catalogo-page {
+  padding: 24px;
+}
+
+.catalogo-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.catalogo-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.catalogo-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.catalogo-tabla th,
+.catalogo-tabla td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.catalogo-tabla input {
+  font: inherit;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.catalogo-fila-inactiva {
+  opacity: 0.55;
+}
+
+.catalogo-acciones {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 /* --- Cocina --- */
 
 .comandas-grid {

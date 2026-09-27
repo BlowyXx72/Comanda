@@ -167,7 +167,8 @@ Estas reglas existen para que las dos partes se unan sin romperse.
 | `backend/prisma/schema.prisma` | Compartido | Parte 1 solo toca `Sede` y `Producto`; Parte 2 solo toca `CanalPedido`, `Pedido` y el nuevo `Cliente` |
 | `backend/src/realtime/realtime.gateway.ts` | Parte 1 | Parte 2 solo **usa** `emitirComandaNueva` / `emitirPedidoActualizado` |
 | `backend/src/app.module.ts`, `frontend/src/App.tsx` | Compartido | Solo **agregar** líneas (imports / rutas), nunca reordenar ni borrar |
-| `frontend/src/pages/Mesas.tsx` | Compartido | Parte 1 no lo toca (el cambio de sede va en el hook); Parte 2 agrega QR y offline |
+| `frontend/src/pages/Mesas.tsx` | Compartido | Parte 1 no lo toca **salvo** una excepción ya aplicada (Fase 10): factorizó `listarProductos` en un `cargarProductos()` y agregó `onCatalogoActualizado: () => cargarProductos()` a la llamada existente de `useComandaSocket` (4 líneas, nada de JSX ni de `enviarComanda`). Parte 2 agrega QR y offline sobre esa base |
+| `frontend/src/realtime/useComandaSocket.ts` | Compartido | Parte 1 le agregó (Fase 10) el callback opcional `onCatalogoActualizado` — no rompe las llamadas existentes que no lo usan (`/cocina`, `/caja`). Parte 2 puede seguir usándolo tal cual |
 | `frontend/src/api/comanda.ts` | Compartido | Solo agregar funciones/tipos nuevos |
 | `prisma/seed.ts` | Parte 1 | Parte 2 pide lo que necesite en su PR (p. ej. clientes demo) y se agrega al integrar |
 

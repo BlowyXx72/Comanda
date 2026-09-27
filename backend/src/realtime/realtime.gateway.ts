@@ -83,4 +83,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   emitirVentaRegistrada(cadenaId: string, venta: unknown) {
     this.server.to(nombreRoomCadena(cadenaId)).emit('venta:registrada', venta);
   }
+
+  // Llamado por CatalogService al crear/editar/desactivar un producto. Lo
+  // escucha /mesas (Fase 10, CU-08) para refrescar el catálogo sin recargar.
+  emitirCatalogoActualizado(cadenaId: string, evento: unknown) {
+    this.server.to(nombreRoomCadena(cadenaId)).emit('catalogo:actualizado', evento);
+  }
 }

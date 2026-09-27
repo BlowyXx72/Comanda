@@ -3,6 +3,7 @@ import './App.css'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { CajaPage } from './pages/Caja'
+import { CatalogoPage } from './pages/Catalogo'
 import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
@@ -56,6 +57,14 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN']}>
                   <PanelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/catalogo"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <CatalogoPage />
                 </ProtectedRoute>
               }
             />
