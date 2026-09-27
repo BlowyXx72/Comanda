@@ -20,8 +20,8 @@ agregado que no esté en el documento de propuesta va marcado en el código:
 - `// DECISIÓN DE PROTOTIPO` — algo que decidimos nosotros porque la propuesta
   no lo fijaba (p. ej. Prisma, Socket.IO, JWT).
 - `// TODO PRODUCCIÓN` — un stub de algo que la propuesta sí pide pero que
-  este prototipo no implementa de verdad (DIAN real, Rappi, menú QR,
-  domicilios, panel multi-sede, offline/PWA, réplica de lectura, RLS).
+  este prototipo no implementa de verdad (DIAN real, Rappi, cobro offline,
+  réplica de lectura, RLS).
 
 ## Stack
 
@@ -61,7 +61,9 @@ Módulos que existen de verdad: `AuthModule`, `BranchesModule`,
 `CatalogModule`, `TablesModule`, `OrdersModule`, `PaymentsModule`,
 `RealtimeModule`, `ReportsModule` (este último no estaba en la lista
 original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
-el documento y no encajaba en ningún módulo existente). Deben quedar
+el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
+(menú QR sin JWT, CU-03) y `SyncModule` (`POST /sync` del modo offline,
+CU-07). Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
 
@@ -81,9 +83,7 @@ justificación de por qué WebSocket y no polling.
 
 ## Fuera de alcance explícito (no implementar de verdad)
 
-DIAN real, Rappi, menú QR (`GET /menu/{cadena}/{sede}` público), domicilios
-web, panel multi-sede consolidado, offline/PWA (IndexedDB + `POST /sync`),
-réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de
+DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de
 la propuesta (§5.1: CDN, Nginx, balanceo entre instancias, cola de mensajes +
 workers asíncronos, almacén de objetos, monitoreo/respaldos, SSH/NTP/SMTP/
 Syslog) — el prototipo es una sola instancia de cada pieza. Dejar como stubs
@@ -91,12 +91,15 @@ marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista
 completa y razonada en `docs/prototipo-slice.md`.
 
 El ER de la propuesta (§6.2) tiene entidades que este prototipo no
-implementa: `Cliente`, `Insumo`, `MovimientoInventario`, `Receta` — no hay
-registro de comensales ni gestión de inventario/recetas. Tampoco se usa
-`Sede.rangoNumeracion` de verdad: el campo existe en el schema, pero el
-consecutivo del `DocumentoFiscal` es un `MAX+1` simple por sede
-(`PaymentsService`), no un número tomado de un rango pre-asignado. Detalle en
+implementa: `Insumo`, `MovimientoInventario`, `Receta` — no hay gestión de
+inventario/recetas. `Cliente` sí existe, solo para pedidos de domicilio. Detalle en
 `docs/prototipo-slice.md`.
+
+Desde la Fase 8, `Sede` sí usa un rango de numeración fiscal real
+(`rangoInicio`/`rangoFin`/`siguienteConsecutivo`, §6.3 de la propuesta): el
+consecutivo del `DocumentoFiscal` sale de un `UPDATE ... increment` atómico
+sobre la sede dentro de la transacción de `PaymentsService.pagar`, no de un
+`MAX+1`.
 
 ## Flujo de trabajo
 

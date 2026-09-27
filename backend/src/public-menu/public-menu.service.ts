@@ -26,8 +26,8 @@ export class PublicMenuService {
     }
 
     const productos = await this.prisma.producto.findMany({
-      // al integrar Parte 1: filtrar activo = true
-      where: { cadenaId },
+      // Igual que GET /productos (Fase 10): los dados de baja no se muestran.
+      where: { cadenaId, activo: true },
       orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
       select: { id: true, nombre: true, precio: true, categoria: true },
     });

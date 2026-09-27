@@ -133,6 +133,15 @@ export class OrdersService {
       detalles.map((detalle) => this.catalogService.obtenerDeCadena(detalle.productoId, cadenaId)),
     );
 
+    // Fase 10: GET /productos ya no lista los desactivados, pero un cliente
+    // con el catálogo desactualizado (o alguien pegándole directo a la API)
+    // podría seguir mandando un productoId que se dio de baja mientras tanto.
+    // Aplica igual a pedidos en mesa, domicilio y los que llegan por /sync.
+    const inactivo = productos.find((producto) => !producto.activo);
+    if (inactivo) {
+      throw new ConflictException(`El producto "${inactivo.nombre}" ya no está disponible`);
+    }
+
     let total = new Prisma.Decimal(0);
     const detallesData = detalles.map((detalle, i) => {
       const producto = productos[i];

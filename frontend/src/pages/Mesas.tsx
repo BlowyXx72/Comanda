@@ -57,11 +57,17 @@ export function MesasPage() {
     setPedidosActivos(pedidosRes);
   };
 
-  useEffect(() => {
+  const cargarProductos = () => {
     if (!token || !sede) return;
+    // Sin red se usa el último catálogo guardado (CU-07).
     conRespaldo(`productos:${sede.cadenaId}`, () => listarProductos(token))
       .then(setProductos)
       .catch(() => undefined);
+  };
+
+  useEffect(() => {
+    if (!token || !sede) return;
+    cargarProductos();
     cargarMesas().catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, sede]);
@@ -71,6 +77,9 @@ export function MesasPage() {
     sedeId: sede?.id ?? null,
     onComandaNueva: () => cargarMesas(),
     onPedidoActualizado: () => cargarMesas(),
+    // Fase 10 (CU-08): ADMIN crea/edita/desactiva un producto desde
+    // /catalogo y el mesero ve el catálogo actualizado sin recargar.
+    onCatalogoActualizado: () => cargarProductos(),
   });
 
   const cola = useColaOffline(token, () => cargarMesas().catch(() => undefined));

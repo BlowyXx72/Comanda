@@ -24,15 +24,21 @@ async function main() {
     data: { nit: '900123456-7', nombre: 'Demo', plan: 'BASICO' },
   });
 
-  const sede = await prisma.sede.create({
-    data: {
-      cadenaId: cadena.id,
-      nombre: 'Sede Centro',
-      direccion: 'Cra 10 # 20-30, Bogotá',
-      // DECISIÓN DE PROTOTIPO: formato ilustrativo, no corresponde a un rango de numeración DIAN real.
-      rangoNumeracion: 'SETP990000001-SETP990500000',
-    },
-  });
+  // DECISIÓN DE PROTOTIPO (Fase 7): 3 sedes en vez de 1, para poder demostrar
+  // el panel multi-sede (CU-06) y el catálogo centralizado (CU-08).
+  // Fase 8: cada sede recibe un rango de numeración fiscal que no se solapa
+  // con el de las demás (§6.3 de la propuesta); `siguienteConsecutivo`
+  // arranca en `rangoInicio`, así que el primer documento fiscal de cada
+  // sede usa exactamente ese número.
+  const sedes = await Promise.all(
+    [
+      { nombre: 'Sede Centro', direccion: 'Cra 10 # 20-30, Bogotá', rangoInicio: 1, rangoFin: 1000 },
+      { nombre: 'Sede Norte', direccion: 'Cl 140 # 15-20, Bogotá', rangoInicio: 1001, rangoFin: 2000 },
+      { nombre: 'Sede Chapinero', direccion: 'Cra 13 # 60-10, Bogotá', rangoInicio: 2001, rangoFin: 3000 },
+    ].map(({ rangoInicio, ...datos }) =>
+      prisma.sede.create({ data: { cadenaId: cadena.id, rangoInicio, siguienteConsecutivo: rangoInicio, ...datos } }),
+    ),
+  );
 
   await prisma.usuario.createMany({
     data: [
@@ -70,15 +76,17 @@ async function main() {
     ],
   });
 
-  await prisma.mesa.createMany({
-    data: Array.from({ length: 6 }, (_, i) => ({
-      sedeId: sede.id,
-      numero: i + 1,
-      estado: 'LIBRE' as const,
-    })),
-  });
+  for (const s of sedes) {
+    await prisma.mesa.createMany({
+      data: Array.from({ length: 6 }, (_, i) => ({
+        sedeId: s.id,
+        numero: i + 1,
+        estado: 'LIBRE' as const,
+      })),
+    });
+  }
 
-  console.log('Seed completado: 1 cadena, 1 sede, 3 usuarios, 8 productos, 6 mesas.');
+  console.log(`Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, 8 productos, ${sedes.length * 6} mesas.`);
 }
 
 main()
