@@ -17,6 +17,10 @@ import { useColaOffline } from '../offline/useColaOffline';
 import { useSedeConRespaldo } from '../offline/useSedeConRespaldo';
 import { useComandaSocket } from '../realtime/useComandaSocket';
 import { formatearCOP } from '../utils/formato';
+import { reproducirBeepPedidoListo } from '../utils/sonido';
+
+// Cuánto dura resaltada la mesa cuando cocina marca su pedido LISTO.
+const DURACION_ALERTA_MS = 4000;
 
 // DECISIÓN DE PROTOTIPO: el QR se genera en el navegador con `qrcode.react`
 // (la propuesta pide el QR por mesa, no cómo generarlo). Apunta a la vista
@@ -45,6 +49,9 @@ export function MesasPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarQr, setMostrarQr] = useState(false);
+  // Mesas cuyo pedido acaba de pasar a LISTO en cocina, para resaltarlas en
+  // la grilla (ver useComandaSocket → onPedidoActualizado más abajo).
+  const [mesasRecienListas, setMesasRecienListas] = useState<Set<string>>(new Set());
 
   const cargarMesas = async () => {
     if (!token || !sede) return;
@@ -76,7 +83,24 @@ export function MesasPage() {
     token,
     sedeId: sede?.id ?? null,
     onComandaNueva: () => cargarMesas(),
-    onPedidoActualizado: () => cargarMesas(),
+    onPedidoActualizado: (pedido) => {
+      cargarMesas();
+      // Alerta para el mesero: cocina acaba de marcar este pedido LISTO,
+      // hay que ir a recogerlo. Sin esto, el cambio solo se notaba si el
+      // mesero tenía la mesa abierta en el panel de detalle.
+      if (pedido.estado === 'LISTO' && pedido.mesaId) {
+        const mesaId = pedido.mesaId;
+        reproducirBeepPedidoListo();
+        setMesasRecienListas((prev) => new Set(prev).add(mesaId));
+        setTimeout(() => {
+          setMesasRecienListas((prev) => {
+            const siguiente = new Set(prev);
+            siguiente.delete(mesaId);
+            return siguiente;
+          });
+        }, DURACION_ALERTA_MS);
+      }
+    },
     // Fase 10 (CU-08): ADMIN crea/edita/desactiva un producto desde
     // /catalogo y el mesero ve el catálogo actualizado sin recargar.
     onCatalogoActualizado: () => cargarProductos(),
@@ -239,19 +263,23 @@ export function MesasPage() {
       )}
 
       <div className="mesas-grid">
-        {mesasVista.map((mesa) => (
-          <button
-            key={mesa.id}
-            className={`mesa-card mesa-card--${mesa.estado.toLowerCase()}`}
-            onClick={() => abrirMesa(mesa)}
-          >
-            <span className="mesa-numero">Mesa {mesa.numero}</span>
-            <span className="mesa-estado">
-              {mesa.estado}
-              {pendienteDeMesa(mesa.id) && ' · sin sincronizar'}
-            </span>
-          </button>
-        ))}
+        {mesasVista.map((mesa) => {
+          const recienLista = mesasRecienListas.has(mesa.id);
+          return (
+            <button
+              key={mesa.id}
+              className={`mesa-card mesa-card--${mesa.estado.toLowerCase()}${recienLista ? ' mesa-card--recien-listo' : ''}`}
+              onClick={() => abrirMesa(mesa)}
+            >
+              {recienLista && <span className="mesa-alerta">¡Listo!</span>}
+              <span className="mesa-numero">Mesa {mesa.numero}</span>
+              <span className="mesa-estado">
+                {mesa.estado}
+                {pendienteDeMesa(mesa.id) && ' · sin sincronizar'}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {mesaSeleccionada && (
