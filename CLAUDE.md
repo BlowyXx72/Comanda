@@ -81,6 +81,11 @@ escucha el KDS) y `pedido:actualizado` (cambio de estado, lo escuchan mesero y
 caja). Ver README, sección "Servicios telemáticos usados y por qué", para la
 justificación de por qué WebSocket y no polling.
 
+Room por cadena: `cadena:{cadenaId}` (Fases 9–10). Eventos: `venta:registrada`
+(cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo)
+y `catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
+`/mesas` y el menú QR de todas las sedes de esa cadena).
+
 ## Fuera de alcance explícito (no implementar de verdad)
 
 DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de

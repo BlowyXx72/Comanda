@@ -38,7 +38,9 @@ resetear los datos de demo — el script es idempotente, borra y recrea todo).
 
 Usuarios de prueba creados por el seed (contraseña de cada uno junto al
 correo): `admin@demo.com` / `admin123`, `cajero@demo.com` / `cajero123`,
-`mesero@demo.com` / `mesero123`.
+`mesero@demo.com` / `mesero123`. Desde la Fase 7 el seed crea **3 sedes**
+para la cadena demo: ADMIN ve un selector de sede en el encabezado;
+MESERO/CAJERO operan siempre en la última sede elegida en ese navegador.
 
 Verifica que todo esté sano:
 
@@ -104,6 +106,36 @@ Con dos (o tres) pestañas del navegador abiertas en http://localhost:5173:
    medio de pago y confirma: se genera el documento fiscal simulado
    (consecutivo por sede) y la mesa vuelve a **LIBRE** — visible de inmediato
    en la pestaña de `/mesas`, sin recargar.
+
+En la pestaña de `/mesas`, cuando cocina marca **"Marcar LISTO"** (paso 3),
+la mesa correspondiente se resalta unos segundos y suena un beep para
+avisarle al mesero que debe ir a recogerla, sin necesidad de tener esa mesa
+abierta en el panel de detalle.
+
+## Otras funcionalidades (Fases 7 a 10)
+
+Además del flujo principal, el prototipo cubre estos casos de uso adicionales
+de la propuesta (detalle completo y estado de cada uno en
+[`docs/prototipo-slice.md`](docs/prototipo-slice.md)):
+
+- **Menú QR (CU-03)** — en `/mesas`, cada mesa tiene un botón para mostrar su
+  código QR, que apunta a `/menu/:cadenaId/:sedeId?mesa=N`: una vista pública
+  (sin login) con el catálogo de esa sede, pensada para el celular del
+  comensal.
+- **Domicilio web (CU-04)** — desde la vista de menú público, un cliente
+  remoto puede hacer un pedido a domicilio sin JWT; llega a `/cocina` de la
+  sede correspondiente con la etiqueta "Domicilio" en vez de número de mesa.
+- **Panel multi-sede (CU-06)** — `/panel` (solo ADMIN) muestra el consolidado
+  de ventas de las 3 sedes de la cadena, agrupado por sede/día/canal,
+  actualizado en vivo con cada cobro.
+- **Modo offline del mesero (CU-07)** — si el navegador del mesero pierde
+  conexión, `/mesas` sigue funcionando con catálogo y mesas en caché
+  (IndexedDB) y encola los pedidos nuevos localmente; al reconectar, se
+  sincronizan solos contra `POST /sync` (idempotente, no duplica si se
+  reenvía el mismo lote).
+- **Catálogo centralizado (CU-08)** — `/catalogo` (solo ADMIN) permite
+  crear, editar y desactivar productos una sola vez; el cambio se propaga en
+  vivo a `/mesas` y al menú QR de las 3 sedes, sin recargar.
 
 ## Estructura del repositorio
 
@@ -171,7 +203,20 @@ infraestructura corresponde a un concepto telemático concreto:
 
 ## Plan de fases
 
-Las 7 fases del prototipo (`Fase 0` scaffolding, `Fase 1` datos, `Fase 2`
-auth, `Fase 3` REST, `Fase 4` tiempo real, `Fase 5` cobro, `Fase 6` pulido)
-ya están completas, cada una en un commit independiente — ver el historial
-de `git log` para el detalle de qué trajo cada una.
+Las fases `0` a `6` (scaffolding, datos, auth, REST, tiempo real, cobro,
+pulido) cubren el flujo principal y ya están completas, cada una en un
+commit independiente.
+
+A partir de la fase `7`, el trabajo se dividió en dos partes en paralelo
+(ver [`docs/fases-siguientes.md`](docs/fases-siguientes.md) para el plan
+detallado y los contratos de integración entre ambas), ya integradas en
+`main`:
+
+- **Parte 1** — operación interna multi-sede: `Fase 7` (multi-sede real),
+  `Fase 8` (rangos de numeración fiscal, §6.3), `Fase 9` (panel multi-sede,
+  CU-06), `Fase 10` (catálogo centralizado, CU-08).
+- **Parte 2** — canales hacia el cliente y resiliencia: `Fase 7B` (menú QR,
+  CU-03), `Fase 8B` (domicilio web, CU-04), `Fase 9B` (modo offline del
+  mesero, CU-07).
+
+Ver el historial de `git log` para el detalle de qué trajo cada commit.
