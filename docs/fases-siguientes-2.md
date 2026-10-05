@@ -35,7 +35,6 @@ empieza sin confirmarlas:
 2. **Librerías y puertos nuevos.** `CLAUDE.md` exige preguntar antes de
    agregarlos:
    - `bullmq` (cola sobre el Redis que ya existe) — Fases 11B, 12B y 14B.
-   - `@socket.io/redis-adapter` — Fase 13B.
    - `nodemailer` — Fase 14B.
    - Cliente S3 (`@aws-sdk/client-s3` o `minio`) — Fase 11B.
    - Nuevos contenedores: `postgres-replica`, `minio`, `nginx`, `worker`,
@@ -46,11 +45,6 @@ empieza sin confirmarlas:
 real. Los "proveedores" de esta ronda son simuladores locales. También quedan
 fuera CDN, DNS por subdominio, SSH, NTP, Syslog y monitoreo, porque en Docker
 local no tienen nada que demostrar.
-
-**Un hallazgo a corregir:** `CLAUDE.md` dice que Redis es el backplane del
-WebSocket "a partir de Fase 4", pero hoy solo lo usa `/health`; Socket.IO no
-tiene adaptador de Redis. Con una sola instancia no se nota. La Fase 13B lo
-conecta de verdad.
 
 ---
 
@@ -209,9 +203,10 @@ tráfico.
     `/socket.io` (con upgrade a WSS).
   - Activa TLS 1.3, HTTP/2 y gzip.
 - `backend` pasa a 2 réplicas (`backend-1`, `backend-2`) balanceadas por Nginx.
-  - Socket.IO necesita afinidad de sesión (`ip_hash`) para el polling inicial
-    y `@socket.io/redis-adapter`. Así, un evento emitido en una instancia
-    llega a sockets conectados a la otra (corrige el hallazgo de arriba).
+  - Socket.IO necesita afinidad de sesión (`ip_hash`) para el polling
+    inicial. El backplane de Redis (`RedisIoAdapter`, desde la Fase 4) ya
+    hace que un evento emitido en una instancia llegue a los sockets de la
+    otra; esta fase es la primera vez que se demuestra con dos instancias.
 - `limit_req` en `/api/menu/` y `/api/public/` (resuelve el
   `// TODO PRODUCCIÓN` de rate limiting de 7B/8B).
 - Efecto colateral buscado: con HTTPS, el service worker de la 9B funciona
