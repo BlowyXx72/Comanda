@@ -61,6 +61,53 @@ services:
         condition: service_healthy
     command: sh -c "npx prisma migrate deploy && npm run start:dev"
 
+  # Fase 11B: almacén de objetos de §5.1 (XML fiscales). Consola web en
+  # http://localhost:${MINIO_CONSOLE_PORT} con MINIO_ROOT_USER/PASSWORD.
+  # DECISIÓN DE PROTOTIPO: MinIO dejó de publicar imágenes en Docker Hub
+  # (minio/minio ya no descarga); se usa la imagen congelada de Bitnami, que
+  # es el mismo servidor MinIO (versión 2025.5.24) sin actualizaciones.
+  # Basta para un prototipo local; en producción sería un S3 administrado.
+  minio:
+    image: bitnamilegacy/minio:2025.5.24
+    container_name: comanda-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - comanda-minio-data:/bitnami/minio/data
+
+  # Fase 11B: trabajador asíncrono de §5.1. Misma imagen y código que el
+  # backend, otro punto de entrada (src/worker.ts): consume la cola fiscal de
+  # BullMQ y valida los documentos contra el proveedor DIAN simulado.
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: comanda-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT_INTERNAL: 6379
+    volumes:
+      - ./backend:/app
+      - comanda-backend-node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    # migrate deploy también aquí por si el worker arranca antes que el
+    # backend; Prisma serializa los dos con un advisory lock.
+    command: sh -c "npx prisma migrate deploy && npm run start:worker"
+
   frontend:
     build:
       context: ./frontend
@@ -81,5 +128,6 @@ services:
 
 volumes:
   comanda-postgres-data:
+  comanda-minio-data:
   comanda-backend-node-modules:
   comanda-frontend-node-modules:

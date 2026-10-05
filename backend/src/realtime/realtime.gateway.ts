@@ -89,4 +89,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   emitirCatalogoActualizado(cadenaId: string, evento: unknown) {
     this.server.to(nombreRoomCadena(cadenaId)).emit('catalogo:actualizado', evento);
   }
+
+  // Llamado por FiscalEventosService cuando el worker termina de validar un
+  // documento (Fase 11B). Lo escucha /caja para mostrar el estado DIAN en vivo.
+  emitirDocumentoActualizado(sedeId: string, documento: unknown) {
+    this.server.to(nombreRoomSede(sedeId)).emit('documento:actualizado', documento);
+  }
 }

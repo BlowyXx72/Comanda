@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Pedido } from '../api/comanda';
+import type { DocumentoActualizado, Pedido } from '../api/comanda';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3000';
 
@@ -19,6 +19,8 @@ interface UseComandaSocketOptions {
   // RealtimeGateway), así que reutiliza esta misma conexión en vez de abrir
   // una segunda solo para esto.
   onCatalogoActualizado?: (evento: CatalogoActualizado) => void;
+  // Fase 11B: el worker terminó de validar un documento fiscal (lo usa /caja).
+  onDocumentoActualizado?: (documento: DocumentoActualizado) => void;
 }
 
 // Consumido por: /cocina (comanda:nueva + pedido:actualizado), /caja
@@ -30,6 +32,7 @@ export function useComandaSocket({
   onComandaNueva,
   onPedidoActualizado,
   onCatalogoActualizado,
+  onDocumentoActualizado,
 }: UseComandaSocketOptions) {
   const onComandaNuevaRef = useRef(onComandaNueva);
   const onPedidoActualizadoRef = useRef(onPedidoActualizado);
@@ -37,6 +40,8 @@ export function useComandaSocket({
   onComandaNuevaRef.current = onComandaNueva;
   onPedidoActualizadoRef.current = onPedidoActualizado;
   onCatalogoActualizadoRef.current = onCatalogoActualizado;
+  const onDocumentoActualizadoRef = useRef(onDocumentoActualizado);
+  onDocumentoActualizadoRef.current = onDocumentoActualizado;
 
   useEffect(() => {
     if (!token || !sedeId) {
@@ -51,6 +56,7 @@ export function useComandaSocket({
     socket.on('comanda:nueva', (pedido: Pedido) => onComandaNuevaRef.current?.(pedido));
     socket.on('pedido:actualizado', (pedido: Pedido) => onPedidoActualizadoRef.current?.(pedido));
     socket.on('catalogo:actualizado', (evento: CatalogoActualizado) => onCatalogoActualizadoRef.current?.(evento));
+    socket.on('documento:actualizado', (doc: DocumentoActualizado) => onDocumentoActualizadoRef.current?.(doc));
 
     return () => {
       socket.disconnect();

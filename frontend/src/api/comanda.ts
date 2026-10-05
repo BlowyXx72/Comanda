@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchTexto } from './client';
 
 export interface Sede {
   id: string;
@@ -108,10 +108,16 @@ export interface DocumentoFiscal {
   sedeId: string;
   tipo: string;
   consecutivo: number;
-  estadoDian: string;
+  estadoDian: EstadoDian;
   urlXml: string | null;
+  // Fase 11B: respuesta del proveedor DIAN simulado y hora de validación.
+  mensajeDian?: string | null;
+  validadoEn?: string | null;
   creadoEn: string;
 }
+
+// SIMULADO = cobrado antes de la Fase 11B; los demás los pone el worker.
+export type EstadoDian = 'SIMULADO' | 'PENDIENTE' | 'VALIDADO_SIMULADO' | 'RECHAZADO_SIMULADO';
 
 export interface ResultadoPago {
   pago: Pago;
@@ -228,3 +234,18 @@ export type ResultadoSync =
 
 export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
   apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);
+
+// --- Documento fiscal en segundo plano (Fase 11B) ---
+
+// Payload de `documento:actualizado` (room sede:{id}).
+export interface DocumentoActualizado {
+  documentoFiscalId: string;
+  pedidoId: string;
+  sedeId: string;
+  estadoDian: EstadoDian;
+  urlXml: string | null;
+  mensajeDian: string | null;
+}
+
+export const descargarXmlDocumento = (documentoFiscalId: string, token: string) =>
+  apiFetchTexto(`/documentos-fiscales/${documentoFiscalId}/xml`, token);

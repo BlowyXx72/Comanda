@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.build.json",
+  // Fase 11B: el contenedor `worker` compila a su propia carpeta para no
+  // pisar el dist/ que el backend recompila en paralelo con --watch (los dos
+  // contenedores comparten el mismo bind mount de ./backend).
+  "compilerOptions": {
+    "outDir": "./dist-worker"
+  }
+}

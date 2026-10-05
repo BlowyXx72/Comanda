@@ -30,7 +30,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | Caso de uso | Estado en el prototipo |
 |---|---|
 | CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
-| CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede, pero no se transmite a la DIAN. |
+| CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede. Desde la Fase 11B el documento queda `PENDIENTE` y un worker aparte genera el XML (sin firma), lo guarda en MinIO y lo "valida" contra un proveedor DIAN **simulado**, sin bloquear la caja; el estado llega a `/caja` en vivo. No se transmite a la DIAN real. |
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
 | CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; sin rate limiting (`// TODO PRODUCCIÓN`). |
 | CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
@@ -45,7 +45,9 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 `// TODO PRODUCCIÓN`:
 
 - Integración real con la **DIAN** (facturación electrónica) — el documento fiscal
-  es simulado, `estado_dian` siempre queda en `SIMULADO`, `url_xml` siempre `null`.
+  es simulado: el XML no sigue UBL 2.1 ni va firmado, y la "validación" la
+  hace `ProveedorDianSimuladoService` (Fase 11B), no el proveedor tecnológico
+  autorizado.
 - Integración con **Rappi** u otras plataformas de domicilios.
 - **Límite de tasa** en los endpoints públicos del menú QR y del domicilio
   web (CU-03/CU-04): hoy cualquiera puede llamarlos sin freno.
@@ -65,10 +67,11 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   `cadena_id` embebido en el JWT, no por subdominio.
 - **Infraestructura de alta disponibilidad** de la propuesta (§5.1): CDN,
   proxy inverso Nginx con límite de tasa, dos servidores de aplicación
-  balanceados, cola de mensajes + trabajadores asíncronos para DIAN/Rappi,
-  almacén de objetos separado, monitoreo y respaldos. El prototipo es una
-  sola instancia de cada pieza (un backend, un Postgres, un Redis) porque el
-  volumen de una demo no lo justifica.
+  balanceados, monitoreo y respaldos. El prototipo es una sola instancia de
+  cada pieza (un backend, un Postgres, un Redis) porque el volumen de una demo
+  no lo justifica. La cola de mensajes + trabajador asíncrono y el almacén de
+  objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
+  plano").
 - **SSH (solo con llaves), NTP, SMTP y Syslog centralizado** (§5.2 de la
   propuesta) — protocolos de operación de servidores de producción; no
   aplican a un prototipo que corre en Docker local.
@@ -167,8 +170,40 @@ validación vive en `OrdersModule`.
   `Sede` (ver "Numeración fiscal por sede (Fase 8)" más abajo), dentro de la
   misma transacción que crea el `Pago`, actualiza el `Pedido` a `PAGADO` y
   libera la `Mesa`.
-- `estadoDian` queda fijo en `SIMULADO` y `urlXml` en `null`: no hay
-  generación ni firma de XML, ni radicación ante la DIAN.
+- Hasta la Fase 11B, `estadoDian` quedaba fijo en `SIMULADO` y `urlXml` en
+  `null` (esos documentos viejos conservan ese estado). Desde la 11B ver
+  "Documento fiscal en segundo plano" más abajo.
+
+## Documento fiscal en segundo plano (Fase 11B)
+
+§5.1 pide un trabajador asíncrono con cola de mensajes para que "la caja
+nunca espere a un servicio externo", y §6.3 que "la validación DIAN ocurre en
+segundo plano sin bloquear la caja". Así quedó:
+
+- `POST /pagos` crea el documento en `PENDIENTE` y, **después** de confirmar
+  la transacción, lo encola en BullMQ (sobre el mismo Redis del backplane de
+  Socket.IO) sin esperar el encolado. Si Redis falla, el cobro ya quedó: el
+  documento sigue `PENDIENTE` y el worker lo re-encola al arrancar (el
+  `jobId` es el id del documento, así que no se duplica).
+- El contenedor `worker` (misma imagen y código del backend, entrada
+  `src/worker.ts`) toma cada trabajo y:
+  - genera un XML propio y mínimo, sin firma (no es UBL 2.1);
+  - lo sube a MinIO (almacén de objetos S3, §5.1) y guarda en `urlXml` la URI
+    `s3://bucket/llave`;
+  - lo "valida" contra `ProveedorDianSimuladoService`.
+- El simulador tiene latencia, tasa de caída y tasa de rechazo configurables
+  por `.env` (`DIAN_SIMULADA_*`):
+  - Una caída es un error técnico: BullMQ reintenta con backoff exponencial
+    (`COLA_FISCAL_INTENTOS`, 5 por defecto). Si se agotan los intentos, el
+    documento queda `RECHAZADO_SIMULADO` con el motivo.
+  - Un rechazo es una respuesta de negocio y no se reintenta.
+- Al terminar, el backend recibe el evento `completed` de la cola y emite
+  `documento:actualizado` a `sede:{id}`; `/caja` actualiza el recibo en vivo.
+- El navegador no habla con MinIO: `GET /documentos-fiscales/:id/xml`
+  (CAJERO/ADMIN, con aislamiento por cadena) descarga el XML.
+- `// DECISIÓN DE PROTOTIPO`: MinIO corre con la imagen congelada
+  `bitnamilegacy/minio`, porque MinIO dejó de publicar `minio/minio` en Docker
+  Hub. Es el mismo servidor, sin actualizaciones.
 
 ## Numeración fiscal por sede (Fase 8)
 

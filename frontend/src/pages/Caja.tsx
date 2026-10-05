@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
-import { crearPago, listarPedidosActivos, type MedioPago, type Pedido, type ResultadoPago } from '../api/comanda';
+import {
+  crearPago,
+  descargarXmlDocumento,
+  listarPedidosActivos,
+  type EstadoDian,
+  type MedioPago,
+  type Pedido,
+  type ResultadoPago,
+} from '../api/comanda';
 import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
 import { etiquetaPedido, formatearCOP } from '../utils/formato';
+
+const TEXTO_ESTADO_DIAN: Record<EstadoDian, string> = {
+  SIMULADO: 'Simulado (cobrado antes de la cola fiscal)',
+  PENDIENTE: 'Validando con la DIAN (simulada) en segundo plano…',
+  VALIDADO_SIMULADO: 'Validado (simulado)',
+  RECHAZADO_SIMULADO: 'Rechazado (simulado)',
+};
 
 export function CajaPage() {
   const { token } = useAuth();
@@ -35,7 +50,35 @@ export function CajaPage() {
         return prev.map((p) => (p.id === pedido.id ? pedido : p));
       });
     },
+    // Fase 11B: el cobro ya respondió con el documento PENDIENTE; el worker
+    // avisa aquí cuando termina de validarlo.
+    onDocumentoActualizado: (doc) =>
+      setRecibo((prev) =>
+        prev && prev.documentoFiscal.id === doc.documentoFiscalId
+          ? {
+              ...prev,
+              documentoFiscal: {
+                ...prev.documentoFiscal,
+                estadoDian: doc.estadoDian,
+                urlXml: doc.urlXml,
+                mensajeDian: doc.mensajeDian,
+              },
+            }
+          : prev,
+      ),
   });
+
+  const verXml = async () => {
+    if (!token || !recibo) return;
+    try {
+      const xml = await descargarXmlDocumento(recibo.documentoFiscal.id, token);
+      const url = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo descargar el XML');
+    }
+  };
 
   const abrirCobro = (pedido: Pedido) => {
     setPedidoACobrar(pedido);
@@ -155,9 +198,13 @@ export function CajaPage() {
           <p>
             <strong>{recibo.documentoFiscal.tipo}</strong> N.° {recibo.documentoFiscal.consecutivo}
           </p>
-          <p className="panel-nota">
-            Estado DIAN: {recibo.documentoFiscal.estadoDian} — documento simulado, sin envío real a la DIAN.
+          <p className={`estado-dian estado-dian--${recibo.documentoFiscal.estadoDian.toLowerCase()}`}>
+            Estado DIAN: {TEXTO_ESTADO_DIAN[recibo.documentoFiscal.estadoDian]}
           </p>
+          {recibo.documentoFiscal.mensajeDian && <p className="panel-nota">{recibo.documentoFiscal.mensajeDian}</p>}
+          <p className="panel-nota">Documento simulado, sin envío real a la DIAN.</p>
+          {recibo.documentoFiscal.urlXml && <button onClick={verXml}>Ver XML</button>}
+          {error && <p className="login-error">{error}</p>}
           <ul className="lista-items">
             {recibo.pedido.detalles.map((detalle) => (
               <li key={detalle.id}>

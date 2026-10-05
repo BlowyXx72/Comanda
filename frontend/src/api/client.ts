@@ -32,3 +32,18 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, token
 
   return (await response.json()) as T;
 }
+
+// Igual que apiFetch, pero devuelve el cuerpo como texto (p. ej. el XML del
+// documento fiscal, Fase 11B).
+export async function apiFetchTexto(path: string, token?: string | null): Promise<string> {
+  const headers = new Headers();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.message ?? response.statusText, response.status);
+  }
+  return response.text();
+}

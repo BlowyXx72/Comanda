@@ -44,8 +44,14 @@ enum TipoDocumentoFiscal {
 }
 
 enum EstadoDian {
+  // Documentos cobrados antes de la Fase 11B: nunca pasaron por la cola.
   SIMULADO
-  // TODO PRODUCCION: PENDIENTE, ACEPTADO, RECHAZADO cuando haya integración real con la DIAN
+  // Fase 11B: el cobro deja el documento PENDIENTE y el worker lo "valida"
+  // en segundo plano contra ProveedorDianSimulado (§5.1, §6.3).
+  PENDIENTE
+  VALIDADO_SIMULADO
+  RECHAZADO_SIMULADO
+  // TODO PRODUCCION: estados reales del proveedor tecnológico DIAN
 }
 
 // Tenant
@@ -212,8 +218,13 @@ model DocumentoFiscal {
 
   tipo        TipoDocumentoFiscal @default(FACTURA)
   consecutivo Int
-  estadoDian  EstadoDian          @default(SIMULADO) @map("estado_dian")
+  estadoDian  EstadoDian          @default(PENDIENTE) @map("estado_dian")
+  // Fase 11B: URI del XML en el almacén de objetos (s3://bucket/llave);
+  // el navegador lo descarga por GET /documentos-fiscales/:id/xml.
   urlXml      String?             @map("url_xml")
+  // Respuesta (simulada) del proveedor DIAN o motivo del rechazo.
+  mensajeDian String?             @map("mensaje_dian")
+  validadoEn  DateTime?           @map("validado_en")
   creadoEn    DateTime            @default(now()) @map("creado_en")
 
   pedido Pedido @relation(fields: [pedidoId], references: [id])

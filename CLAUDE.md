@@ -62,8 +62,12 @@ Módulos que existen de verdad: `AuthModule`, `BranchesModule`,
 `RealtimeModule`, `ReportsModule` (este último no estaba en la lista
 original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
 el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
-(menú QR sin JWT, CU-03) y `SyncModule` (`POST /sync` del modo offline,
-CU-07). Deben quedar
+(menú QR sin JWT, CU-03), `SyncModule` (`POST /sync` del modo offline,
+CU-07) y `FiscalModule` (Fase 11B: cola BullMQ de documentos fiscales,
+validación DIAN **simulada** en segundo plano y XML en MinIO). El
+procesamiento de esa cola corre en un proceso aparte, el contenedor `worker`
+(`src/worker.ts` + `FiscalWorkerModule`), con el mismo código del backend.
+Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
 
@@ -86,12 +90,20 @@ Room por cadena: `cadena:{cadenaId}` (Fases 9–10). Eventos: `venta:registrada`
 y `catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
 `/mesas` y el menú QR de todas las sedes de esa cadena).
 
+`documento:actualizado` (Fase 11B, room `sede:{id}`): el worker terminó de
+validar un documento fiscal; lo escucha `/caja`. El worker no tiene sockets:
+el backend lo reenvía al recibir el evento `completed` de la cola.
+
 ## Fuera de alcance explícito (no implementar de verdad)
 
-DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de
-la propuesta (§5.1: CDN, Nginx, balanceo entre instancias, cola de mensajes +
-workers asíncronos, almacén de objetos, monitoreo/respaldos, SSH/NTP/SMTP/
-Syslog) — el prototipo es una sola instancia de cada pieza. Dejar como stubs
+DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y
+el resto de la infraestructura de alta disponibilidad de la propuesta (§5.1:
+CDN, Nginx, balanceo entre instancias, monitoreo/respaldos, SSH/NTP/SMTP/
+Syslog) — el prototipo es una sola instancia de cada pieza. La cola de
+mensajes + worker asíncrono y el almacén de objetos sí existen desde la
+Fase 11B, pero el "proveedor DIAN" al que hablan es un simulador local. La
+ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)) mueve
+más piezas de esta lista adentro del alcance a medida que se integren. Dejar como stubs
 marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista
 completa y razonada en `docs/prototipo-slice.md`.
 
