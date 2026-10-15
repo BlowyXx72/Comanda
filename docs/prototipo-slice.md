@@ -30,10 +30,10 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | Caso de uso | Estado en el prototipo |
 |---|---|
 | CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
-| CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede, pero no se transmite a la DIAN. |
+| CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede. Desde la Fase 11B el documento queda `PENDIENTE` y un worker aparte genera el XML (sin firma), lo guarda en MinIO y lo "valida" contra un proveedor DIAN **simulado**, sin bloquear la caja; el estado llega a `/caja` en vivo. No se transmite a la DIAN real. |
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
-| CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; sin rate limiting (`// TODO PRODUCCIÓN`). |
-| CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
+| CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; desde la Fase 13B Nginx le limita la tasa (`429`). |
+| CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
 | CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
 | CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
@@ -45,10 +45,13 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 `// TODO PRODUCCIÓN`:
 
 - Integración real con la **DIAN** (facturación electrónica) — el documento fiscal
-  es simulado, `estado_dian` siempre queda en `SIMULADO`, `url_xml` siempre `null`.
-- Integración con **Rappi** u otras plataformas de domicilios.
-- **Límite de tasa** en los endpoints públicos del menú QR y del domicilio
-  web (CU-03/CU-04): hoy cualquiera puede llamarlos sin freno.
+  es simulado: el XML no sigue UBL 2.1 ni va firmado, y la "validación" la
+  hace `ProveedorDianSimuladoService` (Fase 11B), no el proveedor tecnológico
+  autorizado.
+- Integración real con **Rappi** u otras plataformas de domicilios. Desde la
+  Fase 12B existe el canal `PLATAFORMA` y su API, pero quien la usa es un
+  simulador local con formato propio (ver "Pedidos de plataforma simulados
+  (Fase 12B)").
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
 - **Réplica de lectura** de base de datos (la propuesta la usa específicamente
@@ -57,21 +60,24 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - **Row Level Security (RLS)** de PostgreSQL para aislamiento multi-tenant — en
   el prototipo el aislamiento por `cadena_id` se aplica a nivel de aplicación
   (filtros explícitos en cada query), no a nivel de motor de base de datos.
-- **HTTPS/TLS 1.3 y WSS** — en local todo corre sobre HTTP/WS sin cifrado; en
-  producción esto sería obligatorio (ver README, sección "Servicios
-  telemáticos usados y por qué").
+- **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
+  con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
 - **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
   `lacadena.comandacentral.co`) — en el prototipo el tenant se resuelve por el
   `cadena_id` embebido en el JWT, no por subdominio.
-- **Infraestructura de alta disponibilidad** de la propuesta (§5.1): CDN,
-  proxy inverso Nginx con límite de tasa, dos servidores de aplicación
-  balanceados, cola de mensajes + trabajadores asíncronos para DIAN/Rappi,
-  almacén de objetos separado, monitoreo y respaldos. El prototipo es una
-  sola instancia de cada pieza (un backend, un Postgres, un Redis) porque el
-  volumen de una demo no lo justifica.
-- **SSH (solo con llaves), NTP, SMTP y Syslog centralizado** (§5.2 de la
+- **Resto de la infraestructura de alta disponibilidad** de la propuesta
+  (§5.1): CDN, monitoreo y respaldos. Postgres, Redis y Nginx son una sola
+  instancia. El proxy inverso con límite de tasa y las dos instancias de
+  backend balanceadas sí existen desde la Fase 13B (ver "Proxy inverso y dos
+  instancias (Fase 13B)"). La cola de mensajes + trabajador asíncrono y el almacén de
+  objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
+  plano").
+- **SSH (solo con llaves), NTP y Syslog centralizado** (§5.2 de la
   propuesta) — protocolos de operación de servidores de producción; no
   aplican a un prototipo que corre en Docker local.
+- **Entrega real de correo.** Desde la Fase 14B el worker envía por SMTP,
+  pero a Mailpit, que los muestra en su bandeja web y no los entrega (ver
+  "Correo: comprobante y resumen diario (Fase 14B)").
 
 ## Diferencias con el ER completo de la propuesta (§6.2)
 
@@ -84,10 +90,14 @@ intencionales por alcance:
   receta definida descuenta inventario automáticamente; ver la sección
   "Inventario y recetas (Fase 11)" más abajo.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
-  (nombre, teléfono, dirección); un pedido en mesa sigue sin cliente.
-- **`Pedido.canal`** acepta `SALON` y `DOMICILIO` (enum `CanalPedido`); el
-  canal de plataformas no existe, coherente con que CU-05 no está
-  implementado.
+  y, desde la 12B, de plataforma (nombre, teléfono, dirección); un pedido en
+  mesa sigue sin cliente. La Fase 14B le agrega `email` opcional, que el ER no
+  tiene, para enviar el comprobante.
+- **`Pedido.canal`** acepta `SALON`, `DOMICILIO` y, desde la Fase 12B,
+  `PLATAFORMA` (enum `CanalPedido`).
+- **`IntegracionPlataforma`** (Fase 12B) no está en el ER: guarda cada
+  plataforma conectada a una cadena (hash de la API key y webhook de acuse).
+  `Pedido` gana `integracionId` y `referenciaExterna` (únicos en pareja).
 - **`DocumentoFiscal`** no tiene el campo `CUDE/CUFE` del ER (el identificador
   real que asigna la DIAN): no aplica a un documento simulado.
 - Desde la **Fase 8**, `Sede.rangoInicio`/`rangoFin`/`siguienteConsecutivo`
@@ -168,8 +178,151 @@ validación vive en `OrdersModule`.
   `Sede` (ver "Numeración fiscal por sede (Fase 8)" más abajo), dentro de la
   misma transacción que crea el `Pago`, actualiza el `Pedido` a `PAGADO` y
   libera la `Mesa`.
-- `estadoDian` queda fijo en `SIMULADO` y `urlXml` en `null`: no hay
-  generación ni firma de XML, ni radicación ante la DIAN.
+- Hasta la Fase 11B, `estadoDian` quedaba fijo en `SIMULADO` y `urlXml` en
+  `null` (esos documentos viejos conservan ese estado). Desde la 11B ver
+  "Documento fiscal en segundo plano" más abajo.
+
+## Documento fiscal en segundo plano (Fase 11B)
+
+§5.1 pide un trabajador asíncrono con cola de mensajes para que "la caja
+nunca espere a un servicio externo", y §6.3 que "la validación DIAN ocurre en
+segundo plano sin bloquear la caja". Así quedó:
+
+- `POST /pagos` crea el documento en `PENDIENTE` y, **después** de confirmar
+  la transacción, lo encola en BullMQ (sobre el mismo Redis del backplane de
+  Socket.IO) sin esperar el encolado. Si Redis falla, el cobro ya quedó: el
+  documento sigue `PENDIENTE` y el worker lo re-encola al arrancar (el
+  `jobId` es el id del documento, así que no se duplica).
+- El contenedor `worker` (misma imagen y código del backend, entrada
+  `src/worker.ts`) toma cada trabajo y:
+  - genera un XML propio y mínimo, sin firma (no es UBL 2.1);
+  - lo sube a MinIO (almacén de objetos S3, §5.1) y guarda en `urlXml` la URI
+    `s3://bucket/llave`;
+  - lo "valida" contra `ProveedorDianSimuladoService`.
+- El simulador tiene latencia, tasa de caída y tasa de rechazo configurables
+  por `.env` (`DIAN_SIMULADA_*`):
+  - Una caída es un error técnico: BullMQ reintenta con backoff exponencial
+    (`COLA_FISCAL_INTENTOS`, 5 por defecto). Si se agotan los intentos, el
+    documento queda `RECHAZADO_SIMULADO` con el motivo.
+  - Un rechazo es una respuesta de negocio y no se reintenta.
+- Al terminar, el backend recibe el evento `completed` de la cola y emite
+  `documento:actualizado` a `sede:{id}`; `/caja` actualiza el recibo en vivo.
+- El navegador no habla con MinIO: `GET /documentos-fiscales/:id/xml`
+  (CAJERO/ADMIN, con aislamiento por cadena) descarga el XML.
+- `// DECISIÓN DE PROTOTIPO`: MinIO corre con la imagen congelada
+  `bitnamilegacy/minio`, porque MinIO dejó de publicar `minio/minio` en Docker
+  Hub. Es el mismo servidor, sin actualizaciones.
+
+## Pedidos de plataforma simulados (Fase 12B)
+
+CU-05 pide que "un pedido de Rappi entra automáticamente por API al mismo
+tablero de la sede, sin re-digitación", y §5.1 que la comunicación con Rappi
+vaya por el worker. Así quedó:
+
+- `IntegracionPlataforma` une una plataforma a una cadena. La plataforma se
+  autentica con `X-Api-Key`; en la base solo queda el hash SHA-256 de la
+  llave. La cadena sale de la integración, nunca del cuerpo.
+- `GET /integraciones/plataformas/catalogo`: sedes y productos activos, para
+  que la plataforma arme su menú.
+- `POST /integraciones/plataformas/pedidos`: traduce el formato de la
+  plataforma (`orderId`, `storeId`, `customer`, `items[].sku/qty`) a un
+  `Pedido` de canal `PLATAFORMA` en `EN_PREPARACION`, con un `Cliente`, y
+  emite `comanda:nueva`. Cocina y caja lo muestran como
+  "Plataforma · {orderId}".
+- Idempotencia: `(integracionId, referenciaExterna)` es único. Un reenvío
+  devuelve el mismo pedido con `duplicate: true`; dos reenvíos simultáneos
+  también (el segundo choca con el índice y devuelve el del primero).
+- Acuse: después de crear el pedido se encola un trabajo en la cola
+  `plataformas` (BullMQ). El worker hace `POST` al webhook `urlAcuse` de la
+  integración con el pedido aceptado; si no responde 2xx, reintenta con
+  backoff (`COLA_PLATAFORMAS_INTENTOS`). El pedido ya está en cocina pase lo
+  que pase con el acuse.
+- `// DECISIÓN DE PROTOTIPO`: la plataforma es un simulador.
+  - Formato JSON propio (en inglés), a propósito distinto del de Comanda. No
+    copia la API de Rappi: no hay acceso aprobado y está prohibido integrarla.
+  - La página `/simulador-plataforma` (sin sesión, con la API key del `.env`)
+    manda pedidos, tiene un botón para reenviar el último y muestra los
+    acuses.
+  - El webhook de acuses del simulador vive en el propio backend
+    (`/simulador-plataforma/:integracionId/acuses`) y guarda los acuses en
+    Redis; en producción el webhook sería de la plataforma.
+  - El seed crea la integración demo con `PLATAFORMA_SIMULADA_API_KEY`.
+- `// TODO PRODUCCIÓN`: rotación de API keys y firma HMAC de pedidos y
+  acuses.
+
+## Proxy inverso y dos instancias (Fase 13B)
+
+§5.1 pide un "punto único de entrada: terminación TLS 1.3, HTTP/2,
+compresión, límite de tasa y balanceo" y "dos instancias ... para tolerancia
+a fallos"; §5.2 pide HTTPS y WSS. Así quedó:
+
+- Contenedor `nginx` (`nginx/`), en `https://localhost:8443`:
+  - `/api/...` va a `backend-1`/`backend-2` sin el prefijo; `/socket.io/`
+    con upgrade a WSS; `/` al servidor de Vite (incluido su HMR).
+  - Solo TLS 1.3, HTTP/2 y gzip. El log muestra qué instancia atendió cada
+    petición.
+  - `limit_req` en `/api/menu/` y `/api/public/`: 5 peticiones/s por IP con
+    ráfaga de 10; al pasarse responde `429`.
+- Balanceo:
+  - La API va en round robin. Socket.IO usa `ip_hash`, porque el handshake
+    por long-polling necesita llegar siempre a la misma instancia.
+  - Si una instancia se cae, Nginx la saca del balanceo (`max_fails`, y
+    `resolve` re-resuelve el DNS de Docker cada 5 s) y los sockets se
+    reconectan a la otra en ~1 s. Los eventos emitidos en una instancia
+    llegan a los sockets de la otra por el backplane de Redis (Fase 4).
+  - `documento:actualizado` es la excepción: lo emiten todas las instancias
+    (cada una recibe el `completed` de la cola), así que cada una lo manda
+    solo a sus propios sockets (`server.local`) para no duplicarlo.
+- El frontend llama a la API por rutas relativas (`VITE_API_URL=/api`, socket
+  en el mismo origen). Entrando directo a Vite (`:5173`), su `server.proxy`
+  hace lo mismo que Nginx, sin TLS. El service worker (9B) no cachea `/api/`
+  ni `/socket.io/`, que ahora son del mismo origen.
+- Con HTTPS, el service worker de la 9B funciona también desde un teléfono en
+  la red local (`NGINX_CERT_IP` en el `.env`).
+- `// DECISIÓN DE PROTOTIPO`:
+  - El certificado es autofirmado. Lo genera el contenedor al arrancar
+    (`nginx/generar-certificado.sh`) y vive en un volumen, no en el repo.
+  - `backend-1` sigue publicado en `:3000` para Swagger y depuración.
+  - Las dos instancias responden al alias de red `backend`, así que lo
+    interno (worker → webhook del simulador, proxy de Vite) no cambió.
+  - Cada instancia compila a su propia carpeta (`dist/`, `dist-2/`), porque
+    comparten el bind mount de `./backend`.
+- Probado: con `backend-1` detenido la API y los eventos siguen por
+  `backend-2`, y un KDS conectado a la instancia que se detiene se reconecta
+  y sigue recibiendo comandas.
+
+## Correo: comprobante y resumen diario (Fase 14B)
+
+§5.2 pide "SMTP: envío de comprobantes al comensal y resúmenes diarios al
+dueño". Así quedó:
+
+- Contenedor `mailpit`: servidor SMTP local con bandeja web
+  (http://localhost:8025). El worker le habla por SMTP con `nodemailer`
+  (variables `SMTP_*`); en producción bastaría apuntarlas a un relay real.
+- Cola `correo` (BullMQ) con reintentos y backoff (`COLA_CORREO_INTENTOS`).
+  El backend solo encola; envía el contenedor `worker` (`MailWorkerModule`).
+- Comprobante:
+  - El formulario de domicilio pide un correo opcional (`Cliente.email`,
+    migración `r2p2_cliente_email`, `// DECISIÓN DE PROTOTIPO`).
+  - Cuando la DIAN simulada deja el documento de un domicilio en
+    `VALIDADO_SIMULADO`, el worker fiscal encola el comprobante (`jobId` fijo,
+    así un reintento no manda dos). Sin correo, no se envía nada.
+  - El correo dice que el documento es simulado y no tiene validez fiscal.
+- Resumen diario:
+  - Trabajo repetible de BullMQ (`RESUMEN_DIARIO_CRON`, 23:00 en
+    `RESUMEN_DIARIO_ZONA`, Bogotá): un correo por cadena a todos sus ADMIN,
+    con el consolidado de la Fase 9 (`ReportsService.consolidado`) del día.
+  - `POST /correo/resumen-diario` (solo ADMIN, `fecha` opcional) lo dispara
+    a mano para la cadena del ADMIN; en `/panel` es el botón "Enviar resumen
+    del día por correo".
+  - El worker registra `ReportsService` y `BranchesService` como proveedores
+    propios en vez de importar `ReportsModule`, que trae controladores con
+    guards de JWT que el worker no tiene.
+  - Mientras el consolidado cuente el día en UTC, el resumen de las 23:00 de
+    Bogotá corresponde al día UTC de esa fecha; coinciden cuando la Fase 14
+    (Parte 1) pase el reporte a la zona de Bogotá.
+- `// TODO PRODUCCIÓN`: relay SMTP con TLS y autenticación, SPF/DKIM, y
+  baja de suscripción del resumen.
 
 ## Numeración fiscal por sede (Fase 8)
 

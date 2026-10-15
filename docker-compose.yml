@@ -1,3 +1,30 @@
+# Fase 13B: configuración común de las dos instancias del backend.
+x-backend: &backend
+  build:
+    context: ./backend
+    dockerfile: Dockerfile.dev
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    PORT: ${BACKEND_PORT}
+    # Redis se sigue chequeando en /health por TCP crudo (ver TODO PRODUCCION
+    # en health.controller.ts); Postgres ya se resuelve vía DATABASE_URL/Prisma.
+    REDIS_HOST: redis
+    REDIS_PORT_INTERNAL: 6379
+  networks:
+    default:
+      aliases:
+        - backend
+  volumes:
+    - ./backend:/app
+    - comanda-backend-node-modules:/app/node_modules
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -29,28 +56,64 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
+  # Fase 13B: dos instancias del backend detrás de Nginx (§5.1, "dos
+  # instancias ... para tolerancia a fallos"). Comparten configuración por el
+  # ancla x-backend. Las dos responden también al alias de red `backend`, así
+  # que los servicios internos (worker -> webhook del simulador, proxy de Vite)
+  # siguen usando http://backend:3000 y Docker reparte entre las que estén vivas.
+  backend-1:
+    <<: *backend
+    container_name: comanda-backend-1
+    ports:
+      # DECISIÓN DE PROTOTIPO: backend-1 sigue publicado directo en el host
+      # para Swagger (/api/docs) y depuración; la app entra por Nginx.
+      - "${BACKEND_PORT}:3000"
+      # Puerto de Prisma Studio (GUI para ver/editar la base de datos). Solo
+      # se usa cuando alguien lo levanta a mano (ver README); no se inicia
+      # solo. `prisma studio` solo escucha en 127.0.0.1 dentro del
+      # contenedor, así que se expone vía un pequeño proxy TCP en Node (ver
+      # README) en vez del puerto de Studio directo.
+      - "5556:5556"
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+
+  backend-2:
+    <<: *backend
+    container_name: comanda-backend-2
+    command: sh -c "npx prisma migrate deploy && npm run start:dev:2"
+
+  # Fase 11B: almacén de objetos de §5.1 (XML fiscales). Consola web en
+  # http://localhost:${MINIO_CONSOLE_PORT} con MINIO_ROOT_USER/PASSWORD.
+  # DECISIÓN DE PROTOTIPO: MinIO dejó de publicar imágenes en Docker Hub
+  # (minio/minio ya no descarga); se usa la imagen congelada de Bitnami, que
+  # es el mismo servidor MinIO (versión 2025.5.24) sin actualizaciones.
+  # Basta para un prototipo local; en producción sería un S3 administrado.
+  minio:
+    image: bitnamilegacy/minio:2025.5.24
+    container_name: comanda-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - comanda-minio-data:/bitnami/minio/data
+
+  # Fase 11B: trabajador asíncrono de §5.1. Misma imagen y código que el
+  # backend, otro punto de entrada (src/worker.ts): consume la cola fiscal de
+  # BullMQ y valida los documentos contra el proveedor DIAN simulado.
+  worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: comanda-backend
+    container_name: comanda-worker
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      PORT: ${BACKEND_PORT}
-      # Redis se sigue chequeando en /health por TCP crudo (ver TODO PRODUCCION
-      # en health.controller.ts); Postgres ya se resuelve vía DATABASE_URL/Prisma.
       REDIS_HOST: redis
       REDIS_PORT_INTERNAL: 6379
-    ports:
-      - "${BACKEND_PORT}:3000"
-      # DECISIÓN DE PROTOTIPO: puerto de Prisma Studio (GUI para ver/editar
-      # la base de datos). Solo se usa cuando alguien lo levanta a mano (ver
-      # README); no se inicia solo. `prisma studio` solo escucha en
-      # 127.0.0.1 dentro del contenedor, así que se expone vía un pequeño
-      # proxy TCP en Node (ver README) en vez del puerto de Studio directo.
-      - "5556:5556"
     volumes:
       - ./backend:/app
       - comanda-backend-node-modules:/app/node_modules
@@ -59,7 +122,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+      minio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    # migrate deploy también aquí por si el worker arranca antes que el
+    # backend; Prisma serializa los dos con un advisory lock.
+    command: sh -c "npx prisma migrate deploy && npm run start:worker"
 
   frontend:
     build:
@@ -77,9 +146,43 @@ services:
       - ./frontend:/app
       - comanda-frontend-node-modules:/app/node_modules
     depends_on:
-      - backend
+      - backend-1
+      - backend-2
+
+  # Fase 13B: proxy inverso con TLS 1.3, HTTP/2, WSS, límite de tasa y
+  # balanceo entre backend-1 y backend-2. Entrada única de la app:
+  # https://localhost:${NGINX_HTTPS_PORT}. Ver nginx/nginx.conf.
+  nginx:
+    build:
+      context: ./nginx
+    container_name: comanda-nginx
+    restart: unless-stopped
+    environment:
+      NGINX_CERT_IP: ${NGINX_CERT_IP:-}
+    ports:
+      - "${NGINX_HTTPS_PORT}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - comanda-nginx-certs:/etc/nginx/certs
+    depends_on:
+      - frontend
+      - backend-1
+      - backend-2
+
+  # Fase 14B: servidor SMTP local de §5.2 con bandeja web para la demo
+  # (http://localhost:${MAILPIT_WEB_PORT}). Recibe todos los correos del
+  # worker y no entrega ninguno de verdad. El SMTP (1025) solo se usa dentro
+  # de la red de Docker, por eso no se publica.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: comanda-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_WEB_PORT}:8025"
 
 volumes:
   comanda-postgres-data:
+  comanda-minio-data:
   comanda-backend-node-modules:
   comanda-frontend-node-modules:
+  comanda-nginx-certs:

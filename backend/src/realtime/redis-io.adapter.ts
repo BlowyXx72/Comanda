@@ -4,9 +4,8 @@ import { Redis } from 'ioredis';
 import type { ServerOptions } from 'socket.io';
 
 // Backplane de Socket.IO vía Redis Pub/Sub (ver README, "Servicios
-// telemáticos usados y por qué"): con una sola instancia de backend, como en
-// este prototipo, no hace falta para que funcione — pero es lo que permite
-// que en producción varias instancias detrás de un balanceador compartan el
+// telemáticos usados y por qué"): desde la Fase 13B hay dos instancias del
+// backend detrás de Nginx, y es esto lo que permite que compartan el
 // mismo canal de eventos en tiempo real.
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor?: ReturnType<typeof createAdapter>;

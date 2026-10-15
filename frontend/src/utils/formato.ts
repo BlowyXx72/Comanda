@@ -3,8 +3,15 @@ export const formatearCOP = (valor: string | number) =>
     Number(valor),
   );
 
-// Cómo se identifica un pedido en cocina/caja: los de domicilio no tienen mesa.
-export const etiquetaPedido = (pedido: { canal: string; mesa?: { numero: number } | null }) => {
+// Cómo se identifica un pedido en cocina/caja: los de domicilio y plataforma
+// no tienen mesa. Los de plataforma (Fase 12B) muestran el id de la
+// plataforma, que es como el domiciliario lo va a reclamar.
+export const etiquetaPedido = (pedido: {
+  canal: string;
+  mesa?: { numero: number } | null;
+  referenciaExterna?: string | null;
+}) => {
   if (pedido.canal === 'DOMICILIO') return 'Domicilio';
+  if (pedido.canal === 'PLATAFORMA') return pedido.referenciaExterna ? `Plataforma · ${pedido.referenciaExterna}` : 'Plataforma';
   return pedido.mesa ? `Mesa ${pedido.mesa.numero}` : 'Sin mesa';
 };

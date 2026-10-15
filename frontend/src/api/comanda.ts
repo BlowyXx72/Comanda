@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchTexto } from './client';
 
 export interface Sede {
   id: string;
@@ -68,6 +68,8 @@ export interface Pedido {
   total: string;
   mesa?: Mesa | null;
   cliente?: Cliente | null;
+  // Fase 12B: id del pedido en la plataforma (solo canal PLATAFORMA).
+  referenciaExterna?: string | null;
   detalles: PedidoDetalle[];
 }
 
@@ -77,6 +79,8 @@ export interface Cliente {
   nombre: string;
   telefono: string;
   direccion: string;
+  // Fase 14B: opcional, para enviarle el comprobante por correo.
+  email?: string | null;
 }
 
 export interface CrearPedidoDetalleInput {
@@ -108,10 +112,16 @@ export interface DocumentoFiscal {
   sedeId: string;
   tipo: string;
   consecutivo: number;
-  estadoDian: string;
+  estadoDian: EstadoDian;
   urlXml: string | null;
+  // Fase 11B: respuesta del proveedor DIAN simulado y hora de validación.
+  mensajeDian?: string | null;
+  validadoEn?: string | null;
   creadoEn: string;
 }
+
+// SIMULADO = cobrado antes de la Fase 11B; los demás los pone el worker.
+export type EstadoDian = 'SIMULADO' | 'PENDIENTE' | 'VALIDADO_SIMULADO' | 'RECHAZADO_SIMULADO';
 
 export interface ResultadoPago {
   pago: Pago;
@@ -206,7 +216,7 @@ export interface CrearPedidoDomicilioInput {
   id: string;
   cadenaId: string;
   sedeId: string;
-  cliente: { nombre: string; telefono: string; direccion: string };
+  cliente: { nombre: string; telefono: string; direccion: string; email?: string };
   detalles: CrearPedidoDetalleInput[];
 }
 
@@ -309,3 +319,68 @@ export const reemplazarReceta = (productoId: string, items: ItemRecetaInput[], t
     { method: 'PUT', body: JSON.stringify({ items }) },
     token,
   );
+
+// --- Documento fiscal en segundo plano (Fase 11B) ---
+
+// Payload de `documento:actualizado` (room sede:{id}).
+export interface DocumentoActualizado {
+  documentoFiscalId: string;
+  pedidoId: string;
+  sedeId: string;
+  estadoDian: EstadoDian;
+  urlXml: string | null;
+  mensajeDian: string | null;
+}
+
+export const descargarXmlDocumento = (documentoFiscalId: string, token: string) =>
+  apiFetchTexto(`/documentos-fiscales/${documentoFiscalId}/xml`, token);
+
+// --- Plataforma de domicilios simulada (Fase 12B, CU-05) ---
+// Las usa solo /simulador-plataforma, que hace de sistema externo: se
+// autentica con X-Api-Key en vez de JWT y habla el formato de la plataforma.
+
+const conApiKey = (apiKey: string): RequestInit['headers'] => ({ 'X-Api-Key': apiKey });
+
+export interface CatalogoPlataforma {
+  plataforma: string;
+  sedes: { id: string; nombre: string; direccion: string }[];
+  productos: { id: string; nombre: string; precio: string; categoria: string }[];
+}
+
+export interface PedidoPlataformaInput {
+  orderId: string;
+  storeId: string;
+  customer: { name: string; phone: string; address: string };
+  items: { sku: string; qty: number; comment?: string }[];
+}
+
+export interface RespuestaPedidoPlataforma {
+  orderId: string;
+  externalId: string;
+  status: EstadoPedido;
+  total: string;
+  duplicate: boolean;
+}
+
+export interface AcusePlataforma {
+  recibidoEn: string;
+  cuerpo: { orderId: string; externalId: string; status: string; store: string; total: string; acceptedAt: string };
+}
+
+export const obtenerCatalogoPlataforma = (apiKey: string) =>
+  apiFetch<CatalogoPlataforma>('/integraciones/plataformas/catalogo', { headers: conApiKey(apiKey) });
+
+export const enviarPedidoPlataforma = (input: PedidoPlataformaInput, apiKey: string) =>
+  apiFetch<RespuestaPedidoPlataforma>('/integraciones/plataformas/pedidos', {
+    method: 'POST',
+    headers: conApiKey(apiKey),
+    body: JSON.stringify(input),
+  });
+
+export const listarAcusesPlataforma = (apiKey: string) =>
+  apiFetch<AcusePlataforma[]>('/simulador-plataforma/acuses', { headers: conApiKey(apiKey) });
+
+// --- Correo (Fase 14B) ---
+
+export const enviarResumenDiario = (token: string, fecha?: string) =>
+  apiFetch<{ encolado: boolean }>('/correo/resumen-diario', { method: 'POST', body: JSON.stringify({ fecha }) }, token);

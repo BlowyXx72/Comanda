@@ -11,6 +11,7 @@ import { LoginPage } from './pages/Login'
 import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
 import { PanelPage } from './pages/Panel'
+import { SimuladorPlataformaPage } from './pages/SimuladorPlataforma'
 import { SedeProvider } from './sede/SedeContext'
 import { SelectorSedeGlobal } from './sede/SelectorSedeGlobal'
 
@@ -23,6 +24,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/menu/:cadenaId/:sedeId" element={<MenuPublicoPage />} />
+            {/* Fase 12B: hace de plataforma externa, así que no usa sesión (va con API key). */}
+            <Route path="/simulador-plataforma" element={<SimuladorPlataformaPage />} />
             <Route
               path="/"
               element={

@@ -6,8 +6,10 @@ import { OrdersService } from './orders.service.js';
 // Consumido por: formulario de domicilio de la vista pública del menú (CU-04).
 // Sin JwtAuthGuard a propósito: quien pide es un cliente externo, no un
 // usuario interno de la cadena.
-// TODO PRODUCCIÓN: rate limiting / captcha en este endpoint público para que
-// no se pueda inundar la cocina de pedidos falsos.
+// Desde la Fase 13B, Nginx limita la tasa de /api/public/ (ver
+// nginx/nginx.conf), así que no se puede inundar la cocina desde una IP.
+// TODO PRODUCCIÓN: captcha, para frenar también pedidos falsos lentos o
+// desde muchas IP.
 @ApiTags('pedidos-publicos')
 @Controller('public/pedidos')
 export class PublicOrdersController {

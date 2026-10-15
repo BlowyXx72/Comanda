@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { ColaFiscalService } from '../fiscal/cola-fiscal.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { OrdersService } from '../orders/orders.service.js';
@@ -13,11 +14,14 @@ import type { CrearPagoDto } from './dto/crear-pago.dto.js';
 // como PAGADO y libera la mesa — todo en una sola transacción.
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
     private readonly realtimeGateway: RealtimeGateway,
     private readonly inventoryService: InventoryService,
+    private readonly colaFiscal: ColaFiscalService,
   ) {}
 
   async pagar(dto: CrearPagoDto, cadenaId: string) {
@@ -68,9 +72,10 @@ export class PaymentsService {
           sedeId: pedido.sedeId,
           tipo: 'FACTURA',
           consecutivo,
-          // TODO PRODUCCION: aquí iría la integración real con la DIAN
-          // (generar y firmar el XML, radicarlo, guardar su estado real).
-          estadoDian: 'SIMULADO',
+          // Fase 11B: queda PENDIENTE y el worker lo valida en segundo plano
+          // contra el proveedor DIAN simulado (ver FiscalModule).
+          // TODO PRODUCCION: proveedor tecnológico DIAN real.
+          estadoDian: 'PENDIENTE',
         },
       });
 
@@ -107,6 +112,7 @@ export class PaymentsService {
       total: resultado.pedido.total,
       fechaHora: resultado.pago.creadoEn,
     });
+
     // Fase 11: aviso genérico de que el inventario de esta sede cambió (el
     // descuento por receta ya se aplicó dentro de la transacción); /inventario
     // simplemente recarga existencias al recibirlo, igual que /mesas con
@@ -115,6 +121,15 @@ export class PaymentsService {
       sedeId: resultado.pedido.sedeId,
       pedidoId: resultado.pedido.id,
     });
+
+    // Fase 11B (§5.1): la validación DIAN va por la cola, fuera de la
+    // transacción y sin esperarla, ni siquiera el encolado: con Redis caído,
+    // BullMQ reintenta la conexión y la caja quedaría colgada. Si encolar
+    // falla, el cobro ya quedó confirmado: el documento sigue PENDIENTE y el
+    // worker lo re-encola al arrancar.
+    void this.colaFiscal
+      .encolar({ documentoFiscalId: resultado.documentoFiscal.id, cadenaId })
+      .catch((err: Error) => this.logger.error(`No se pudo encolar el documento fiscal: ${err.message}`));
     return resultado;
   }
 }

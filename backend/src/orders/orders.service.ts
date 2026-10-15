@@ -24,6 +24,16 @@ const INCLUDE_PEDIDO = {
   detalles: { include: { producto: true } },
 } satisfies Prisma.PedidoInclude;
 
+// Entrada de crearPlataforma(), ya en términos de Comanda.
+export interface DatosPedidoPlataforma {
+  integracionId: string;
+  cadenaId: string;
+  referenciaExterna: string;
+  sedeId: string;
+  cliente: { nombre: string; telefono: string; direccion: string };
+  detalles: CreatePedidoDetalleDto[];
+}
+
 // Consumido por OrdersController (POST/GET/PATCH /pedidos), a su vez usado
 // por mesero (crear), cocina (marcar LISTO) y caja (consultar antes de cobrar).
 @Injectable()
@@ -126,8 +136,57 @@ export class OrdersService {
     return pedido;
   }
 
+  // Pedido de una plataforma de domicilios (CU-05, Fase 12B). Lo llama
+  // IntegracionesService ya traducido del formato de la plataforma. Llega a
+  // cocina por el mismo `comanda:nueva` que salón y domicilio web.
+  // DECISIÓN DE PROTOTIPO: aquí el UUID lo genera el backend, no el cliente:
+  // la plataforma no conoce los ids de Comanda. La idempotencia la da la
+  // pareja (integración, referenciaExterna), única en la base.
+  async crearPlataforma(datos: DatosPedidoPlataforma) {
+    const claveExterna = {
+      integracionId_referenciaExterna: { integracionId: datos.integracionId, referenciaExterna: datos.referenciaExterna },
+    };
+    const existente = await this.prisma.pedido.findUnique({ where: claveExterna, include: INCLUDE_PEDIDO });
+    if (existente) {
+      return { pedido: existente, duplicado: true };
+    }
+
+    await this.branchesService.obtenerDeCadena(datos.sedeId, datos.cadenaId);
+    const { total, detallesData } = await this.armarDetalles(datos.detalles, datos.cadenaId);
+
+    let pedido;
+    try {
+      pedido = await this.prisma.pedido.create({
+        data: {
+          sede: { connect: { id: datos.sedeId } },
+          canal: 'PLATAFORMA',
+          // Mismo criterio que crear(): nace directo en EN_PREPARACION.
+          estado: 'EN_PREPARACION',
+          total,
+          integracion: { connect: { id: datos.integracionId } },
+          referenciaExterna: datos.referenciaExterna,
+          // Mismo criterio que crearDomicilio(): un Cliente nuevo por pedido.
+          cliente: { create: { cadena: { connect: { id: datos.cadenaId } }, ...datos.cliente } },
+          detalles: { create: detallesData },
+        },
+        include: INCLUDE_PEDIDO,
+      });
+    } catch (err) {
+      // Dos reenvíos simultáneos: el primero gana por el índice único y el
+      // segundo responde con el pedido que creó el primero.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const ganador = await this.prisma.pedido.findUnique({ where: claveExterna, include: INCLUDE_PEDIDO });
+        if (ganador) return { pedido: ganador, duplicado: true };
+      }
+      throw err;
+    }
+
+    this.realtimeGateway.emitirComandaNueva(datos.sedeId, pedido);
+    return { pedido, duplicado: false };
+  }
+
   // Valida que cada producto sea de la cadena y congela su precio vigente en
-  // el detalle. Compartido por los pedidos de salón y de domicilio.
+  // el detalle. Compartido por los pedidos de salón, domicilio y plataforma.
   private async armarDetalles(detalles: CreatePedidoDetalleDto[], cadenaId: string) {
     const productos = await Promise.all(
       detalles.map((detalle) => this.catalogService.obtenerDeCadena(detalle.productoId, cadenaId)),
