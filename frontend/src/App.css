@@ -580,3 +580,27 @@
   background: rgba(220, 38, 38, 0.1);
   font-weight: normal;
 }
+
+/* --- Estado DIAN en el recibo (Fase 11B) --- */
+
+.estado-dian {
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.estado-dian--pendiente {
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.12);
+}
+
+.estado-dian--validado_simulado {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.estado-dian--rechazado_simulado {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}

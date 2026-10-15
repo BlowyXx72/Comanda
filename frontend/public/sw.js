@@ -4,9 +4,11 @@
 // estrategia "red primero, caché de respaldo" para todo GET del mismo origen.
 // Así funciona igual con el servidor de desarrollo de Vite (que es como corre
 // el frontend en docker compose) y nunca sirve código viejo si hay red.
-// Los datos de la API (otro origen, puerto 3000) no pasan por aquí: los cachea
-// la app en IndexedDB (src/offline/).
-const CACHE = 'comanda-shell-v1';
+// Los datos de la API no pasan por aquí: los cachea la app en IndexedDB
+// (src/offline/). Desde la Fase 13B la API está en el mismo origen (/api), así
+// que se excluye explícitamente para no guardar respuestas autenticadas.
+const CACHE = 'comanda-shell-v2';
+const SIN_CACHE = ['/api/', '/socket.io/'];
 const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -25,7 +27,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (SIN_CACHE.some((prefijo) => url.pathname.startsWith(prefijo))) return;
 
   event.respondWith(
     fetch(request)

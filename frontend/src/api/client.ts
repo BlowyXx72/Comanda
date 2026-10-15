@@ -1,6 +1,7 @@
 // Consumido por: AuthContext (login) y, en fases siguientes, por las
 // pantallas de mesas/cocina/caja para hablar con la API REST del backend.
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// Fase 13B: por defecto /api en el mismo origen (Nginx o el proxy de Vite).
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 export class ApiError extends Error {
   constructor(
@@ -31,4 +32,19 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, token
   }
 
   return (await response.json()) as T;
+}
+
+// Igual que apiFetch, pero devuelve el cuerpo como texto (p. ej. el XML del
+// documento fiscal, Fase 11B).
+export async function apiFetchTexto(path: string, token?: string | null): Promise<string> {
+  const headers = new Headers();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.message ?? response.statusText, response.status);
+  }
+  return response.text();
 }

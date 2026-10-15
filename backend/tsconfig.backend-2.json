@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.build.json",
+  // Fase 13B: la segunda instancia del backend compila a su propia carpeta,
+  // por la misma razón que tsconfig.worker.json: backend-1, backend-2 y el
+  // worker comparten el bind mount de ./backend y cada uno corre su propio
+  // `nest start --watch` (con deleteOutDir).
+  "compilerOptions": {
+    "outDir": "./dist-2"
+  }
+}

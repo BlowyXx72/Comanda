@@ -1,5 +1,16 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsDefined, IsNotEmpty, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDefined,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 import { CreatePedidoDetalleDto } from './create-pedido-detalle.dto.js';
 
 export class ClienteDomicilioDto {
@@ -17,6 +28,13 @@ export class ClienteDomicilioDto {
   @IsNotEmpty()
   @MaxLength(200)
   direccion!: string;
+
+  // Fase 14B: opcional; si viene, el comprobante se envía por correo cuando
+  // la DIAN simulada valida el documento.
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string;
 }
 
 export class CreatePedidoDomicilioDto {

@@ -1,6 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '../src/generated/prisma/client.js';
+import { hashApiKey } from '../src/integrations/api-key.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -14,6 +16,8 @@ async function main() {
   await prisma.pago.deleteMany();
   await prisma.pedidoDetalle.deleteMany();
   await prisma.pedido.deleteMany();
+  await prisma.cliente.deleteMany();
+  await prisma.integracionPlataforma.deleteMany();
   await prisma.mesa.deleteMany();
   await prisma.producto.deleteMany();
   await prisma.usuario.deleteMany();
@@ -84,6 +88,27 @@ async function main() {
         estado: 'LIBRE' as const,
       })),
     });
+  }
+
+  // Fase 12B (CU-05): integración con la plataforma de domicilios simulada.
+  // La API key sale del .env (PLATAFORMA_SIMULADA_API_KEY) y aquí solo se
+  // guarda su hash. El webhook de acuse apunta al buzón del simulador, que
+  // vive en el propio backend (ver integrations/simulador/).
+  const apiKeyPlataforma = process.env.PLATAFORMA_SIMULADA_API_KEY;
+  if (apiKeyPlataforma) {
+    const integracionId = randomUUID();
+    const urlBase = process.env.PLATAFORMA_SIMULADA_URL_ACUSES_BASE ?? 'http://backend:3000';
+    await prisma.integracionPlataforma.create({
+      data: {
+        id: integracionId,
+        cadenaId: cadena.id,
+        nombre: 'Plataforma simulada',
+        apiKeyHash: hashApiKey(apiKeyPlataforma),
+        urlAcuse: `${urlBase}/simulador-plataforma/${integracionId}/acuses`,
+      },
+    });
+  } else {
+    console.warn('PLATAFORMA_SIMULADA_API_KEY no está en el .env: no se crea la integración de plataforma demo.');
   }
 
   console.log(`Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, 8 productos, ${sedes.length * 6} mesas.`);

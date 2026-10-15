@@ -7,6 +7,8 @@ node_modules/
 
 # Build output
 dist/
+dist-worker/
+dist-2/
 build/
 *.tsbuildinfo
 
