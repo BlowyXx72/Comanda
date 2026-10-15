@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
+import { InventoryService } from '../inventory/inventory.service.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
@@ -7,14 +8,16 @@ import type { CrearPagoDto } from './dto/crear-pago.dto.js';
 
 // Consumido por PaymentsController (POST /pagos), a su vez usado por caja al
 // cobrar una mesa. Cierra el ciclo del pedido: registra el pago, genera el
-// documento fiscal simulado con consecutivo por sede, marca el pedido como
-// PAGADO y libera la mesa — todo en una sola transacción.
+// documento fiscal simulado con consecutivo por sede, descuenta el
+// inventario según la receta de cada producto (Fase 11), marca el pedido
+// como PAGADO y libera la mesa — todo en una sola transacción.
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async pagar(dto: CrearPagoDto, cadenaId: string) {
@@ -71,6 +74,16 @@ export class PaymentsService {
         },
       });
 
+      // Fase 11 (§6.2): un SALIDA por cada insumo de la receta de cada
+      // detalle, dentro de la misma transacción — si algo falla, se revierte
+      // todo, incluido el consecutivo. No bloquea el cobro si queda negativo
+      // (DECISIÓN DE PROTOTIPO, ver docs/fases-siguientes-2.md Fase 11).
+      await this.inventoryService.descontarPorVenta(
+        tx,
+        pedido.sedeId,
+        pedido.detalles.map((detalle) => ({ productoId: detalle.productoId, cantidad: detalle.cantidad })),
+      );
+
       if (pedido.mesaId) {
         await tx.mesa.update({ where: { id: pedido.mesaId }, data: { estado: 'LIBRE' } });
       }
@@ -93,6 +106,14 @@ export class PaymentsService {
       canal: resultado.pedido.canal,
       total: resultado.pedido.total,
       fechaHora: resultado.pago.creadoEn,
+    });
+    // Fase 11: aviso genérico de que el inventario de esta sede cambió (el
+    // descuento por receta ya se aplicó dentro de la transacción); /inventario
+    // simplemente recarga existencias al recibirlo, igual que /mesas con
+    // catalogo:actualizado.
+    this.realtimeGateway.emitirInventarioActualizado(cadenaId, {
+      sedeId: resultado.pedido.sedeId,
+      pedidoId: resultado.pedido.id,
     });
     return resultado;
   }

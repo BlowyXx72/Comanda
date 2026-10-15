@@ -228,3 +228,84 @@ export type ResultadoSync =
 
 export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
   apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);
+
+// --- Inventario y recetas (Fase 11, §6.2) ---
+
+export interface Insumo {
+  id: string;
+  cadenaId: string;
+  nombre: string;
+  unidad: string;
+  // Prisma serializa Decimal como string en el JSON.
+  costoUnitario: string;
+}
+
+export interface ExistenciaInsumo extends Insumo {
+  existencia: string;
+}
+
+export interface CrearInsumoInput {
+  nombre: string;
+  unidad: string;
+  costoUnitario: number;
+}
+
+export interface ActualizarInsumoInput {
+  nombre?: string;
+  unidad?: string;
+  costoUnitario?: number;
+}
+
+export type TipoMovimientoManual = 'ENTRADA' | 'MERMA';
+
+export interface CrearMovimientoInput {
+  sedeId: string;
+  insumoId: string;
+  tipo: TipoMovimientoManual;
+  cantidad: number;
+}
+
+export interface MovimientoInventario {
+  id: string;
+  sedeId: string;
+  insumoId: string;
+  tipo: TipoMovimientoManual | 'SALIDA';
+  cantidad: string;
+  fecha: string;
+}
+
+export interface ItemRecetaInput {
+  insumoId: string;
+  cantidad: number;
+}
+
+export interface ItemReceta {
+  productoId: string;
+  insumoId: string;
+  cantidad: string;
+  insumo: Insumo;
+}
+
+export const listarInsumos = (token: string) => apiFetch<Insumo[]>('/insumos', {}, token);
+
+export const crearInsumo = (input: CrearInsumoInput, token: string) =>
+  apiFetch<Insumo>('/insumos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const actualizarInsumo = (id: string, input: ActualizarInsumoInput, token: string) =>
+  apiFetch<Insumo>(`/insumos/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token);
+
+export const obtenerExistenciasSede = (sedeId: string, token: string) =>
+  apiFetch<ExistenciaInsumo[]>(`/sedes/${sedeId}/inventario`, {}, token);
+
+export const registrarMovimientoInventario = (input: CrearMovimientoInput, token: string) =>
+  apiFetch<MovimientoInventario>('/inventario/movimientos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const listarReceta = (productoId: string, token: string) =>
+  apiFetch<ItemReceta[]>(`/productos/${productoId}/receta`, {}, token);
+
+export const reemplazarReceta = (productoId: string, items: ItemRecetaInput[], token: string) =>
+  apiFetch<ItemReceta[]>(
+    `/productos/${productoId}/receta`,
+    { method: 'PUT', body: JSON.stringify({ items }) },
+    token,
+  );

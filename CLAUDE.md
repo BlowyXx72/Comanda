@@ -20,8 +20,7 @@ agregado que no esté en el documento de propuesta va marcado en el código:
 - `// DECISIÓN DE PROTOTIPO` — algo que decidimos nosotros porque la propuesta
   no lo fijaba (p. ej. Prisma, Socket.IO, JWT).
 - `// TODO PRODUCCIÓN` — un stub de algo que la propuesta sí pide pero que
-  este prototipo no implementa de verdad (DIAN real, Rappi, cobro offline,
-  réplica de lectura, RLS).
+  este prototipo no implementa de verdad (DIAN real, Rappi, cobro offline).
 
 ## Stack
 
@@ -40,10 +39,11 @@ Entidades del negocio en **español**, mapeadas 1:1 al documento de propuesta:
 `PedidoDetalle`, `Pago`, `DocumentoFiscal`. El resto del código (nombres
 técnicos, infraestructura) en inglés estándar.
 
-Multi-tenant: todas las tablas de negocio llevan `cadena_id`. En este
-prototipo el aislamiento se aplica **a nivel de aplicación** (filtrar siempre
-por el `cadena_id` del JWT), no con Row Level Security de Postgres (eso es
-`// TODO PRODUCCIÓN`).
+Multi-tenant: todas las tablas de negocio llevan `cadena_id`. El aislamiento
+se aplica **a nivel de aplicación** (filtrar siempre por el `cadena_id` del
+JWT) desde la Fase 0; la ronda 2 (`docs/fases-siguientes-2.md`, Fase 12) añade
+Row Level Security de Postgres como segunda capa, sin quitar los filtros de
+aplicación.
 
 Máquina de estados del Pedido — no saltar estados:
 
@@ -62,8 +62,9 @@ Módulos que existen de verdad: `AuthModule`, `BranchesModule`,
 `RealtimeModule`, `ReportsModule` (este último no estaba en la lista
 original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
 el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
-(menú QR sin JWT, CU-03) y `SyncModule` (`POST /sync` del modo offline,
-CU-07). Deben quedar
+(menú QR sin JWT, CU-03), `SyncModule` (`POST /sync` del modo offline,
+CU-07) e `InventoryModule` (insumos, recetas y movimientos de inventario,
+Fase 11, §6.2 — tampoco estaba en la lista original). Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
 
@@ -81,23 +82,34 @@ escucha el KDS) y `pedido:actualizado` (cambio de estado, lo escuchan mesero y
 caja). Ver README, sección "Servicios telemáticos usados y por qué", para la
 justificación de por qué WebSocket y no polling.
 
-Room por cadena: `cadena:{cadenaId}` (Fases 9–10). Eventos: `venta:registrada`
-(cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo)
-y `catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
-`/mesas` y el menú QR de todas las sedes de esa cadena).
+Room por cadena: `cadena:{cadenaId}` (Fases 9–11). Eventos: `venta:registrada`
+(cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo),
+`catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
+`/mesas` y el menú QR de todas las sedes de esa cadena) e
+`inventario:actualizado` (movimiento manual o descuento automático por venta,
+lo escucha `/inventario` para refrescar existencias).
 
 ## Fuera de alcance explícito (no implementar de verdad)
 
-DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y toda la infraestructura de alta disponibilidad de
-la propuesta (§5.1: CDN, Nginx, balanceo entre instancias, cola de mensajes +
-workers asíncronos, almacén de objetos, monitoreo/respaldos, SSH/NTP/SMTP/
-Syslog) — el prototipo es una sola instancia de cada pieza. Dejar como stubs
-marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista
-completa y razonada en `docs/prototipo-slice.md`.
+DIAN real y Rappi real quedan fuera bajo cualquier circunstancia (regla
+dura). El resto de la infraestructura de alta disponibilidad de la propuesta
+que la ronda 2 no cubre completa (§5.1: CDN, monitoreo/respaldos, SSH/NTP/
+Syslog, DNS por subdominio) también sigue fuera — el prototipo es una sola
+instancia de cada pieza salvo donde una fase concreta la amplíe. Dejar como
+stubs marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión.
+Lista completa y razonada en `docs/prototipo-slice.md`.
 
-El ER de la propuesta (§6.2) tiene entidades que este prototipo no
-implementa: `Insumo`, `MovimientoInventario`, `Receta` — no hay gestión de
-inventario/recetas. `Cliente` sí existe, solo para pedidos de domicilio. Detalle en
+RLS, réplica de lectura, cola de trabajos (DIAN simulada), almacén de
+objetos, proxy inverso con TLS/balanceo y SMTP **ya no están fuera de
+alcance**: son la ronda 2, aprobada con el docente (`docs/fases-siguientes-2.md`,
+Fases 11–14 y 11B–14B). Mientras una fase de esa lista no esté implementada,
+sigue tratándose como `// TODO PRODUCCIÓN` en el código hasta que su commit
+aterrice.
+
+Desde la Fase 11 (ronda 2, §6.2), el ER ya tiene `Insumo`, `Receta` y
+`MovimientoInventario`: `PaymentsService.pagar` descuenta inventario por
+receta dentro de la misma transacción del cobro (`backend/src/inventory/`).
+`Cliente` existe desde la Fase 8B, solo para pedidos de domicilio. Detalle en
 `docs/prototipo-slice.md`.
 
 Desde la Fase 8, `Sede` sí usa un rango de numeración fiscal real

@@ -79,9 +79,10 @@ El ER de la propuesta tiene más entidades y campos que el `schema.prisma` de
 este prototipo (ver `backend/prisma/schema.prisma`). Diferencias, todas
 intencionales por alcance:
 
-- **No existen `Insumo`, `MovimientoInventario` ni `Receta`.** No hay
-  gestión de inventario/recetas — vender un producto no descuenta ningún
-  insumo. No hace parte del *vertical slice*.
+- **`Insumo`, `Receta` y `MovimientoInventario` existen desde la Fase 11**
+  (ronda 2, §6.2, ver `docs/fases-siguientes-2.md`). Vender un producto con
+  receta definida descuenta inventario automáticamente; ver la sección
+  "Inventario y recetas (Fase 11)" más abajo.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
   (nombre, teléfono, dirección); un pedido en mesa sigue sin cliente.
 - **`Pedido.canal`** acepta `SALON` y `DOMICILIO` (enum `CanalPedido`); el
@@ -245,6 +246,44 @@ validación vive en `OrdersModule`.
   desactivar/reactivar productos. No necesita escuchar el propio evento que
   emite: como quien edita ahí es la misma persona que ve el resultado, cada
   mutación simplemente recarga la tabla.
+
+## Inventario y recetas (Fase 11, ronda 2, §6.2)
+
+- `InventoryModule` (`backend/src/inventory/`) agrega `Insumo` (catálogo de
+  insumos de la cadena), `Receta` (PK compuesta `productoId`+`insumoId`: cuánto
+  insumo necesita una unidad de un producto) y `MovimientoInventario`
+  (`ENTRADA`/`SALIDA`/`MERMA` por sede).
+- No hay columna de stock: la existencia de un insumo en una sede es la suma
+  de sus movimientos (`GET /sedes/:id/inventario`, calculado en memoria, igual
+  que `ReportsService` con los pagos). `ENTRADA`/`MERMA` se registran a mano
+  (`POST /inventario/movimientos`, solo ADMIN); `SALIDA` solo la genera
+  `PaymentsService.pagar`, nunca el endpoint manual.
+- `PaymentsService.pagar` descuenta inventario **dentro de la misma
+  transacción** del cobro: por cada detalle del pedido, busca la receta de su
+  producto y crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo
+  (cantidad de la receta × cantidad del detalle). Si un producto no tiene
+  receta definida, simplemente no genera movimientos — no todos los productos
+  demo la necesitan (ver seed).
+- `// DECISIÓN DE PROTOTIPO`: si una existencia queda negativa, **no se
+  bloquea el cobro** — el saldo negativo queda visible en `/inventario` como
+  alerta para ADMIN. La propuesta no fija qué hacer en ese caso; bloquear la
+  venta habría acoplado caja a la disponibilidad de insumos, que esta demo no
+  modela con la granularidad (mermas, proveedores) que ameritaría esa regla.
+- CRUD mínimo: `POST`/`GET`/`PATCH /insumos` y `GET`/`PUT /productos/:id/receta`
+  (el `PUT` reemplaza la receta completa del producto, más simple que exponer
+  un endpoint por ítem), todos `@Roles('ADMIN')`.
+- Tiempo real: evento nuevo `inventario:actualizado` a la room
+  `cadena:{cadenaId}` (movimiento manual o descuento automático por venta).
+  `/inventario` lo escucha con `useInventarioSocket` (calcado de
+  `useVentasSocket`: el backend ya une todo socket autenticado a la room de su
+  cadena al conectarse, no hace falta unirse a una sede).
+- Frontend: página `/inventario` (solo ADMIN) con tres secciones — insumos
+  (CRUD), existencias de la sede activa (con movimiento manual por insumo) y
+  receta de un producto. No abre su propio selector de sede: confía en el
+  mismo `SelectorSedeGlobal` que ya usan `/mesas` y `/caja`.
+- Seed: 6 insumos y receta en 4 de los 8 productos demo (Hamburguesa, Pizza,
+  Papas Fritas, Gaseosa), con una `ENTRADA` inicial de 10000 por insumo en
+  cada una de las 3 sedes para que la demo no arranque en cero.
 
 ## Pulido (Fase 6)
 
