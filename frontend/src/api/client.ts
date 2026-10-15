@@ -1,6 +1,7 @@
 // Consumido por: AuthContext (login) y, en fases siguientes, por las
 // pantallas de mesas/cocina/caja para hablar con la API REST del backend.
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// Fase 13B: por defecto /api en el mismo origen (Nginx o el proxy de Vite).
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 export class ApiError extends Error {
   constructor(

@@ -92,7 +92,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   // Llamado por FiscalEventosService cuando el worker termina de validar un
   // documento (Fase 11B). Lo escucha /caja para mostrar el estado DIAN en vivo.
+  // `local`: a diferencia de los demás eventos, este no nace de una petición
+  // atendida por una sola instancia sino del evento de la cola, que reciben
+  // todas (Fase 13B). Si se reenviara por el backplane de Redis, cada caja lo
+  // recibiría una vez por instancia.
   emitirDocumentoActualizado(sedeId: string, documento: unknown) {
-    this.server.to(nombreRoomSede(sedeId)).emit('documento:actualizado', documento);
+    this.server.local.to(nombreRoomSede(sedeId)).emit('documento:actualizado', documento);
   }
 }

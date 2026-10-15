@@ -32,7 +32,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
 | CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede. Desde la Fase 11B el documento queda `PENDIENTE` y un worker aparte genera el XML (sin firma), lo guarda en MinIO y lo "valida" contra un proveedor DIAN **simulado**, sin bloquear la caja; el estado llega a `/caja` en vivo. No se transmite a la DIAN real. |
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
-| CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; sin rate limiting (`// TODO PRODUCCIÓN`). |
+| CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; desde la Fase 13B Nginx le limita la tasa (`429`). |
 | CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
 | CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
@@ -52,8 +52,6 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   Fase 12B existe el canal `PLATAFORMA` y su API, pero quien la usa es un
   simulador local con formato propio (ver "Pedidos de plataforma simulados
   (Fase 12B)").
-- **Límite de tasa** en los endpoints públicos del menú QR y del domicilio
-  web (CU-03/CU-04): hoy cualquiera puede llamarlos sin freno.
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
 - **Réplica de lectura** de base de datos (la propuesta la usa específicamente
@@ -62,17 +60,16 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - **Row Level Security (RLS)** de PostgreSQL para aislamiento multi-tenant — en
   el prototipo el aislamiento por `cadena_id` se aplica a nivel de aplicación
   (filtros explícitos en cada query), no a nivel de motor de base de datos.
-- **HTTPS/TLS 1.3 y WSS** — en local todo corre sobre HTTP/WS sin cifrado; en
-  producción esto sería obligatorio (ver README, sección "Servicios
-  telemáticos usados y por qué").
+- **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
+  con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
 - **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
   `lacadena.comandacentral.co`) — en el prototipo el tenant se resuelve por el
   `cadena_id` embebido en el JWT, no por subdominio.
-- **Infraestructura de alta disponibilidad** de la propuesta (§5.1): CDN,
-  proxy inverso Nginx con límite de tasa, dos servidores de aplicación
-  balanceados, monitoreo y respaldos. El prototipo es una sola instancia de
-  cada pieza (un backend, un Postgres, un Redis) porque el volumen de una demo
-  no lo justifica. La cola de mensajes + trabajador asíncrono y el almacén de
+- **Resto de la infraestructura de alta disponibilidad** de la propuesta
+  (§5.1): CDN, monitoreo y respaldos. Postgres, Redis y Nginx son una sola
+  instancia. El proxy inverso con límite de tasa y las dos instancias de
+  backend balanceadas sí existen desde la Fase 13B (ver "Proxy inverso y dos
+  instancias (Fase 13B)"). La cola de mensajes + trabajador asíncrono y el almacén de
   objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
   plano").
 - **SSH (solo con llaves), NTP, SMTP y Syslog centralizado** (§5.2 de la
@@ -246,6 +243,47 @@ vaya por el worker. Así quedó:
   - El seed crea la integración demo con `PLATAFORMA_SIMULADA_API_KEY`.
 - `// TODO PRODUCCIÓN`: rotación de API keys y firma HMAC de pedidos y
   acuses.
+
+## Proxy inverso y dos instancias (Fase 13B)
+
+§5.1 pide un "punto único de entrada: terminación TLS 1.3, HTTP/2,
+compresión, límite de tasa y balanceo" y "dos instancias ... para tolerancia
+a fallos"; §5.2 pide HTTPS y WSS. Así quedó:
+
+- Contenedor `nginx` (`nginx/`), en `https://localhost:8443`:
+  - `/api/...` va a `backend-1`/`backend-2` sin el prefijo; `/socket.io/`
+    con upgrade a WSS; `/` al servidor de Vite (incluido su HMR).
+  - Solo TLS 1.3, HTTP/2 y gzip. El log muestra qué instancia atendió cada
+    petición.
+  - `limit_req` en `/api/menu/` y `/api/public/`: 5 peticiones/s por IP con
+    ráfaga de 10; al pasarse responde `429`.
+- Balanceo:
+  - La API va en round robin. Socket.IO usa `ip_hash`, porque el handshake
+    por long-polling necesita llegar siempre a la misma instancia.
+  - Si una instancia se cae, Nginx la saca del balanceo (`max_fails`, y
+    `resolve` re-resuelve el DNS de Docker cada 5 s) y los sockets se
+    reconectan a la otra en ~1 s. Los eventos emitidos en una instancia
+    llegan a los sockets de la otra por el backplane de Redis (Fase 4).
+  - `documento:actualizado` es la excepción: lo emiten todas las instancias
+    (cada una recibe el `completed` de la cola), así que cada una lo manda
+    solo a sus propios sockets (`server.local`) para no duplicarlo.
+- El frontend llama a la API por rutas relativas (`VITE_API_URL=/api`, socket
+  en el mismo origen). Entrando directo a Vite (`:5173`), su `server.proxy`
+  hace lo mismo que Nginx, sin TLS. El service worker (9B) no cachea `/api/`
+  ni `/socket.io/`, que ahora son del mismo origen.
+- Con HTTPS, el service worker de la 9B funciona también desde un teléfono en
+  la red local (`NGINX_CERT_IP` en el `.env`).
+- `// DECISIÓN DE PROTOTIPO`:
+  - El certificado es autofirmado. Lo genera el contenedor al arrancar
+    (`nginx/generar-certificado.sh`) y vive en un volumen, no en el repo.
+  - `backend-1` sigue publicado en `:3000` para Swagger y depuración.
+  - Las dos instancias responden al alias de red `backend`, así que lo
+    interno (worker → webhook del simulador, proxy de Vite) no cambió.
+  - Cada instancia compila a su propia carpeta (`dist/`, `dist-2/`), porque
+    comparten el bind mount de `./backend`.
+- Probado: con `backend-1` detenido la API y los eventos siguen por
+  `backend-2`, y un KDS conectado a la instancia que se detiene se reconecta
+  y sigue recibiendo comandas.
 
 ## Numeración fiscal por sede (Fase 8)
 

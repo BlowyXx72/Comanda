@@ -13,6 +13,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "start:dev:2": "nest start --watch -p tsconfig.backend-2.json",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:worker": "nest start --watch -p tsconfig.worker.json --entryFile worker",

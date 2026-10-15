@@ -102,10 +102,12 @@ el backend lo reenvía al recibir el evento `completed` de la cola.
 
 DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y
 el resto de la infraestructura de alta disponibilidad de la propuesta (§5.1:
-CDN, Nginx, balanceo entre instancias, monitoreo/respaldos, SSH/NTP/SMTP/
-Syslog) — el prototipo es una sola instancia de cada pieza. La cola de
-mensajes + worker asíncrono y el almacén de objetos sí existen desde la
-Fase 11B, pero el "proveedor DIAN" al que hablan es un simulador local. La
+CDN, monitoreo/respaldos, SSH/NTP/SMTP/Syslog). La cola de mensajes + worker
+asíncrono y el almacén de objetos existen desde la Fase 11B, pero el
+"proveedor DIAN" al que hablan es un simulador local. Desde la Fase 13B la
+app entra por Nginx (`https://localhost:8443`: TLS 1.3, HTTP/2, WSS, límite
+de tasa) con dos instancias del backend (`backend-1`, `backend-2`);
+Postgres, Redis y Nginx siguen siendo una sola instancia. La
 ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)) mueve
 más piezas de esta lista adentro del alcance a medida que se integren. Dejar como stubs
 marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista

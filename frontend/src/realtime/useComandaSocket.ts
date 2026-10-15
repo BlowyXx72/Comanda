@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { DocumentoActualizado, Pedido } from '../api/comanda';
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3000';
+// Fase 13B: vacío = mismo origen de la página (Nginx o el proxy de Vite).
+const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 export interface CatalogoActualizado {
   productoId: string;

@@ -7,9 +7,9 @@ import { COLA_FISCAL, type ResultadoFiscal } from './fiscal.types.js';
 // El worker corre en otro proceso y no tiene los sockets de los navegadores.
 // Este servicio, dentro del backend, escucha los eventos de la cola en Redis
 // y reenvía cada resultado como `documento:actualizado` a la sede.
-// TODO 13B: con dos instancias de backend, ambas escucharían el mismo evento
-// y, con el backplane de Redis, cada caja lo recibiría dos veces. Ahí hay que
-// dejar un solo emisor o deduplicar en el cliente por documentoFiscalId.
+// Fase 13B: con dos instancias, las dos reciben el mismo evento `completed`.
+// Por eso cada una lo emite solo a sus propios sockets (ver
+// RealtimeGateway.emitirDocumentoActualizado) y cada caja lo recibe una vez.
 @Injectable()
 export class FiscalEventosService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(FiscalEventosService.name);

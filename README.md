@@ -18,18 +18,27 @@ dockerizados con hot-reload.
 ```bash
 cp .env.example .env
 docker compose up -d
-docker compose exec backend npx prisma db seed
+docker compose exec backend-1 npx prisma db seed
 ```
 
 Esto levanta:
 
 | Servicio | URL | Descripción |
 |---|---|---|
+| **App (Nginx)** | **https://localhost:8443** | Entrada única: TLS 1.3, HTTP/2, WSS, límite de tasa y balanceo (Fase 13B) |
 | Postgres | `localhost:5432` | Base de datos |
-| Redis | `localhost:6379` | Caché / Pub-Sub para el WebSocket |
-| Backend (NestJS) | http://localhost:3000 | API REST + Gateway WebSocket |
-| Frontend (React) | http://localhost:5173 | Interfaz web |
+| Redis | `localhost:6379` | Caché / Pub-Sub para el WebSocket y colas BullMQ |
+| Backend (NestJS) | `backend-1` y `backend-2` (detrás de Nginx); `backend-1` también en http://localhost:3000 | API REST + Gateway WebSocket |
+| Worker | — | Colas en segundo plano: DIAN simulada (11B) y acuses a plataformas (12B) |
+| MinIO | http://localhost:9001 | Almacén de objetos (XML fiscales) |
+| Frontend (React) | http://localhost:5173 | Servidor de Vite (también entra directo, sin TLS) |
 | Swagger | http://localhost:3000/api/docs | Documentación interactiva de la API |
+
+El certificado de Nginx es autofirmado (lo genera el contenedor al arrancar
+y vive en un volumen, no en el repo): la primera vez el navegador muestra una
+advertencia que hay que aceptar. Para entrar desde un teléfono en la red
+local, pon la IP de la máquina en `NGINX_CERT_IP` y en `VITE_PUBLIC_URL`
+(`https://<ip>:8443`) y recrea el contenedor (`docker compose up -d nginx`).
 
 Las migraciones de Prisma (`prisma migrate deploy`) corren automáticamente
 cada vez que arranca el contenedor del backend; el seed (`prisma db seed`) es
@@ -57,7 +66,7 @@ curl http://localhost:3000/health
 No se levanta solo con `docker compose up`. Para verla/editarla a mano:
 
 ```bash
-docker compose exec -d backend npx prisma studio --port 5555 --browser none
+docker compose exec -d backend-1 npx prisma studio --port 5555 --browser none
 ```
 
 `prisma studio` solo escucha en `127.0.0.1` dentro del contenedor (y no
@@ -68,7 +77,7 @@ rechaza con 403 cualquier request cuyo `Host` no coincida con el puerto en
 el que arrancó):
 
 ```bash
-docker compose exec -d backend node -e "
+docker compose exec -d backend-1 node -e "
 const http = require('http');
 http.createServer((req, res) => {
   const options = {
@@ -94,7 +103,8 @@ de VSCode) conectado a `localhost:5432` con las credenciales del `.env`.
 
 ## Flujo de la demo
 
-Con dos (o tres) pestañas del navegador abiertas en http://localhost:5173:
+Con dos (o tres) pestañas del navegador abiertas en https://localhost:8443
+(o http://localhost:5173, sin TLS):
 
 1. Entra con `mesero@demo.com` → `/mesas`, toca una mesa libre, arma el
    pedido con productos del catálogo y presiona **"Enviar comanda"**.
@@ -157,25 +167,29 @@ infraestructura corresponde a un concepto telemático concreto:
   (`/sedes`, `/productos`, `/pedidos`, `/pagos`, `/reportes/ventas`, ...)
   para todas las operaciones que no requieren empuje de servidor a cliente:
   login, consultas de catálogo, creación de pedidos, cobro. Documentados de
-  forma interactiva en `/api/docs` (Swagger). En local corre sobre HTTP
-  plano; **en producción iría sobre HTTPS/TLS 1.3 + HTTP/2** para cifrar el
-  transporte y multiplexar peticiones.
+  forma interactiva en `/api/docs` (Swagger). Desde la Fase 13B la app entra
+  por Nginx con **HTTPS/TLS 1.3 + HTTP/2** (cifrado del transporte y
+  multiplexación de peticiones) y compresión gzip.
 - **WebSocket (Socket.IO)** — el flujo estrella del producto (comanda
   aparece en cocina sin recargar) no se puede resolver con *polling* sin
   introducir latencia y carga innecesaria en el servidor: **necesitamos que
   el servidor empuje el evento al cliente en el momento en que ocurre**, no
   que el cliente pregunte cada N segundos "¿hay algo nuevo?". El WebSocket
   mantiene una conexión full-duplex persistente entre el KDS/mesero/caja y el
-  backend. En local es `ws://`; **en producción sería `wss://`** (WebSocket
-  sobre TLS).
+  backend. Por Nginx es `wss://` (WebSocket sobre TLS); entrando directo a
+  Vite (puerto 5173) sigue siendo `ws://`.
 - **Redis Pub/Sub** — el Gateway de WebSocket publica y se suscribe a eventos
   vía Redis en lugar de mantener el estado solo en memoria del proceso Node.
-  En este prototipo hay una sola instancia de backend, así que Redis no es
-  estrictamente necesario para que funcione, pero se incluye desde ya porque
-  es lo que permite que, en producción, **varias instancias del backend
-  (detrás de un balanceador) compartan el mismo canal de eventos en tiempo
-  real** sin que un cliente conectado a la instancia A se pierda un evento
-  emitido por la instancia B.
+  Desde la Fase 13B hay **dos instancias del backend detrás de Nginx**, y es
+  Redis el que hace que compartan el mismo canal de eventos en tiempo real:
+  un KDS conectado a `backend-1` recibe la comanda que creó un mesero cuya
+  petición atendió `backend-2`. Si una instancia se cae, Nginx manda todo a la
+  otra y los sockets se reconectan solos.
+- **Proxy inverso y balanceo (Nginx)** — punto único de entrada (§5.1):
+  termina TLS, reparte la API en round robin entre las dos instancias, da
+  afinidad (`ip_hash`) a Socket.IO para el handshake por long-polling y
+  limita la tasa de los endpoints públicos sin autenticación (menú QR y
+  domicilio: `429` al pasarse). Ver `nginx/nginx.conf`.
 - **Multi-tenant / DNS (a futuro)** — el documento de propuesta plantea
   resolver la cadena (tenant) por subdominio en producción (p. ej.
   `cadena-x.comanda.app`), lo que depende de DNS y de un mecanismo de
