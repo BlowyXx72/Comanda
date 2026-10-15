@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { type Job, UnrecoverableError, Worker } from 'bullmq';
+import { ColaCorreoService } from '../mail/cola-correo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { conexionRedis } from '../queue/conexion-redis.js';
 import { AlmacenObjetosService } from './almacen-objetos.service.js';
@@ -22,6 +23,7 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
     private readonly almacen: AlmacenObjetosService,
     private readonly proveedor: ProveedorDianSimuladoService,
     private readonly colaFiscal: ColaFiscalService,
+    private readonly colaCorreo: ColaCorreoService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -65,8 +67,12 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
     }
 
     // Idempotente: si un reintento llega después de que otro intento ya lo
-    // resolvió, solo se devuelve el estado actual.
-    if (doc.estadoDian !== 'PENDIENTE') return this.resultado(doc);
+    // resolvió, solo se devuelve el estado actual. Se vuelve a encolar el
+    // comprobante por si lo que falló fue justo ese encolado (jobId fijo).
+    if (doc.estadoDian !== 'PENDIENTE') {
+      await this.encolarComprobanteSiAplica(doc.id, doc.estadoDian, doc.pedido.canal, cadenaId);
+      return this.resultado(doc);
+    }
 
     let urlXml = doc.urlXml;
     const xml = generarXmlSimulado(doc);
@@ -88,6 +94,7 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
           validadoEn: new Date(),
         },
       });
+      await this.encolarComprobanteSiAplica(doc.id, actualizado.estadoDian, doc.pedido.canal, cadenaId);
       return this.resultado(actualizado);
     } catch (err) {
       if (!(err instanceof ProveedorDianNoDisponibleError)) throw err;
@@ -103,6 +110,20 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
         },
       });
       return this.resultado(actualizado);
+    }
+  }
+
+  // Fase 14B (§5.2): el comprobante de un domicilio sale por correo cuando el
+  // documento queda validado. Si el cliente no dejó correo, el worker de
+  // correo lo omite.
+  private async encolarComprobanteSiAplica(
+    documentoFiscalId: string,
+    estadoDian: ResultadoFiscal['estadoDian'],
+    canal: string,
+    cadenaId: string,
+  ) {
+    if (estadoDian === 'VALIDADO_SIMULADO' && canal === 'DOMICILIO') {
+      await this.colaCorreo.encolarComprobante(documentoFiscalId, cadenaId);
     }
   }
 

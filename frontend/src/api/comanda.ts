@@ -79,6 +79,8 @@ export interface Cliente {
   nombre: string;
   telefono: string;
   direccion: string;
+  // Fase 14B: opcional, para enviarle el comprobante por correo.
+  email?: string | null;
 }
 
 export interface CrearPedidoDetalleInput {
@@ -214,7 +216,7 @@ export interface CrearPedidoDomicilioInput {
   id: string;
   cadenaId: string;
   sedeId: string;
-  cliente: { nombre: string; telefono: string; direccion: string };
+  cliente: { nombre: string; telefono: string; direccion: string; email?: string };
   detalles: CrearPedidoDetalleInput[];
 }
 
@@ -296,3 +298,8 @@ export const enviarPedidoPlataforma = (input: PedidoPlataformaInput, apiKey: str
 
 export const listarAcusesPlataforma = (apiKey: string) =>
   apiFetch<AcusePlataforma[]>('/simulador-plataforma/acuses', { headers: conApiKey(apiKey) });
+
+// --- Correo (Fase 14B) ---
+
+export const enviarResumenDiario = (token: string, fecha?: string) =>
+  apiFetch<{ encolado: boolean }>('/correo/resumen-diario', { method: 'POST', body: JSON.stringify({ fecha }) }, token);

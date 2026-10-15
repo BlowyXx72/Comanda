@@ -28,7 +28,7 @@ export function MenuPublicoPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [carrito, setCarrito] = useState<Record<string, ItemCarrito>>({});
-  const [cliente, setCliente] = useState({ nombre: '', telefono: '', direccion: '' });
+  const [cliente, setCliente] = useState({ nombre: '', telefono: '', direccion: '', email: '' });
   const [enviando, setEnviando] = useState(false);
   const [errorPedido, setErrorPedido] = useState<string | null>(null);
   const [pedidoCreado, setPedidoCreado] = useState<PedidoDomicilioCreado | null>(null);
@@ -69,7 +69,8 @@ export function MenuPublicoPage() {
         id: crypto.randomUUID(),
         cadenaId,
         sedeId,
-        cliente,
+        // Fase 14B: el correo es opcional; vacío no se manda.
+        cliente: { ...cliente, email: cliente.email.trim() || undefined },
         detalles: itemsCarrito.map((item) => ({ productoId: item.producto.id, cantidad: item.cantidad })),
       });
       setPedidoCreado(creado);
@@ -174,6 +175,15 @@ export function MenuPublicoPage() {
                 maxLength={200}
                 value={cliente.direccion}
                 onChange={(e) => setCliente({ ...cliente, direccion: e.target.value })}
+              />
+            </label>
+            <label>
+              Correo (opcional, para enviarte el comprobante)
+              <input
+                type="email"
+                maxLength={254}
+                value={cliente.email}
+                onChange={(e) => setCliente({ ...cliente, email: e.target.value })}
               />
             </label>
 

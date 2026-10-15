@@ -124,6 +124,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      mailpit:
+        condition: service_started
     # migrate deploy también aquí por si el worker arranca antes que el
     # backend; Prisma serializa los dos con un advisory lock.
     command: sh -c "npx prisma migrate deploy && npm run start:worker"
@@ -166,6 +168,17 @@ services:
       - frontend
       - backend-1
       - backend-2
+
+  # Fase 14B: servidor SMTP local de §5.2 con bandeja web para la demo
+  # (http://localhost:${MAILPIT_WEB_PORT}). Recibe todos los correos del
+  # worker y no entrega ninguno de verdad. El SMTP (1025) solo se usa dentro
+  # de la red de Docker, por eso no se publica.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: comanda-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_WEB_PORT}:8025"
 
 volumes:
   comanda-postgres-data:

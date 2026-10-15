@@ -7,6 +7,7 @@ import { CatalogModule } from './catalog/catalog.module.js';
 import { FiscalModule } from './fiscal/fiscal.module.js';
 import { HealthModule } from './health/health.module.js';
 import { IntegracionesModule } from './integrations/integraciones.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -30,6 +31,7 @@ import { TablesModule } from './tables/tables.module.js';
     SyncModule,
     FiscalModule,
     IntegracionesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

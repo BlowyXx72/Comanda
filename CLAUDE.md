@@ -65,12 +65,13 @@ original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
 el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
 (menú QR sin JWT, CU-03), `SyncModule` (`POST /sync` del modo offline,
 CU-07) y `FiscalModule` (Fase 11B: cola BullMQ de documentos fiscales,
-validación DIAN **simulada** en segundo plano y XML en MinIO) e
+validación DIAN **simulada** en segundo plano y XML en MinIO),
 `IntegracionesModule` (Fase 12B, CU-05: pedidos de plataforma por API con
-`X-Api-Key`, contra un simulador). El procesamiento de las colas corre en un
-proceso aparte, el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que
-junta `FiscalWorkerModule` e `IntegracionesWorkerModule`), con el mismo
-código del backend.
+`X-Api-Key`, contra un simulador) y `MailModule` (Fase 14B: correo SMTP a
+Mailpit, comprobante de domicilio y resumen diario). El procesamiento de las
+colas corre en un proceso aparte, el contenedor `worker` (`src/worker.ts` +
+`WorkerModule`, que junta `FiscalWorkerModule`, `IntegracionesWorkerModule`
+y `MailWorkerModule`), con el mismo código del backend.
 Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
@@ -102,7 +103,8 @@ el backend lo reenvía al recibir el evento `completed` de la cola.
 
 DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y
 el resto de la infraestructura de alta disponibilidad de la propuesta (§5.1:
-CDN, monitoreo/respaldos, SSH/NTP/SMTP/Syslog). La cola de mensajes + worker
+CDN, monitoreo/respaldos, SSH/NTP/Syslog; el SMTP existe desde la Fase 14B,
+pero contra Mailpit, que no entrega correos de verdad). La cola de mensajes + worker
 asíncrono y el almacén de objetos existen desde la Fase 11B, pero el
 "proveedor DIAN" al que hablan es un simulador local. Desde la Fase 13B la
 app entra por Nginx (`https://localhost:8443`: TLS 1.3, HTTP/2, WSS, límite

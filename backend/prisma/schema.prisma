@@ -206,6 +206,9 @@ model Cliente {
   nombre    String
   telefono  String
   direccion String
+  // Fase 14B (§5.2, SMTP): a dónde se envía el comprobante del domicilio.
+  // DECISIÓN DE PROTOTIPO: el ER no tiene correo en Cliente; es opcional.
+  email     String?
 
   cadena  Cadena   @relation(fields: [cadenaId], references: [id])
   pedidos Pedido[]

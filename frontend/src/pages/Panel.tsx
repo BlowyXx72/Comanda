@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { obtenerReporteConsolidado, type ReporteConsolidado } from '../api/comanda';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { BotonResumenDiario } from '../correo/BotonResumenDiario';
 import { useVentasSocket } from '../realtime/useVentasSocket';
 import { formatearCOP } from '../utils/formato';
 
@@ -36,6 +37,7 @@ export function PanelPage() {
   return (
     <div className="panel-page">
       <h1>Panel consolidado</h1>
+      <BotonResumenDiario />
       <p className="panel-rango">
         {reporte.desde === reporte.hasta ? reporte.desde : `${reporte.desde} — ${reporte.hasta}`}
       </p>

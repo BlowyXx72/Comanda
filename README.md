@@ -29,8 +29,9 @@ Esto levanta:
 | Postgres | `localhost:5432` | Base de datos |
 | Redis | `localhost:6379` | Caché / Pub-Sub para el WebSocket y colas BullMQ |
 | Backend (NestJS) | `backend-1` y `backend-2` (detrás de Nginx); `backend-1` también en http://localhost:3000 | API REST + Gateway WebSocket |
-| Worker | — | Colas en segundo plano: DIAN simulada (11B) y acuses a plataformas (12B) |
+| Worker | — | Colas en segundo plano: DIAN simulada (11B), acuses a plataformas (12B) y correo (14B) |
 | MinIO | http://localhost:9001 | Almacén de objetos (XML fiscales) |
+| Mailpit | http://localhost:8025 | Bandeja web del SMTP local: comprobantes y resumen diario (Fase 14B) |
 | Frontend (React) | http://localhost:5173 | Servidor de Vite (también entra directo, sin TLS) |
 | Swagger | http://localhost:3000/api/docs | Documentación interactiva de la API |
 

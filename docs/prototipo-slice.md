@@ -72,9 +72,12 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   instancias (Fase 13B)"). La cola de mensajes + trabajador asíncrono y el almacén de
   objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
   plano").
-- **SSH (solo con llaves), NTP, SMTP y Syslog centralizado** (§5.2 de la
+- **SSH (solo con llaves), NTP y Syslog centralizado** (§5.2 de la
   propuesta) — protocolos de operación de servidores de producción; no
   aplican a un prototipo que corre en Docker local.
+- **Entrega real de correo.** Desde la Fase 14B el worker envía por SMTP,
+  pero a Mailpit, que los muestra en su bandeja web y no los entrega (ver
+  "Correo: comprobante y resumen diario (Fase 14B)").
 
 ## Diferencias con el ER completo de la propuesta (§6.2)
 
@@ -86,7 +89,9 @@ intencionales por alcance:
   gestión de inventario/recetas — vender un producto no descuenta ningún
   insumo. No hace parte del *vertical slice*.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
-  (nombre, teléfono, dirección); un pedido en mesa sigue sin cliente.
+  y, desde la 12B, de plataforma (nombre, teléfono, dirección); un pedido en
+  mesa sigue sin cliente. La Fase 14B le agrega `email` opcional, que el ER no
+  tiene, para enviar el comprobante.
 - **`Pedido.canal`** acepta `SALON`, `DOMICILIO` y, desde la Fase 12B,
   `PLATAFORMA` (enum `CanalPedido`).
 - **`IntegracionPlataforma`** (Fase 12B) no está en el ER: guarda cada
@@ -284,6 +289,39 @@ a fallos"; §5.2 pide HTTPS y WSS. Así quedó:
 - Probado: con `backend-1` detenido la API y los eventos siguen por
   `backend-2`, y un KDS conectado a la instancia que se detiene se reconecta
   y sigue recibiendo comandas.
+
+## Correo: comprobante y resumen diario (Fase 14B)
+
+§5.2 pide "SMTP: envío de comprobantes al comensal y resúmenes diarios al
+dueño". Así quedó:
+
+- Contenedor `mailpit`: servidor SMTP local con bandeja web
+  (http://localhost:8025). El worker le habla por SMTP con `nodemailer`
+  (variables `SMTP_*`); en producción bastaría apuntarlas a un relay real.
+- Cola `correo` (BullMQ) con reintentos y backoff (`COLA_CORREO_INTENTOS`).
+  El backend solo encola; envía el contenedor `worker` (`MailWorkerModule`).
+- Comprobante:
+  - El formulario de domicilio pide un correo opcional (`Cliente.email`,
+    migración `r2p2_cliente_email`, `// DECISIÓN DE PROTOTIPO`).
+  - Cuando la DIAN simulada deja el documento de un domicilio en
+    `VALIDADO_SIMULADO`, el worker fiscal encola el comprobante (`jobId` fijo,
+    así un reintento no manda dos). Sin correo, no se envía nada.
+  - El correo dice que el documento es simulado y no tiene validez fiscal.
+- Resumen diario:
+  - Trabajo repetible de BullMQ (`RESUMEN_DIARIO_CRON`, 23:00 en
+    `RESUMEN_DIARIO_ZONA`, Bogotá): un correo por cadena a todos sus ADMIN,
+    con el consolidado de la Fase 9 (`ReportsService.consolidado`) del día.
+  - `POST /correo/resumen-diario` (solo ADMIN, `fecha` opcional) lo dispara
+    a mano para la cadena del ADMIN; en `/panel` es el botón "Enviar resumen
+    del día por correo".
+  - El worker registra `ReportsService` y `BranchesService` como proveedores
+    propios en vez de importar `ReportsModule`, que trae controladores con
+    guards de JWT que el worker no tiene.
+  - Mientras el consolidado cuente el día en UTC, el resumen de las 23:00 de
+    Bogotá corresponde al día UTC de esa fecha; coinciden cuando la Fase 14
+    (Parte 1) pase el reporte a la zona de Bogotá.
+- `// TODO PRODUCCIÓN`: relay SMTP con TLS y autenticación, SPF/DKIM, y
+  baja de suscripción del resumen.
 
 ## Numeración fiscal por sede (Fase 8)
 
