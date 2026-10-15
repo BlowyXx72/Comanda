@@ -24,7 +24,10 @@ enum EstadoMesa {
 enum CanalPedido {
   SALON
   DOMICILIO
-  // TODO PRODUCCION: RAPPI, QR cuando existan esos canales
+  // Fase 12B (CU-05): pedido que entra por API desde una plataforma de
+  // domicilios externa. En este prototipo la plataforma es un simulador.
+  PLATAFORMA
+  // TODO PRODUCCION: QR cuando el comensal pueda pedir desde la mesa
 }
 
 enum EstadoPedido {
@@ -66,6 +69,8 @@ model Cadena {
   usuarios  Usuario[]
   productos Producto[]
   clientes  Cliente[]
+
+  integracionesPlataforma IntegracionPlataforma[]
 
   @@map("cadenas")
 }
@@ -143,27 +148,54 @@ model Pedido {
   // DECISIÓN DE PROTOTIPO: el UUID lo genera el cliente y viaja en la petición
   // (POST /pedidos); el default de acá es solo un respaldo si algún día se crea
   // un pedido desde el propio backend sin UUID explícito.
-  id        String       @id @default(uuid())
-  sedeId    String       @map("sede_id")
-  mesaId    String?      @map("mesa_id")
+  id                String       @id @default(uuid())
+  sedeId            String       @map("sede_id")
+  mesaId            String?      @map("mesa_id")
   // Opcional desde Fase 8B: un pedido de domicilio lo crea el cliente desde
   // la web, no un usuario interno; en ese caso va clienteId.
-  usuarioId String?      @map("usuario_id")
-  clienteId String?      @map("cliente_id")
-  canal     CanalPedido  @default(SALON)
-  estado    EstadoPedido @default(ABIERTO)
-  fechaHora DateTime     @default(now()) @map("fecha_hora")
-  total     Decimal      @default(0) @db.Decimal(10, 2)
+  usuarioId         String?      @map("usuario_id")
+  clienteId         String?      @map("cliente_id")
+  // Fase 12B: solo en pedidos de canal PLATAFORMA. La referencia es el id del
+  // pedido en la plataforma; única por integración, para que un reenvío de la
+  // plataforma no duplique la comanda.
+  integracionId     String?      @map("integracion_id")
+  referenciaExterna String?      @map("referencia_externa")
+  canal             CanalPedido  @default(SALON)
+  estado            EstadoPedido @default(ABIERTO)
+  fechaHora         DateTime     @default(now()) @map("fecha_hora")
+  total             Decimal      @default(0) @db.Decimal(10, 2)
 
-  sede            Sede             @relation(fields: [sedeId], references: [id])
-  mesa            Mesa?            @relation(fields: [mesaId], references: [id])
-  usuario         Usuario?         @relation(fields: [usuarioId], references: [id])
-  cliente         Cliente?         @relation(fields: [clienteId], references: [id])
+  sede            Sede                   @relation(fields: [sedeId], references: [id])
+  mesa            Mesa?                  @relation(fields: [mesaId], references: [id])
+  usuario         Usuario?               @relation(fields: [usuarioId], references: [id])
+  cliente         Cliente?               @relation(fields: [clienteId], references: [id])
+  integracion     IntegracionPlataforma? @relation(fields: [integracionId], references: [id])
   detalles        PedidoDetalle[]
   pagos           Pago[]
   documentoFiscal DocumentoFiscal?
 
+  @@unique([integracionId, referenciaExterna])
   @@map("pedidos")
+}
+
+// Fase 12B (CU-05): una plataforma de domicilios conectada a una cadena.
+// La plataforma se autentica con una API key (header X-Api-Key); aquí solo se
+// guarda su hash SHA-256, nunca la llave en claro.
+// DECISIÓN DE PROTOTIPO: `urlAcuse` es el webhook al que el worker le avisa a
+// la plataforma que el pedido entró a cocina. La propuesta pide que esa
+// comunicación salga por el trabajador asíncrono (§5.1), no fija el formato.
+model IntegracionPlataforma {
+  id         String  @id @default(uuid())
+  cadenaId   String  @map("cadena_id")
+  nombre     String
+  apiKeyHash String  @unique @map("api_key_hash")
+  urlAcuse   String? @map("url_acuse")
+  activa     Boolean @default(true)
+
+  cadena  Cadena   @relation(fields: [cadenaId], references: [id])
+  pedidos Pedido[]
+
+  @@map("integraciones_plataforma")
 }
 
 // Entidad Cliente del ER de la propuesta (§6.2), usada por los pedidos de

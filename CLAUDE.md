@@ -37,7 +37,8 @@ agregado que no esté en el documento de propuesta va marcado en el código:
 
 Entidades del negocio en **español**, mapeadas 1:1 al documento de propuesta:
 `Cadena` (tenant), `Sede`, `Usuario`, `Producto`, `Mesa`, `Pedido`,
-`PedidoDetalle`, `Pago`, `DocumentoFiscal`. El resto del código (nombres
+`PedidoDetalle`, `Pago`, `DocumentoFiscal`, `Cliente`; además
+`IntegracionPlataforma` (Fase 12B), que no está en el ER de la propuesta. El resto del código (nombres
 técnicos, infraestructura) en inglés estándar.
 
 Multi-tenant: todas las tablas de negocio llevan `cadena_id`. En este
@@ -64,9 +65,12 @@ original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
 el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
 (menú QR sin JWT, CU-03), `SyncModule` (`POST /sync` del modo offline,
 CU-07) y `FiscalModule` (Fase 11B: cola BullMQ de documentos fiscales,
-validación DIAN **simulada** en segundo plano y XML en MinIO). El
-procesamiento de esa cola corre en un proceso aparte, el contenedor `worker`
-(`src/worker.ts` + `FiscalWorkerModule`), con el mismo código del backend.
+validación DIAN **simulada** en segundo plano y XML en MinIO) e
+`IntegracionesModule` (Fase 12B, CU-05: pedidos de plataforma por API con
+`X-Api-Key`, contra un simulador). El procesamiento de las colas corre en un
+proceso aparte, el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que
+junta `FiscalWorkerModule` e `IntegracionesWorkerModule`), con el mismo
+código del backend.
 Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.

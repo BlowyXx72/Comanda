@@ -33,7 +33,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede. Desde la Fase 11B el documento queda `PENDIENTE` y un worker aparte genera el XML (sin firma), lo guarda en MinIO y lo "valida" contra un proveedor DIAN **simulado**, sin bloquear la caja; el estado llega a `/caja` en vivo. No se transmite a la DIAN real. |
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
 | CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; sin rate limiting (`// TODO PRODUCCIÓN`). |
-| CU-05 Pedido de plataforma (Rappi) | **No implementado.** No se integra ninguna API externa. |
+| CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
 | CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
 | CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
@@ -48,7 +48,10 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   es simulado: el XML no sigue UBL 2.1 ni va firmado, y la "validación" la
   hace `ProveedorDianSimuladoService` (Fase 11B), no el proveedor tecnológico
   autorizado.
-- Integración con **Rappi** u otras plataformas de domicilios.
+- Integración real con **Rappi** u otras plataformas de domicilios. Desde la
+  Fase 12B existe el canal `PLATAFORMA` y su API, pero quien la usa es un
+  simulador local con formato propio (ver "Pedidos de plataforma simulados
+  (Fase 12B)").
 - **Límite de tasa** en los endpoints públicos del menú QR y del domicilio
   web (CU-03/CU-04): hoy cualquiera puede llamarlos sin freno.
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
@@ -87,9 +90,11 @@ intencionales por alcance:
   insumo. No hace parte del *vertical slice*.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
   (nombre, teléfono, dirección); un pedido en mesa sigue sin cliente.
-- **`Pedido.canal`** acepta `SALON` y `DOMICILIO` (enum `CanalPedido`); el
-  canal de plataformas no existe, coherente con que CU-05 no está
-  implementado.
+- **`Pedido.canal`** acepta `SALON`, `DOMICILIO` y, desde la Fase 12B,
+  `PLATAFORMA` (enum `CanalPedido`).
+- **`IntegracionPlataforma`** (Fase 12B) no está en el ER: guarda cada
+  plataforma conectada a una cadena (hash de la API key y webhook de acuse).
+  `Pedido` gana `integracionId` y `referenciaExterna` (únicos en pareja).
 - **`DocumentoFiscal`** no tiene el campo `CUDE/CUFE` del ER (el identificador
   real que asigna la DIAN): no aplica a un documento simulado.
 - Desde la **Fase 8**, `Sede.rangoInicio`/`rangoFin`/`siguienteConsecutivo`
@@ -204,6 +209,43 @@ segundo plano sin bloquear la caja". Así quedó:
 - `// DECISIÓN DE PROTOTIPO`: MinIO corre con la imagen congelada
   `bitnamilegacy/minio`, porque MinIO dejó de publicar `minio/minio` en Docker
   Hub. Es el mismo servidor, sin actualizaciones.
+
+## Pedidos de plataforma simulados (Fase 12B)
+
+CU-05 pide que "un pedido de Rappi entra automáticamente por API al mismo
+tablero de la sede, sin re-digitación", y §5.1 que la comunicación con Rappi
+vaya por el worker. Así quedó:
+
+- `IntegracionPlataforma` une una plataforma a una cadena. La plataforma se
+  autentica con `X-Api-Key`; en la base solo queda el hash SHA-256 de la
+  llave. La cadena sale de la integración, nunca del cuerpo.
+- `GET /integraciones/plataformas/catalogo`: sedes y productos activos, para
+  que la plataforma arme su menú.
+- `POST /integraciones/plataformas/pedidos`: traduce el formato de la
+  plataforma (`orderId`, `storeId`, `customer`, `items[].sku/qty`) a un
+  `Pedido` de canal `PLATAFORMA` en `EN_PREPARACION`, con un `Cliente`, y
+  emite `comanda:nueva`. Cocina y caja lo muestran como
+  "Plataforma · {orderId}".
+- Idempotencia: `(integracionId, referenciaExterna)` es único. Un reenvío
+  devuelve el mismo pedido con `duplicate: true`; dos reenvíos simultáneos
+  también (el segundo choca con el índice y devuelve el del primero).
+- Acuse: después de crear el pedido se encola un trabajo en la cola
+  `plataformas` (BullMQ). El worker hace `POST` al webhook `urlAcuse` de la
+  integración con el pedido aceptado; si no responde 2xx, reintenta con
+  backoff (`COLA_PLATAFORMAS_INTENTOS`). El pedido ya está en cocina pase lo
+  que pase con el acuse.
+- `// DECISIÓN DE PROTOTIPO`: la plataforma es un simulador.
+  - Formato JSON propio (en inglés), a propósito distinto del de Comanda. No
+    copia la API de Rappi: no hay acceso aprobado y está prohibido integrarla.
+  - La página `/simulador-plataforma` (sin sesión, con la API key del `.env`)
+    manda pedidos, tiene un botón para reenviar el último y muestra los
+    acuses.
+  - El webhook de acuses del simulador vive en el propio backend
+    (`/simulador-plataforma/:integracionId/acuses`) y guarda los acuses en
+    Redis; en producción el webhook sería de la plataforma.
+  - El seed crea la integración demo con `PLATAFORMA_SIMULADA_API_KEY`.
+- `// TODO PRODUCCIÓN`: rotación de API keys y firma HMAC de pedidos y
+  acuses.
 
 ## Numeración fiscal por sede (Fase 8)
 
