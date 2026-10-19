@@ -14,14 +14,18 @@ export class CatalogService {
   ) {}
 
   listar(cadenaId: string, incluirInactivos = false) {
-    return this.prisma.producto.findMany({
-      where: { cadenaId, ...(incluirInactivos ? {} : { activo: true }) },
-      orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
-    });
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.producto.findMany({
+        where: { cadenaId, ...(incluirInactivos ? {} : { activo: true }) },
+        orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
+      }),
+    );
   }
 
   async obtenerDeCadena(productoId: string, cadenaId: string) {
-    const producto = await this.prisma.producto.findUnique({ where: { id: productoId } });
+    const producto = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.producto.findUnique({ where: { id: productoId } }),
+    );
     if (!producto || producto.cadenaId !== cadenaId) {
       throw new NotFoundException(`Producto ${productoId} no encontrado`);
     }
@@ -32,21 +36,27 @@ export class CatalogService {
   // producto una sola vez y `catalogo:actualizado` (room `cadena:{cadenaId}`)
   // avisa a todas las sedes, sin que cada mesero tenga que recargar la página.
   async crear(cadenaId: string, dto: CrearProductoDto) {
-    const producto = await this.prisma.producto.create({ data: { cadenaId, ...dto } });
+    const producto = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.producto.create({ data: { cadenaId, ...dto } }),
+    );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'CREADO' });
     return producto;
   }
 
   async actualizar(id: string, cadenaId: string, dto: ActualizarProductoDto) {
     await this.obtenerDeCadena(id, cadenaId);
-    const producto = await this.prisma.producto.update({ where: { id }, data: dto });
+    const producto = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.producto.update({ where: { id }, data: dto }),
+    );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'ACTUALIZADO' });
     return producto;
   }
 
   async desactivar(id: string, cadenaId: string) {
     await this.obtenerDeCadena(id, cadenaId);
-    const producto = await this.prisma.producto.update({ where: { id }, data: { activo: false } });
+    const producto = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.producto.update({ where: { id }, data: { activo: false } }),
+    );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'DESACTIVADO' });
     return producto;
   }

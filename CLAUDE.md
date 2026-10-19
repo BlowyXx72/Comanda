@@ -20,8 +20,7 @@ agregado que no esté en el documento de propuesta va marcado en el código:
 - `// DECISIÓN DE PROTOTIPO` — algo que decidimos nosotros porque la propuesta
   no lo fijaba (p. ej. Prisma, Socket.IO, JWT).
 - `// TODO PRODUCCIÓN` — un stub de algo que la propuesta sí pide pero que
-  este prototipo no implementa de verdad (DIAN real, Rappi, cobro offline,
-  réplica de lectura, RLS).
+  este prototipo no implementa de verdad (DIAN real, Rappi, cobro offline).
 
 ## Stack
 
@@ -41,10 +40,11 @@ Entidades del negocio en **español**, mapeadas 1:1 al documento de propuesta:
 `IntegracionPlataforma` (Fase 12B), que no está en el ER de la propuesta. El resto del código (nombres
 técnicos, infraestructura) en inglés estándar.
 
-Multi-tenant: todas las tablas de negocio llevan `cadena_id`. En este
-prototipo el aislamiento se aplica **a nivel de aplicación** (filtrar siempre
-por el `cadena_id` del JWT), no con Row Level Security de Postgres (eso es
-`// TODO PRODUCCIÓN`).
+Multi-tenant: todas las tablas de negocio llevan `cadena_id`. El aislamiento
+se aplica **a nivel de aplicación** (filtrar siempre por el `cadena_id` del
+JWT) desde la Fase 0; la ronda 2 (`docs/fases-siguientes-2.md`, Fase 12) añade
+Row Level Security de Postgres como segunda capa, sin quitar los filtros de
+aplicación.
 
 Máquina de estados del Pedido — no saltar estados:
 
@@ -64,15 +64,16 @@ Módulos que existen de verdad: `AuthModule`, `BranchesModule`,
 original de la propuesta; se agregó porque `GET /reportes/ventas` sí lo pide
 el documento y no encajaba en ningún módulo existente), `PublicMenuModule`
 (menú QR sin JWT, CU-03), `SyncModule` (`POST /sync` del modo offline,
-CU-07) y `FiscalModule` (Fase 11B: cola BullMQ de documentos fiscales,
-validación DIAN **simulada** en segundo plano y XML en MinIO),
-`IntegracionesModule` (Fase 12B, CU-05: pedidos de plataforma por API con
-`X-Api-Key`, contra un simulador) y `MailModule` (Fase 14B: correo SMTP a
-Mailpit, comprobante de domicilio y resumen diario). El procesamiento de las
-colas corre en un proceso aparte, el contenedor `worker` (`src/worker.ts` +
-`WorkerModule`, que junta `FiscalWorkerModule`, `IntegracionesWorkerModule`
-y `MailWorkerModule`), con el mismo código del backend.
-Deben quedar
+CU-07), `InventoryModule` (insumos, recetas y movimientos de inventario,
+Fase 11, §6.2 — tampoco estaba en la lista original), `FiscalModule` (Fase
+11B: cola BullMQ de documentos fiscales, validación DIAN **simulada** en
+segundo plano y XML en MinIO), `IntegracionesModule` (Fase 12B, CU-05:
+pedidos de plataforma por API con `X-Api-Key`, contra un simulador) y
+`MailModule` (Fase 14B: correo SMTP a Mailpit, comprobante de domicilio y
+resumen diario). El procesamiento de las colas corre en un proceso aparte,
+el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que junta
+`FiscalWorkerModule`, `IntegracionesWorkerModule` y `MailWorkerModule`), con
+el mismo código del backend. Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
 
@@ -90,10 +91,12 @@ escucha el KDS) y `pedido:actualizado` (cambio de estado, lo escuchan mesero y
 caja). Ver README, sección "Servicios telemáticos usados y por qué", para la
 justificación de por qué WebSocket y no polling.
 
-Room por cadena: `cadena:{cadenaId}` (Fases 9–10). Eventos: `venta:registrada`
-(cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo)
-y `catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
-`/mesas` y el menú QR de todas las sedes de esa cadena).
+Room por cadena: `cadena:{cadenaId}` (Fases 9–11). Eventos: `venta:registrada`
+(cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo),
+`catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
+`/mesas` y el menú QR de todas las sedes de esa cadena) e
+`inventario:actualizado` (movimiento manual o descuento automático por venta,
+lo escucha `/inventario` para refrescar existencias).
 
 `documento:actualizado` (Fase 11B, room `sede:{id}`): el worker terminó de
 validar un documento fiscal; lo escucha `/caja`. El worker no tiene sockets:
@@ -101,23 +104,37 @@ el backend lo reenvía al recibir el evento `completed` de la cola.
 
 ## Fuera de alcance explícito (no implementar de verdad)
 
-DIAN real, Rappi, cobro/facturación sin conexión, réplica de lectura, RLS, y
-el resto de la infraestructura de alta disponibilidad de la propuesta (§5.1:
-CDN, monitoreo/respaldos, SSH/NTP/Syslog; el SMTP existe desde la Fase 14B,
-pero contra Mailpit, que no entrega correos de verdad). La cola de mensajes + worker
-asíncrono y el almacén de objetos existen desde la Fase 11B, pero el
-"proveedor DIAN" al que hablan es un simulador local. Desde la Fase 13B la
-app entra por Nginx (`https://localhost:8443`: TLS 1.3, HTTP/2, WSS, límite
-de tasa) con dos instancias del backend (`backend-1`, `backend-2`);
-Postgres, Redis y Nginx siguen siendo una sola instancia. La
-ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)) mueve
-más piezas de esta lista adentro del alcance a medida que se integren. Dejar como stubs
-marcados `// TODO PRODUCCIÓN` si se necesita un punto de extensión. Lista
-completa y razonada en `docs/prototipo-slice.md`.
+DIAN real y Rappi real quedan fuera bajo cualquier circunstancia (regla
+dura): los "proveedores" de la ronda 2 son simuladores locales. Fuera de eso,
+sigue fuera el resto de la infraestructura de alta disponibilidad de la
+propuesta que la ronda 2 no cubre completa (§5.1: CDN, monitoreo/respaldos,
+SSH/NTP/Syslog, DNS por subdominio; el SMTP existe desde la Fase 14B, pero
+contra Mailpit, que no entrega correos de verdad) — el prototipo es una sola
+instancia de cada pieza salvo donde una fase concreta la amplíe. La cola de
+mensajes + worker asíncrono y el almacén de objetos existen desde la Fase
+11B. Desde la Fase 13B la app entra por Nginx (`https://localhost:8443`: TLS
+1.3, HTTP/2, WSS, límite de tasa) con dos instancias del backend
+(`backend-1`, `backend-2`); Postgres, Redis y Nginx siguen siendo una sola
+instancia (salvo la réplica de lectura de Postgres, Fase 13: `postgres-replica`,
+solo para reportes). Dejar como stubs marcados `// TODO PRODUCCIÓN` si se necesita un
+punto de extensión. Lista completa y razonada en `docs/prototipo-slice.md`.
 
-El ER de la propuesta (§6.2) tiene entidades que este prototipo no
-implementa: `Insumo`, `MovimientoInventario`, `Receta` — no hay gestión de
-inventario/recetas. `Cliente` sí existe, solo para pedidos de domicilio. Detalle en
+De la ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)),
+la Parte 2 (Fases 11B–14B) ya está completa e integrada en `main`. De la
+Parte 1 (Fases 11–14, aprobada con el docente), la Fase 11 (inventario y
+recetas), la Fase 12 (RLS), la Fase 13 (réplica de lectura) y la Fase 14
+(reportes por día/mes, producto y franja horaria, en zona America/Bogota) ya
+están implementadas: las operaciones de negocio pasan por
+`PrismaService.conCadena()` (rol `comanda_app` + `app.cadena_id`) y los filtros
+por `cadena_id` de la aplicación se mantienen como segunda capa. Los reportes
+(`ReportsService`) leen de `postgres-replica` vía `PrismaReplicaService`; es lo
+único que usa ese cliente, y `/panel` suma `venta:registrada` con el payload del
+evento sin re-consultar.
+
+Desde la Fase 11 (ronda 2, §6.2), el ER ya tiene `Insumo`, `Receta` y
+`MovimientoInventario`: `PaymentsService.pagar` descuenta inventario por
+receta dentro de la misma transacción del cobro (`backend/src/inventory/`).
+`Cliente` existe desde la Fase 8B, solo para pedidos de domicilio. Detalle en
 `docs/prototipo-slice.md`.
 
 Desde la Fase 8, `Sede` sí usa un rango de numeración fiscal real

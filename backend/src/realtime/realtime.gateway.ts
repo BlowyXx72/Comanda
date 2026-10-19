@@ -90,6 +90,13 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.server.to(nombreRoomCadena(cadenaId)).emit('catalogo:actualizado', evento);
   }
 
+  // Llamado por InventoryService tras un movimiento manual (ENTRADA/MERMA) o
+  // por PaymentsService tras el descuento automático (SALIDA). Lo escucha
+  // /inventario (Fase 11, §6.2) para refrescar existencias sin recargar.
+  emitirInventarioActualizado(cadenaId: string, evento: unknown) {
+    this.server.to(nombreRoomCadena(cadenaId)).emit('inventario:actualizado', evento);
+  }
+
   // Llamado por FiscalEventosService cuando el worker termina de validar un
   // documento (Fase 11B). Lo escucha /caja para mostrar el estado DIAN en vivo.
   // `local`: a diferencia de los demás eventos, este no nace de una petición

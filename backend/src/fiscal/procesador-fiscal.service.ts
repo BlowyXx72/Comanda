@@ -44,6 +44,8 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
   // Si el backend cobró pero no alcanzó a encolar (p. ej. Redis caído), el
   // documento queda PENDIENTE sin trabajo. Al arrancar se re-encolan; el
   // jobId fijo evita duplicar los que sí estaban en la cola.
+  // Fase 12: este barrido recorre todas las cadenas a propósito, así que se
+  // queda en el cliente dueño (no hay una sola cadena para conCadena()).
   private async reencolarPendientes() {
     const pendientes = await this.prisma.documentoFiscal.findMany({
       where: { estadoDian: 'PENDIENTE' },
@@ -57,10 +59,14 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
 
   private async procesar(job: Job<TrabajoFiscal, ResultadoFiscal>): Promise<ResultadoFiscal> {
     const { documentoFiscalId, cadenaId } = job.data;
-    const doc = await this.prisma.documentoFiscal.findUnique({
-      where: { id: documentoFiscalId },
-      include: { sede: true, pedido: { include: { detalles: { include: { producto: true } } } } },
-    });
+    // Fase 12 (§6.1): el job lleva cadenaId, así que el acceso a datos va por
+    // conCadena() (rol sin privilegios de dueño, sujeto a RLS).
+    const doc = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.documentoFiscal.findUnique({
+        where: { id: documentoFiscalId },
+        include: { sede: true, pedido: { include: { detalles: { include: { producto: true } } } } },
+      }),
+    );
     // UnrecoverableError: reintentar no va a hacer aparecer el documento.
     if (!doc || doc.sede.cadenaId !== cadenaId) {
       throw new UnrecoverableError(`Documento ${documentoFiscalId} no encontrado en la cadena ${cadenaId}`);
@@ -79,21 +85,25 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
     if (!urlXml) {
       const llave = `${cadenaId}/${doc.sedeId}/${doc.consecutivo}-${doc.id}.xml`;
       urlXml = await this.almacen.subir(llave, xml, 'application/xml');
-      await this.prisma.documentoFiscal.update({ where: { id: doc.id }, data: { urlXml } });
+      await this.prisma.conCadena(cadenaId, (tx) =>
+        tx.documentoFiscal.update({ where: { id: doc.id }, data: { urlXml } }),
+      );
     }
 
     const intento = job.attemptsMade + 1;
     const maxIntentos = job.opts.attempts ?? 1;
     try {
       const respuesta = await this.proveedor.validar(xml);
-      const actualizado = await this.prisma.documentoFiscal.update({
-        where: { id: doc.id },
-        data: {
-          estadoDian: respuesta.aceptado ? 'VALIDADO_SIMULADO' : 'RECHAZADO_SIMULADO',
-          mensajeDian: respuesta.mensaje,
-          validadoEn: new Date(),
-        },
-      });
+      const actualizado = await this.prisma.conCadena(cadenaId, (tx) =>
+        tx.documentoFiscal.update({
+          where: { id: doc.id },
+          data: {
+            estadoDian: respuesta.aceptado ? 'VALIDADO_SIMULADO' : 'RECHAZADO_SIMULADO',
+            mensajeDian: respuesta.mensaje,
+            validadoEn: new Date(),
+          },
+        }),
+      );
       await this.encolarComprobanteSiAplica(doc.id, actualizado.estadoDian, doc.pedido.canal, cadenaId);
       return this.resultado(actualizado);
     } catch (err) {
@@ -101,14 +111,16 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
       // Error técnico: BullMQ reintenta con backoff. En el último intento se
       // deja constancia del rechazo en vez de dejar el documento PENDIENTE.
       if (intento < maxIntentos) throw err;
-      const actualizado = await this.prisma.documentoFiscal.update({
-        where: { id: doc.id },
-        data: {
-          estadoDian: 'RECHAZADO_SIMULADO',
-          mensajeDian: `Proveedor DIAN (simulado) no disponible tras ${maxIntentos} intentos`,
-          validadoEn: new Date(),
-        },
-      });
+      const actualizado = await this.prisma.conCadena(cadenaId, (tx) =>
+        tx.documentoFiscal.update({
+          where: { id: doc.id },
+          data: {
+            estadoDian: 'RECHAZADO_SIMULADO',
+            mensajeDian: `Proveedor DIAN (simulado) no disponible tras ${maxIntentos} intentos`,
+            validadoEn: new Date(),
+          },
+        }),
+      );
       return this.resultado(actualizado);
     }
   }

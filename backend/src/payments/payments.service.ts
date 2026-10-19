@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ColaFiscalService } from '../fiscal/cola-fiscal.service.js';
 import { Prisma } from '../generated/prisma/client.js';
+import { InventoryService } from '../inventory/inventory.service.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
@@ -8,8 +9,9 @@ import type { CrearPagoDto } from './dto/crear-pago.dto.js';
 
 // Consumido por PaymentsController (POST /pagos), a su vez usado por caja al
 // cobrar una mesa. Cierra el ciclo del pedido: registra el pago, genera el
-// documento fiscal simulado con consecutivo por sede, marca el pedido como
-// PAGADO y libera la mesa — todo en una sola transacción.
+// documento fiscal simulado con consecutivo por sede, descuenta el
+// inventario según la receta de cada producto (Fase 11), marca el pedido
+// como PAGADO y libera la mesa — todo en una sola transacción.
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -18,6 +20,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly inventoryService: InventoryService,
     private readonly colaFiscal: ColaFiscalService,
   ) {}
 
@@ -37,7 +40,7 @@ export class PaymentsService {
       throw new BadRequestException(`El monto (${monto}) no coincide con el total del pedido (${pedido.total})`);
     }
 
-    const resultado = await this.prisma.$transaction(async (tx) => {
+    const resultado = await this.prisma.conCadena(cadenaId, async (tx) => {
       // Fase 8: el consecutivo sale de un UPDATE atómico sobre la sede
       // (`siguiente_consecutivo = siguiente_consecutivo + 1 RETURNING ...`),
       // no de un MAX+1. Postgres toma el lock de fila en el UPDATE, así que
@@ -76,6 +79,16 @@ export class PaymentsService {
         },
       });
 
+      // Fase 11 (§6.2): un SALIDA por cada insumo de la receta de cada
+      // detalle, dentro de la misma transacción — si algo falla, se revierte
+      // todo, incluido el consecutivo. No bloquea el cobro si queda negativo
+      // (DECISIÓN DE PROTOTIPO, ver docs/fases-siguientes-2.md Fase 11).
+      await this.inventoryService.descontarPorVenta(
+        tx,
+        pedido.sedeId,
+        pedido.detalles.map((detalle) => ({ productoId: detalle.productoId, cantidad: detalle.cantidad })),
+      );
+
       if (pedido.mesaId) {
         await tx.mesa.update({ where: { id: pedido.mesaId }, data: { estado: 'LIBRE' } });
       }
@@ -94,10 +107,23 @@ export class PaymentsService {
     this.realtimeGateway.emitirPedidoActualizado(pedido.sedeId, resultado.pedido);
     this.realtimeGateway.emitirVentaRegistrada(cadenaId, {
       sedeId: resultado.pedido.sedeId,
+      // Fase 13: /panel suma la venta con este payload sin re-consultar (la
+      // réplica puede ir unos ms atrás); sedeNombre permite crear la fila
+      // de una sede/canal que aún no aparecía en el reporte.
+      sedeNombre: resultado.pedido.sede.nombre,
       pedidoId: resultado.pedido.id,
       canal: resultado.pedido.canal,
       total: resultado.pedido.total,
       fechaHora: resultado.pago.creadoEn,
+    });
+
+    // Fase 11: aviso genérico de que el inventario de esta sede cambió (el
+    // descuento por receta ya se aplicó dentro de la transacción); /inventario
+    // simplemente recarga existencias al recibirlo, igual que /mesas con
+    // catalogo:actualizado.
+    this.realtimeGateway.emitirInventarioActualizado(cadenaId, {
+      sedeId: resultado.pedido.sedeId,
+      pedidoId: resultado.pedido.id,
     });
 
     // Fase 11B (§5.1): la validación DIAN va por la cola, fuera de la

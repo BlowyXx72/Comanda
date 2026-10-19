@@ -212,6 +212,12 @@
     display: none;
   }
 
+  /* Máximo 5 destinos en la barra inferior (guía de la skill); los demás
+     siguen en las tarjetas del inicio, al que lleva el logo. */
+  .barra-enlace:nth-child(n + 6) {
+    display: none;
+  }
+
   .contenido {
     padding: var(--esp-4) var(--esp-4) calc(88px + env(safe-area-inset-bottom));
   }
@@ -984,6 +990,19 @@
   background: var(--color-primary);
   border-top: var(--borde);
   border-bottom: none;
+}
+
+/* Fase 14 (Parte 1): selector de agrupación día/mes y títulos de las tablas
+   de productos y franjas del panel. */
+.panel-agrupacion {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-weight: 700;
+}
+
+.panel-page h2 {
+  margin: var(--esp-5) 0 0;
 }
 
 .panel-rango {

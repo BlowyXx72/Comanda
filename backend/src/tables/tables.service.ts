@@ -8,30 +8,39 @@ import type { EstadoMesa } from '../generated/prisma/enums.js';
 export class TablesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listarPorSede(sedeId: string) {
-    return this.prisma.mesa.findMany({
-      where: { sedeId },
-      orderBy: { numero: 'asc' },
-    });
+  // Fase 12 (§6.1): todas las operaciones abren su conexión con conCadena()
+  // para que RLS filtre por la cadena; `mesas` no tiene cadena_id directo y su
+  // política resuelve la cadena por la sede.
+  listarPorSede(sedeId: string, cadenaId: string) {
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.mesa.findMany({
+        where: { sedeId },
+        orderBy: { numero: 'asc' },
+      }),
+    );
   }
 
-  async obtenerDeSede(mesaId: string, sedeId: string) {
-    const mesa = await this.prisma.mesa.findUnique({ where: { id: mesaId } });
+  async obtenerDeSede(mesaId: string, sedeId: string, cadenaId: string) {
+    const mesa = await this.prisma.conCadena(cadenaId, (tx) => tx.mesa.findUnique({ where: { id: mesaId } }));
     if (!mesa || mesa.sedeId !== sedeId) {
       throw new NotFoundException('Mesa no encontrada en esta sede');
     }
     return mesa;
   }
 
-  async ocupar(mesaId: string, sedeId: string) {
-    const mesa = await this.obtenerDeSede(mesaId, sedeId);
+  async ocupar(mesaId: string, sedeId: string, cadenaId: string) {
+    const mesa = await this.obtenerDeSede(mesaId, sedeId, cadenaId);
     if (mesa.estado === 'OCUPADA') {
       throw new ConflictException('La mesa ya está ocupada');
     }
-    return this.prisma.mesa.update({ where: { id: mesaId }, data: { estado: 'OCUPADA' as EstadoMesa } });
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.mesa.update({ where: { id: mesaId }, data: { estado: 'OCUPADA' as EstadoMesa } }),
+    );
   }
 
-  liberar(mesaId: string) {
-    return this.prisma.mesa.update({ where: { id: mesaId }, data: { estado: 'LIBRE' as EstadoMesa } });
+  liberar(mesaId: string, cadenaId: string) {
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.mesa.update({ where: { id: mesaId }, data: { estado: 'LIBRE' as EstadoMesa } }),
+    );
   }
 }
