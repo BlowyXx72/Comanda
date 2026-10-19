@@ -13,6 +13,22 @@ el detalle de qué está implementado y qué queda fuera de alcance.
 No necesitas Node instalado en tu máquina: backend y frontend corren
 dockerizados con hot-reload.
 
+### Skill de UI/UX para Claude Code (opcional)
+
+Si trabajas el frontend con Claude Code, instala la skill **UI UX Pro Max**
+([nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill),
+licencia MIT). Le da a Claude guías de diseño, accesibilidad, paletas y
+tipografía para pantallas como `/cocina`, `/caja` o `/mesas`. Se instala una
+sola vez por máquina (en `~/.claude/skills`, no dentro del repo) y requiere
+Node y Python 3 en la máquina local:
+
+```bash
+npx -y ui-ux-pro-max-cli@latest init --ai claude --global
+```
+
+Después de instalarla, reinicia Claude Code. Se activa sola en tareas de
+interfaz (p. ej. "mejora el diseño de /cocina").
+
 ## Cómo levantar el proyecto
 
 ```bash

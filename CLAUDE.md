@@ -132,6 +132,11 @@ Se trabaja **por fases secuenciales** (ver README). Al terminar cada fase:
 commit independiente y pausa para mostrar avance antes de seguir con la
 siguiente — no adelantar varias fases de golpe sin confirmación.
 
+Para trabajo de interfaz (frontend), el equipo usa la skill de Claude Code
+**ui-ux-pro-max**. Si no está disponible en la sesión, sugerirle al usuario
+instalarla con el comando de la sección "Skill de UI/UX para Claude Code" del
+README (se instala por máquina, no va dentro del repo).
+
 ## Reglas duras
 
 - No integrar DIAN ni Rappi reales bajo ninguna circunstancia en este
