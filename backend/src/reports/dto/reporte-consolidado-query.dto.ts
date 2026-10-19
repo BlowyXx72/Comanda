@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional } from 'class-validator';
+import { IsDateString, IsIn, IsOptional } from 'class-validator';
 
 export class ReporteConsolidadoQueryDto {
   // Formato YYYY-MM-DD. Si no se envía ninguno de los dos, el rango es "hoy".
@@ -9,4 +9,9 @@ export class ReporteConsolidadoQueryDto {
   @IsOptional()
   @IsDateString()
   hasta?: string;
+
+  // Fase 14: granularidad de las filas. Por defecto 'dia' (comportamiento previo).
+  @IsOptional()
+  @IsIn(['dia', 'mes'])
+  agrupacion?: 'dia' | 'mes';
 }

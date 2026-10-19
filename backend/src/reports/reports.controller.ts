@@ -26,11 +26,11 @@ export class ReportsController {
   }
 
   @ApiOperation({
-    summary: 'Consolidado de ventas de todas las sedes de la cadena, agrupado por sede/día/canal (solo ADMIN)',
+    summary: 'Consolidado de ventas de todas las sedes de la cadena, agrupado por sede/día (o mes, con agrupacion=mes)/canal (solo ADMIN)',
   })
   @Roles('ADMIN')
   @Get('consolidado')
   consolidado(@Query() query: ReporteConsolidadoQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.reportsService.consolidado(usuario.cadenaId, query.desde, query.hasta);
+    return this.reportsService.consolidado(usuario.cadenaId, query.desde, query.hasta, query.agrupacion);
   }
 }

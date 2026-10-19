@@ -58,7 +58,9 @@ export class ReportsService {
   // SALON; los que agregue la Parte 2 — p. ej. DOMICILIO — aparecen solos).
   // Lee de la réplica de lectura (Fase 13, §5.1) para no competir con las
   // escrituras de venta.
-  async consolidado(cadenaId: string, desde?: string, hasta?: string) {
+  // Con agrupacion='mes' la clave `fecha` de cada fila es YYYY-MM en vez de
+  // YYYY-MM-DD; el rango desde/hasta sigue siendo por días.
+  async consolidado(cadenaId: string, desde?: string, hasta?: string, agrupacion: 'dia' | 'mes' = 'dia') {
     const inicio = inicioUtc(desde);
     const finBase = inicioUtc(hasta ?? desde);
     const fin = new Date(finBase);
@@ -77,7 +79,7 @@ export class ReportsService {
 
     const grupos = new Map<string, FilaConsolidado>();
     for (const pago of pagos) {
-      const fecha = pago.creadoEn.toISOString().slice(0, 10);
+      const fecha = pago.creadoEn.toISOString().slice(0, agrupacion === 'mes' ? 7 : 10);
       const clave = `${pago.pedido.sedeId}|${fecha}|${pago.pedido.canal}`;
       const fila = grupos.get(clave);
       if (fila) {
