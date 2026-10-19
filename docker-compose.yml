@@ -34,15 +34,87 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Fase 13 (§5.1): el primario acepta réplicas en streaming.
+    # DECISIÓN DE PROTOTIPO: wal_level=replica ya es el default de PG16, se
+    # fija explícito para que sea visible; wal_keep_size retiene WAL suficiente
+    # para que la réplica se ponga al día tras un reinicio sin usar slots.
+    # pg_hba.conf va montado (ver postgres/pg_hba.conf).
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=5
+      - -c
+      - wal_keep_size=256MB
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - comanda-postgres-data:/var/lib/postgresql/data
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Fase 13: crea (o actualiza) el rol de replicación en el primario y termina.
+  # DECISIÓN DE PROTOTIPO: servicio de un solo uso en vez de un script de
+  # initdb, porque estos solo corren con el volumen vacío y el de la base ya
+  # existe; así la contraseña sale de .env y también funciona en bases viejas.
+  postgres-replica-setup:
+    image: postgres:16-alpine
+    container_name: comanda-postgres-replica-setup
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      REPL_USER: ${POSTGRES_REPLICATION_USER}
+      REPL_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        psql -v ON_ERROR_STOP=1 -v u="$$REPL_USER" -v p="$$REPL_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I WITH LOGIN REPLICATION PASSWORD %L', :'u', :'p')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'u')
+        \gexec
+        SELECT format('ALTER ROLE %I WITH LOGIN REPLICATION PASSWORD %L', :'u', :'p') \gexec
+        SQL
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Fase 13 (§5.1): réplica de lectura en streaming replication desde postgres,
+  # para que los reportes no compitan con las escrituras del servicio. Copia
+  # física: hereda tablas, roles y políticas RLS del primario. Solo lectura.
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: comanda-postgres-replica
+    restart: unless-stopped
+    environment:
+      POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER}
+      POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+    entrypoint: ["/replica-entrypoint.sh"]
+    ports:
+      - "${POSTGRES_REPLICA_PORT}:5432"
+    volumes:
+      - comanda-postgres-replica-data:/var/lib/postgresql/data
+      - ./postgres/replica-entrypoint.sh:/replica-entrypoint.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   redis:
     image: redis:7-alpine
@@ -182,6 +254,7 @@ services:
 
 volumes:
   comanda-postgres-data:
+  comanda-postgres-replica-data:
   comanda-minio-data:
   comanda-backend-node-modules:
   comanda-frontend-node-modules:

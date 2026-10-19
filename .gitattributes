@@ -1,0 +1,2 @@
+# Archivos montados en contenedores Linux: siempre LF aunque core.autocrlf=true.
+postgres/** text eol=lf
