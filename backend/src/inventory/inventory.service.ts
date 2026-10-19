@@ -22,11 +22,15 @@ export class InventoryService {
   ) {}
 
   listarInsumos(cadenaId: string) {
-    return this.prisma.insumo.findMany({ where: { cadenaId }, orderBy: { nombre: 'asc' } });
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.insumo.findMany({ where: { cadenaId }, orderBy: { nombre: 'asc' } }),
+    );
   }
 
   async obtenerInsumoDeCadena(insumoId: string, cadenaId: string) {
-    const insumo = await this.prisma.insumo.findUnique({ where: { id: insumoId } });
+    const insumo = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.insumo.findUnique({ where: { id: insumoId } }),
+    );
     if (!insumo || insumo.cadenaId !== cadenaId) {
       throw new NotFoundException(`Insumo ${insumoId} no encontrado`);
     }
@@ -34,12 +38,12 @@ export class InventoryService {
   }
 
   crearInsumo(cadenaId: string, dto: CrearInsumoDto) {
-    return this.prisma.insumo.create({ data: { cadenaId, ...dto } });
+    return this.prisma.conCadena(cadenaId, (tx) => tx.insumo.create({ data: { cadenaId, ...dto } }));
   }
 
   async actualizarInsumo(id: string, cadenaId: string, dto: ActualizarInsumoDto) {
     await this.obtenerInsumoDeCadena(id, cadenaId);
-    return this.prisma.insumo.update({ where: { id }, data: dto });
+    return this.prisma.conCadena(cadenaId, (tx) => tx.insumo.update({ where: { id }, data: dto }));
   }
 
   // Fase 11: no hay columna de stock — la existencia de un insumo en una
@@ -51,7 +55,7 @@ export class InventoryService {
 
     const [insumos, movimientos] = await Promise.all([
       this.listarInsumos(cadenaId),
-      this.prisma.movimientoInventario.findMany({ where: { sedeId } }),
+      this.prisma.conCadena(cadenaId, (tx) => tx.movimientoInventario.findMany({ where: { sedeId } })),
     ]);
 
     const existenciaPorInsumo = new Map<string, Prisma.Decimal>();
@@ -70,9 +74,11 @@ export class InventoryService {
   async registrarMovimiento(dto: CrearMovimientoDto, cadenaId: string) {
     await this.branchesService.obtenerDeCadena(dto.sedeId, cadenaId);
     await this.obtenerInsumoDeCadena(dto.insumoId, cadenaId);
-    const movimiento = await this.prisma.movimientoInventario.create({
-      data: { sedeId: dto.sedeId, insumoId: dto.insumoId, tipo: dto.tipo, cantidad: dto.cantidad },
-    });
+    const movimiento = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.movimientoInventario.create({
+        data: { sedeId: dto.sedeId, insumoId: dto.insumoId, tipo: dto.tipo, cantidad: dto.cantidad },
+      }),
+    );
     this.realtimeGateway.emitirInventarioActualizado(cadenaId, {
       sedeId: dto.sedeId,
       insumoId: dto.insumoId,
@@ -84,11 +90,13 @@ export class InventoryService {
 
   async listarReceta(productoId: string, cadenaId: string) {
     await this.catalogService.obtenerDeCadena(productoId, cadenaId);
-    return this.prisma.receta.findMany({
-      where: { productoId },
-      include: { insumo: true },
-      orderBy: { insumo: { nombre: 'asc' } },
-    });
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.receta.findMany({
+        where: { productoId },
+        include: { insumo: true },
+        orderBy: { insumo: { nombre: 'asc' } },
+      }),
+    );
   }
 
   // PUT: reemplaza la receta completa del producto (CRUD mínimo, ver
@@ -98,12 +106,14 @@ export class InventoryService {
     await this.catalogService.obtenerDeCadena(productoId, cadenaId);
 
     const insumoIds = dto.items.map((item) => item.insumoId);
-    const insumos = await this.prisma.insumo.findMany({ where: { id: { in: insumoIds }, cadenaId } });
+    const insumos = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.insumo.findMany({ where: { id: { in: insumoIds }, cadenaId } }),
+    );
     if (insumos.length !== new Set(insumoIds).size) {
       throw new NotFoundException('Uno o más insumos no existen en esta cadena');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.conCadena(cadenaId, async (tx) => {
       await tx.receta.deleteMany({ where: { productoId } });
       if (dto.items.length === 0) return [];
       await tx.receta.createMany({

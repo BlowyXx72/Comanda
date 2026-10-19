@@ -40,7 +40,7 @@ export class PaymentsService {
       throw new BadRequestException(`El monto (${monto}) no coincide con el total del pedido (${pedido.total})`);
     }
 
-    const resultado = await this.prisma.$transaction(async (tx) => {
+    const resultado = await this.prisma.conCadena(cadenaId, async (tx) => {
       // Fase 8: el consecutivo sale de un UPDATE atómico sobre la sede
       // (`siguiente_consecutivo = siguiente_consecutivo + 1 RETURNING ...`),
       // no de un MAX+1. Postgres toma el lock de fila en el UPDATE, así que

@@ -8,16 +8,20 @@ export class BranchesService {
   constructor(private readonly prisma: PrismaService) {}
 
   listar(cadenaId: string) {
-    return this.prisma.sede.findMany({
-      where: { cadenaId },
-      orderBy: { nombre: 'asc' },
-    });
+    return this.prisma.conCadena(cadenaId, (tx) =>
+      tx.sede.findMany({
+        where: { cadenaId },
+        orderBy: { nombre: 'asc' },
+      }),
+    );
   }
 
   async obtenerDeCadena(sedeId: string, cadenaId: string) {
-    const sede = await this.prisma.sede.findUnique({ where: { id: sedeId } });
+    const sede = await this.prisma.conCadena(cadenaId, (tx) => tx.sede.findUnique({ where: { id: sedeId } }));
     // DECISIÓN DE PROTOTIPO: se responde 404 (no 403) cuando la sede es de
     // otra cadena, para no confirmarle a un usuario ajeno que el id existe.
+    // Con RLS (Fase 12) una sede ajena ya ni aparece en la consulta; el
+    // chequeo explícito queda como segunda capa.
     if (!sede || sede.cadenaId !== cadenaId) {
       throw new NotFoundException(`Sede ${sedeId} no encontrada`);
     }

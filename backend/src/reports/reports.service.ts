@@ -34,12 +34,14 @@ export class ReportsService {
     const fin = new Date(inicio);
     fin.setUTCDate(fin.getUTCDate() + 1);
 
-    const pagos = await this.prisma.pago.findMany({
-      where: {
-        creadoEn: { gte: inicio, lt: fin },
-        pedido: { sedeId },
-      },
-    });
+    const pagos = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.pago.findMany({
+        where: {
+          creadoEn: { gte: inicio, lt: fin },
+          pedido: { sedeId },
+        },
+      }),
+    );
 
     const totalVentas = pagos.reduce((acc, pago) => acc.plus(pago.monto), new Prisma.Decimal(0));
 
@@ -63,14 +65,16 @@ export class ReportsService {
     const fin = new Date(finBase);
     fin.setUTCDate(fin.getUTCDate() + 1);
 
-    const pagos = await this.prisma.pago.findMany({
-      where: {
-        creadoEn: { gte: inicio, lt: fin },
-        pedido: { sede: { cadenaId } },
-      },
-      include: { pedido: { select: { sedeId: true, canal: true, sede: { select: { nombre: true } } } } },
-      orderBy: { creadoEn: 'asc' },
-    });
+    const pagos = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.pago.findMany({
+        where: {
+          creadoEn: { gte: inicio, lt: fin },
+          pedido: { sede: { cadenaId } },
+        },
+        include: { pedido: { select: { sedeId: true, canal: true, sede: { select: { nombre: true } } } } },
+        orderBy: { creadoEn: 'asc' },
+      }),
+    );
 
     const grupos = new Map<string, FilaConsolidado>();
     for (const pago of pagos) {
