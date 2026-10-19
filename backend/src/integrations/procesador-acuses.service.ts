@@ -33,10 +33,13 @@ export class ProcesadorAcusesService implements OnApplicationBootstrap, OnModule
 
   private async procesar(job: Job<TrabajoAcuse>) {
     const { pedidoId, cadenaId, integracionId } = job.data;
-    const pedido = await this.prisma.pedido.findUnique({
-      where: { id: pedidoId },
-      include: { sede: true, integracion: true },
-    });
+    // Fase 12 (§6.1): el job lleva cadenaId; el acceso va por conCadena().
+    const pedido = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.pedido.findUnique({
+        where: { id: pedidoId },
+        include: { sede: true, integracion: true },
+      }),
+    );
     if (!pedido?.integracion || pedido.sede.cadenaId !== cadenaId || pedido.integracionId !== integracionId) {
       throw new UnrecoverableError(`Pedido ${pedidoId} no encontrado para la integración ${integracionId}`);
     }

@@ -16,10 +16,13 @@ async function main() {
   await prisma.pago.deleteMany();
   await prisma.pedidoDetalle.deleteMany();
   await prisma.pedido.deleteMany();
+  await prisma.movimientoInventario.deleteMany();
+  await prisma.receta.deleteMany();
   await prisma.cliente.deleteMany();
   await prisma.integracionPlataforma.deleteMany();
   await prisma.mesa.deleteMany();
   await prisma.producto.deleteMany();
+  await prisma.insumo.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.sede.deleteMany();
   await prisma.cadena.deleteMany();
@@ -67,18 +70,62 @@ async function main() {
     ],
   });
 
-  await prisma.producto.createMany({
+  // Promise.all (no createMany) para quedarnos con los ids y poder enlazar
+  // la receta de cada producto (Fase 11) más abajo.
+  const [hamburguesa, pizza, perroCaliente, ensalada, papasFritas, limonada, gaseosa, brownie] = await Promise.all(
+    [
+      { nombre: 'Hamburguesa Clásica', precio: 18000, categoria: 'Plato fuerte' },
+      { nombre: 'Pizza Personal', precio: 22000, categoria: 'Plato fuerte' },
+      { nombre: 'Perro Caliente', precio: 12000, categoria: 'Plato fuerte' },
+      { nombre: 'Ensalada César', precio: 15000, categoria: 'Plato fuerte' },
+      { nombre: 'Papas Fritas', precio: 8000, categoria: 'Acompañamiento' },
+      { nombre: 'Limonada Natural', precio: 6000, categoria: 'Bebida' },
+      { nombre: 'Gaseosa', precio: 5000, categoria: 'Bebida' },
+      { nombre: 'Brownie con Helado', precio: 9000, categoria: 'Postre' },
+    ].map((datos) => prisma.producto.create({ data: { cadenaId: cadena.id, ...datos } })),
+  );
+  const productos = [hamburguesa, pizza, perroCaliente, ensalada, papasFritas, limonada, gaseosa, brownie];
+
+  // Fase 11 (§6.2): insumos de la cadena y receta de los productos que sí
+  // tienen una (no todos — Perro Caliente, Ensalada César y Brownie quedan
+  // sin receta a propósito, para demostrar que PaymentsService.pagar no
+  // genera movimientos cuando un producto no la tiene).
+  const [panHamburguesa, carneRes, queso, masaPizza, papa, gaseosa350] = await Promise.all(
+    [
+      { nombre: 'Pan de hamburguesa', unidad: 'unidad', costoUnitario: 800 },
+      { nombre: 'Carne de res', unidad: 'gramos', costoUnitario: 25 },
+      { nombre: 'Queso', unidad: 'gramos', costoUnitario: 18 },
+      { nombre: 'Masa de pizza', unidad: 'unidad', costoUnitario: 2500 },
+      { nombre: 'Papa', unidad: 'gramos', costoUnitario: 4 },
+      { nombre: 'Gaseosa 350ml', unidad: 'unidad', costoUnitario: 2500 },
+    ].map((datos) => prisma.insumo.create({ data: { cadenaId: cadena.id, ...datos } })),
+  );
+  const insumos = [panHamburguesa, carneRes, queso, masaPizza, papa, gaseosa350];
+
+  await prisma.receta.createMany({
     data: [
-      { cadenaId: cadena.id, nombre: 'Hamburguesa Clásica', precio: 18000, categoria: 'Plato fuerte' },
-      { cadenaId: cadena.id, nombre: 'Pizza Personal', precio: 22000, categoria: 'Plato fuerte' },
-      { cadenaId: cadena.id, nombre: 'Perro Caliente', precio: 12000, categoria: 'Plato fuerte' },
-      { cadenaId: cadena.id, nombre: 'Ensalada César', precio: 15000, categoria: 'Plato fuerte' },
-      { cadenaId: cadena.id, nombre: 'Papas Fritas', precio: 8000, categoria: 'Acompañamiento' },
-      { cadenaId: cadena.id, nombre: 'Limonada Natural', precio: 6000, categoria: 'Bebida' },
-      { cadenaId: cadena.id, nombre: 'Gaseosa', precio: 5000, categoria: 'Bebida' },
-      { cadenaId: cadena.id, nombre: 'Brownie con Helado', precio: 9000, categoria: 'Postre' },
+      { productoId: hamburguesa.id, insumoId: panHamburguesa.id, cantidad: 1 },
+      { productoId: hamburguesa.id, insumoId: carneRes.id, cantidad: 150 },
+      { productoId: hamburguesa.id, insumoId: queso.id, cantidad: 30 },
+      { productoId: pizza.id, insumoId: masaPizza.id, cantidad: 1 },
+      { productoId: pizza.id, insumoId: queso.id, cantidad: 80 },
+      { productoId: papasFritas.id, insumoId: papa.id, cantidad: 200 },
+      { productoId: gaseosa.id, insumoId: gaseosa350.id, cantidad: 1 },
     ],
   });
+
+  // Existencias iniciales: un ENTRADA por insumo en cada sede, para que
+  // /inventario no arranque la demo en cero.
+  for (const s of sedes) {
+    await prisma.movimientoInventario.createMany({
+      data: insumos.map((insumo) => ({
+        sedeId: s.id,
+        insumoId: insumo.id,
+        tipo: 'ENTRADA' as const,
+        cantidad: 10000,
+      })),
+    });
+  }
 
   for (const s of sedes) {
     await prisma.mesa.createMany({
@@ -111,7 +158,10 @@ async function main() {
     console.warn('PLATAFORMA_SIMULADA_API_KEY no está en el .env: no se crea la integración de plataforma demo.');
   }
 
-  console.log(`Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, 8 productos, ${sedes.length * 6} mesas.`);
+  console.log(
+    `Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, ${productos.length} productos, ` +
+      `${sedes.length * 6} mesas, ${insumos.length} insumos, receta en 4 productos.`,
+  );
 }
 
 main()

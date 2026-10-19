@@ -6,6 +6,7 @@ import { CajaPage } from './pages/Caja'
 import { CatalogoPage } from './pages/Catalogo'
 import { CocinaPage } from './pages/Cocina'
 import { HomePage } from './pages/Home'
+import { InventarioPage } from './pages/Inventario'
 import { LoginPage } from './pages/Login'
 import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
@@ -70,6 +71,14 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN']}>
                   <CatalogoPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventario"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <InventarioPage />
                 </ProtectedRoute>
               }
             />

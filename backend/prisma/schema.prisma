@@ -57,6 +57,15 @@ enum EstadoDian {
   // TODO PRODUCCION: estados reales del proveedor tecnológico DIAN
 }
 
+// Fase 11 (§6.2): tipo de movimiento de inventario. SALIDA solo la crea
+// PaymentsService.pagar (descuento automático por receta); ENTRADA y MERMA
+// se registran a mano desde POST /inventario/movimientos.
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
+  MERMA
+}
+
 // Tenant
 model Cadena {
   id       String   @id @default(uuid())
@@ -69,6 +78,7 @@ model Cadena {
   usuarios  Usuario[]
   productos Producto[]
   clientes  Cliente[]
+  insumos   Insumo[]
 
   integracionesPlataforma IntegracionPlataforma[]
 
@@ -93,10 +103,11 @@ model Sede {
   // carrera entre cajas concurrentes de la misma sede.
   siguienteConsecutivo Int @map("siguiente_consecutivo")
 
-  cadena             Cadena            @relation(fields: [cadenaId], references: [id])
-  mesas              Mesa[]
-  pedidos            Pedido[]
-  documentosFiscales DocumentoFiscal[]
+  cadena                 Cadena                  @relation(fields: [cadenaId], references: [id])
+  mesas                  Mesa[]
+  pedidos                Pedido[]
+  documentosFiscales     DocumentoFiscal[]
+  movimientosInventario  MovimientoInventario[]
 
   @@map("sedes")
 }
@@ -127,6 +138,7 @@ model Producto {
 
   cadena   Cadena          @relation(fields: [cadenaId], references: [id])
   detalles PedidoDetalle[]
+  receta   Receta[]
 
   @@map("productos")
 }
@@ -267,4 +279,54 @@ model DocumentoFiscal {
 
   @@unique([sedeId, consecutivo])
   @@map("documentos_fiscales")
+}
+
+// Fase 11 (§6.2): insumos de la cadena. Sirven de base para las recetas de
+// los productos y para los movimientos de inventario por sede.
+model Insumo {
+  id            String  @id @default(uuid())
+  cadenaId      String  @map("cadena_id")
+  nombre        String
+  unidad        String
+  costoUnitario Decimal @map("costo_unitario") @db.Decimal(10, 2)
+
+  cadena      Cadena                 @relation(fields: [cadenaId], references: [id])
+  receta      Receta[]
+  movimientos MovimientoInventario[]
+
+  @@map("insumos")
+}
+
+// Cuánto de un insumo necesita una unidad de un producto. PK compuesta: un
+// producto tiene a lo sumo una fila por insumo. PaymentsService.pagar la usa
+// para calcular los MovimientoInventario de tipo SALIDA al cobrar.
+model Receta {
+  productoId String  @map("producto_id")
+  insumoId   String  @map("insumo_id")
+  cantidad   Decimal @db.Decimal(10, 2)
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  insumo   Insumo   @relation(fields: [insumoId], references: [id])
+
+  @@id([productoId, insumoId])
+  @@map("recetas")
+}
+
+// Existencias de un insumo en una sede = suma de sus movimientos (no hay
+// columna de stock, ver docs/fases-siguientes-2.md Fase 11). ENTRADA/MERMA
+// se registran a mano (POST /inventario/movimientos); SALIDA la crea
+// PaymentsService.pagar dentro de la transacción del cobro, una por cada
+// insumo de la receta de cada detalle del pedido.
+model MovimientoInventario {
+  id       String                   @id @default(uuid())
+  sedeId   String                   @map("sede_id")
+  insumoId String                   @map("insumo_id")
+  tipo     TipoMovimientoInventario
+  cantidad Decimal                  @db.Decimal(10, 2)
+  fecha    DateTime                 @default(now())
+
+  sede   Sede   @relation(fields: [sedeId], references: [id])
+  insumo Insumo @relation(fields: [insumoId], references: [id])
+
+  @@map("movimientos_inventario")
 }

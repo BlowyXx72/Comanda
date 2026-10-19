@@ -19,18 +19,21 @@ export class PublicMenuService {
   constructor(private readonly prisma: PrismaService) {}
 
   async obtener(cadenaId: string, sedeId: string): Promise<MenuPublico> {
-    const sede = await this.prisma.sede.findUnique({ where: { id: sedeId } });
+    // Fase 12 (§6.1): sin JWT, la cadena sale del path; conCadena() la fija
+    // para RLS. Una sede de otra cadena queda invisible y cae en el 404.
+    const { sede, productos } = await this.prisma.conCadena(cadenaId, async (tx) => ({
+      sede: await tx.sede.findUnique({ where: { id: sedeId } }),
+      productos: await tx.producto.findMany({
+        // Igual que GET /productos (Fase 10): los dados de baja no se muestran.
+        where: { cadenaId, activo: true },
+        orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
+        select: { id: true, nombre: true, precio: true, categoria: true },
+      }),
+    }));
     // Mismo criterio que BranchesService: 404 si la sede no es de esa cadena.
     if (!sede || sede.cadenaId !== cadenaId) {
       throw new NotFoundException('Menú no encontrado');
     }
-
-    const productos = await this.prisma.producto.findMany({
-      // Igual que GET /productos (Fase 10): los dados de baja no se muestran.
-      where: { cadenaId, activo: true },
-      orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
-      select: { id: true, nombre: true, precio: true, categoria: true },
-    });
 
     const porCategoria = new Map<string, CategoriaMenu>();
     for (const producto of productos) {

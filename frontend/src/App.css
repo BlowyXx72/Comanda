@@ -353,6 +353,15 @@
   margin: 4px 0 16px;
 }
 
+.panel-agrupacion {
+  display: block;
+  margin: 0 0 16px;
+}
+
+.panel-page h2 {
+  margin: 32px 0 8px;
+}
+
 .panel-tabla {
   width: 100%;
   border-collapse: collapse;

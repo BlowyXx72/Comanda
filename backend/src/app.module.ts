@@ -7,6 +7,7 @@ import { CatalogModule } from './catalog/catalog.module.js';
 import { FiscalModule } from './fiscal/fiscal.module.js';
 import { HealthModule } from './health/health.module.js';
 import { IntegracionesModule } from './integrations/integraciones.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
@@ -25,6 +26,7 @@ import { TablesModule } from './tables/tables.module.js';
     TablesModule,
     OrdersModule,
     PaymentsModule,
+    InventoryModule,
     ReportsModule,
     HealthModule,
     PublicMenuModule,

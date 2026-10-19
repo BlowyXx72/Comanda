@@ -34,7 +34,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
 | CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; desde la Fase 13B Nginx le limita la tasa (`429`). |
 | CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
-| CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
+| CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado). Desde la Fase 13 lee de la réplica de lectura. |
 | CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
 | CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
 
@@ -54,12 +54,6 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   (Fase 12B)").
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
-- **Réplica de lectura** de base de datos (la propuesta la usa específicamente
-  para separar los reportes de la carga transaccional; aquí `ReportsService`
-  lee de la misma instancia que todo lo demás).
-- **Row Level Security (RLS)** de PostgreSQL para aislamiento multi-tenant — en
-  el prototipo el aislamiento por `cadena_id` se aplica a nivel de aplicación
-  (filtros explícitos en cada query), no a nivel de motor de base de datos.
 - **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
   con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
 - **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
@@ -85,9 +79,10 @@ El ER de la propuesta tiene más entidades y campos que el `schema.prisma` de
 este prototipo (ver `backend/prisma/schema.prisma`). Diferencias, todas
 intencionales por alcance:
 
-- **No existen `Insumo`, `MovimientoInventario` ni `Receta`.** No hay
-  gestión de inventario/recetas — vender un producto no descuenta ningún
-  insumo. No hace parte del *vertical slice*.
+- **`Insumo`, `Receta` y `MovimientoInventario` existen desde la Fase 11**
+  (ronda 2, §6.2, ver `docs/fases-siguientes-2.md`). Vender un producto con
+  receta definida descuenta inventario automáticamente; ver la sección
+  "Inventario y recetas (Fase 11)" más abajo.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
   y, desde la 12B, de plataforma (nombre, teléfono, dirección); un pedido en
   mesa sigue sin cliente. La Fase 14B le agrega `email` opcional, que el ER no
@@ -351,7 +346,8 @@ dueño". Así quedó:
 - `GET /reportes/consolidado?desde=&hasta=` (solo ADMIN, `@Roles('ADMIN')`
   sobre el `@Roles('CAJERO', 'ADMIN')` del controlador) agrupa los pagos de
   **todas** las sedes de la cadena por sede, día y canal. Sin `desde`/`hasta`
-  el rango es "hoy" (mismo criterio UTC que `GET /reportes/ventas`).
+  el rango es "hoy" (desde la Fase 14, en zona America/Bogota, igual que
+  `GET /reportes/ventas`; ver "Reportes ampliados (Fase 14)").
   Agrupar por `Pedido.canal` sin asumir qué valores existen es deliberado:
   hoy solo hay `SALON`, pero si la Parte 2 agrega `DOMICILIO` (Fase 8B),
   aparece solo como otra fila, sin tocar este código.
@@ -365,10 +361,8 @@ dueño". Así quedó:
   `ProtectedRoute` (ver `App.tsx`); no depende de `SedeContext` porque ya
   muestra las 3 sedes a la vez (cada fila trae su propio nombre de sede desde
   el backend).
-- Sigue leyendo de la misma base transaccional que todo lo demás: la réplica
-  de lectura que la propuesta pide específicamente para separar reportes del
-  tráfico de venta (§5.1) queda `// TODO PRODUCCIÓN`; a la escala de esta
-  demo (unas pocas sedes, tráfico bajo) no hace falta.
+- Desde la Fase 13 (ver "Réplica de lectura (Fase 13)") lee de la réplica de
+  lectura, no de la base transaccional.
 
 ## Catálogo centralizado (Fase 10, CU-08)
 
@@ -398,6 +392,161 @@ dueño". Así quedó:
   desactivar/reactivar productos. No necesita escuchar el propio evento que
   emite: como quien edita ahí es la misma persona que ve el resultado, cada
   mutación simplemente recarga la tabla.
+
+## Inventario y recetas (Fase 11, ronda 2, §6.2)
+
+- `InventoryModule` (`backend/src/inventory/`) agrega `Insumo` (catálogo de
+  insumos de la cadena), `Receta` (PK compuesta `productoId`+`insumoId`: cuánto
+  insumo necesita una unidad de un producto) y `MovimientoInventario`
+  (`ENTRADA`/`SALIDA`/`MERMA` por sede).
+- No hay columna de stock: la existencia de un insumo en una sede es la suma
+  de sus movimientos (`GET /sedes/:id/inventario`, calculado en memoria, igual
+  que `ReportsService` con los pagos). `ENTRADA`/`MERMA` se registran a mano
+  (`POST /inventario/movimientos`, solo ADMIN); `SALIDA` solo la genera
+  `PaymentsService.pagar`, nunca el endpoint manual.
+- `PaymentsService.pagar` descuenta inventario **dentro de la misma
+  transacción** del cobro: por cada detalle del pedido, busca la receta de su
+  producto y crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo
+  (cantidad de la receta × cantidad del detalle). Si un producto no tiene
+  receta definida, simplemente no genera movimientos — no todos los productos
+  demo la necesitan (ver seed).
+- `// DECISIÓN DE PROTOTIPO`: si una existencia queda negativa, **no se
+  bloquea el cobro** — el saldo negativo queda visible en `/inventario` como
+  alerta para ADMIN. La propuesta no fija qué hacer en ese caso; bloquear la
+  venta habría acoplado caja a la disponibilidad de insumos, que esta demo no
+  modela con la granularidad (mermas, proveedores) que ameritaría esa regla.
+- CRUD mínimo: `POST`/`GET`/`PATCH /insumos` y `GET`/`PUT /productos/:id/receta`
+  (el `PUT` reemplaza la receta completa del producto, más simple que exponer
+  un endpoint por ítem), todos `@Roles('ADMIN')`.
+- Tiempo real: evento nuevo `inventario:actualizado` a la room
+  `cadena:{cadenaId}` (movimiento manual o descuento automático por venta).
+  `/inventario` lo escucha con `useInventarioSocket` (calcado de
+  `useVentasSocket`: el backend ya une todo socket autenticado a la room de su
+  cadena al conectarse, no hace falta unirse a una sede).
+- Frontend: página `/inventario` (solo ADMIN) con tres secciones — insumos
+  (CRUD), existencias de la sede activa (con movimiento manual por insumo) y
+  receta de un producto. No abre su propio selector de sede: confía en el
+  mismo `SelectorSedeGlobal` que ya usan `/mesas` y `/caja`.
+- Seed: 6 insumos y receta en 4 de los 8 productos demo (Hamburguesa, Pizza,
+  Papas Fritas, Gaseosa), con una `ENTRADA` inicial de 10000 por insumo en
+  cada una de las 3 sedes para que la demo no arranque en cero.
+
+## Row Level Security (Fase 12, ronda 2, §6.1)
+
+- **Rol sin privilegios de dueño** (`comanda_app`, migración `r2p1_rol_app`).
+- **Migración `r2p1_rls`**: `ENABLE` + `FORCE ROW LEVEL SECURITY` en las 13
+  tablas de negocio más `integraciones_plataforma`, con una política
+  `aislamiento_cadena` (`FOR ALL`, `USING` y `WITH CHECK`) para `comanda_app`
+  que compara contra `current_setting('app.cadena_id', true)`. Sin esa
+  variable, el rol de la app no ve ni escribe ninguna fila.
+- **Decisión de prototipo — EXISTS en vez de `cadena_id` denormalizado** para
+  `mesas`, `pedidos`, `pedido_detalles`, `pagos`, `documentos_fiscales`,
+  `movimientos_inventario` y `recetas`: la política hace `EXISTS` contra el
+  padre (`sedes`, `pedidos` o `productos`). La propuesta dice que todas las
+  tablas de negocio llevan `cadena_id` y la columna sería lo más fiel, pero
+  obligaría a tocar cada INSERT (incluido el código de Parte 2) y a mantener
+  un campo redundante; con `EXISTS` el esquema y la escritura quedan intactos.
+  `TODO PRODUCCIÓN`: denormalizar e indexar `cadena_id` con volúmenes reales.
+- **Política `dueno_total`**: como `FORCE` también aplica al dueño, cada tabla
+  tiene una política que le da acceso total al rol dueño (el que corre
+  migraciones y seed, y las consultas previas a conocer la cadena: login por
+  email, API key de plataforma). `comanda_app` nunca la cumple.
+- **`PrismaService.conCadena(cadenaId, fn)`**: segundo cliente Prisma conectado
+  como `comanda_app` (`DATABASE_URL_APP`) que abre una transacción, ejecuta
+  `set_config('app.cadena_id', cadenaId, true)` (local a la transacción, no
+  sobrevive en el pool) y corre `fn(tx)`. Lo usan los servicios de negocio
+  (sedes, catálogo, inventario, reportes, pagos, mesas, pedidos, menú público,
+  domicilio, sync vía pedidos) y los procesadores del worker con la `cadenaId`
+  del payload del job. Los filtros explícitos por `cadenaId` siguen en el
+  código como segunda capa.
+- **Quedan en el cliente dueño** (a propósito, funcionan por `dueno_total`):
+  login por email, resolución de `X-Api-Key`, `reencolarPendientes` y la lista
+  de cadenas del resumen diario — lookups previos a conocer la cadena.
+- **Prueba de aislamiento** (`backend/test/rls-aislamiento.spec.ts`, vitest):
+  crea dos cadenas con el rol dueño y verifica con `comanda_app` que (1) sin
+  `app.cadena_id` no se ve ninguna fila, (2) con la cadena A no aparecen filas
+  de la B (incluida `mesas`, con política `EXISTS`), (3) insertar una fila de
+  otra cadena falla por `WITH CHECK` y (4) un `UPDATE` no alcanza filas ajenas.
+  Corre contra la base real y limpia lo que crea:
+  `docker compose run --rm backend-1 npx vitest run test/rls-aislamiento.spec.ts`.
+
+## Réplica de lectura (Fase 13, ronda 2, §5.1)
+
+- **Infraestructura**: `postgres-replica` (`postgres:16-alpine`) en streaming
+  replication física desde `postgres`. El primario arranca con
+  `wal_level=replica`, `max_wal_senders=5` y `wal_keep_size=256MB` (sin slots
+  de replicación) y un `pg_hba.conf` montado (`postgres/pg_hba.conf`) que
+  añade la línea de `replication` para el usuario `replicador`. Ese usuario lo
+  crea el servicio de un solo uso `postgres-replica-setup` (idempotente, con la
+  contraseña de `.env`), y no un script de initdb, porque initdb solo corre con
+  un volumen vacío y la base del prototipo ya existía.
+- **Arranque de la réplica**: `postgres/replica-entrypoint.sh` hace
+  `pg_basebackup -X stream -R` (con reintentos) si su `PGDATA` está vacío y
+  luego arranca en `hot_standby`; si ya hay datos, solo arranca. Variables nuevas
+  en `.env`/`.env.example`: `POSTGRES_REPLICA_PORT`,
+  `POSTGRES_REPLICATION_USER`, `POSTGRES_REPLICATION_PASSWORD`,
+  `DATABASE_URL_REPLICA`. `.gitattributes` fuerza LF en `postgres/**` para que
+  el `.sh` montado no se rompa con `core.autocrlf`.
+- **Cliente de solo lectura**: `PrismaReplicaService`
+  (`backend/src/prisma/prisma-replica.service.ts`) es un `PrismaClient`
+  contra `DATABASE_URL_REPLICA` con el rol `comanda_app` (al ser copia física,
+  el rol y las políticas ya existen allí) y un `conCadena()` igual al del
+  primario: `set_config('app.cadena_id', …, true)` es un GUC, no escribe, así
+  que funciona en `hot_standby`. **Solo** `ReportsService` lo usa
+  (`ventasDelDia` y `consolidado`); el resto del backend sigue en el primario.
+  El worker depende de la réplica porque su resumen diario usa `ReportsService`.
+- **RLS en la réplica**: se verifica con
+  `backend/test/replica-solo-lectura.spec.ts`, que escribe dos cadenas en el
+  primario con el rol dueño y lee de la réplica con `comanda_app`: sin
+  `app.cadena_id` devuelve 0 filas; con la cadena A no aparece nada de la B.
+  Además confirma `pg_is_in_recovery() = true` y que un `create` contra el
+  cliente de la réplica falla con "read-only transaction".
+  `docker compose run --rm backend-1 npx vitest run test/replica-solo-lectura.spec.ts`.
+- **`/panel` no re-consulta**: la réplica es asíncrona y un pago recién hecho
+  puede tardar unos milisegundos en aparecer. Por eso `/panel` ya no hace un
+  nuevo `GET /reportes/consolidado` al recibir `venta:registrada`: suma la venta
+  en memoria con el payload del evento (`sedeId`, `sedeNombre`, `canal`,
+  `total`, `fechaHora`), la ignora si cae fuera del rango mostrado y crea la fila
+  si esa sede/canal aún no aparecía. `sedeNombre` se agregó al payload en esta
+  fase para poder crear filas sin consultar. Los totales se suman en centavos
+  enteros para no arrastrar errores de punto flotante.
+- `// DECISIÓN DE PROTOTIPO`: replicación **asíncrona**, una sola réplica, sin
+  failover ni promoción automática. `// TODO PRODUCCIÓN`: slots de
+  replicación, monitoreo del lag, balanceo entre varias réplicas y arranque
+  desde una base primaria 100 % limpia (no se probó un volumen nuevo del
+  primario con todo el stack).
+
+## Reportes ampliados (Fase 14, ronda 2, §1.4 y §6.1)
+
+- **`GET /reportes/consolidado?agrupacion=dia|mes`** (solo ADMIN): `dia` es el
+  comportamiento de siempre; con `mes` la clave `fecha` de cada fila es
+  `YYYY-MM` y se mantienen sede y canal como dimensiones. El rango
+  `desde`/`hasta` sigue siendo por días (con el rango por defecto, "hoy", el mes
+  mostrado es solo el de hoy).
+- **`GET /reportes/productos?desde=&hasta=`** (solo ADMIN): ventas por producto
+  en el rango (`cantidadVendida`, `total = precioUnitario × cantidad`), ordenado
+  por cantidad vendida descendente; considera los pedidos con algún pago en el
+  rango.
+- **`GET /reportes/franjas?desde=&hasta=`** (solo ADMIN): ventas por hora del
+  día (0-23, solo las horas con ventas) con `cantidadPedidos` y `totalVentas`.
+- Los tres leen de la réplica (`PrismaReplicaService`, Fase 13) y agrupan en
+  memoria con `Prisma.Decimal`, sin asumir canales fijos, igual que
+  `consolidado`.
+- **Zona horaria**: `ventasDelDia`, `consolidado`, `productos` y `franjas`
+  calculan día, mes y hora en `America/Bogota` (UTC-5 fijo, sin horario de
+  verano) mediante `diaBogota()` y `rangoBogota()` en `ReportsService`.
+  `// DECISIÓN DE PROTOTIPO`: zona fija del negocio, no por sede; el prototipo
+  no modela zona horaria por sede. El resumen diario por correo (Fase 14B)
+  hereda el mismo "hoy" de Bogotá.
+- **Frontend `/panel`**: selector Día/Mes que vuelve a pedir el consolidado, y
+  dos tablas nuevas (ventas por producto y por franja horaria), con el mismo
+  estilo de tabla simple. La suma en vivo de `venta:registrada` deriva el día en
+  Bogotá y, en modo mes, usa la clave `YYYY-MM`. Las tablas de productos y
+  franjas se cargan una vez y no se actualizan en vivo (el payload del evento no
+  trae el detalle).
+- `// TODO PRODUCCIÓN`: zona horaria por sede, ampliar automáticamente el rango
+  al elegir `mes`, y verificación manual en navegador real de `/panel` (solo se
+  comprobó compilación y lint).
 
 ## Pulido (Fase 6)
 

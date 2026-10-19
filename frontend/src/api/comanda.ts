@@ -181,13 +181,57 @@ export interface ReporteConsolidado {
   totalGeneral: string;
 }
 
-export const obtenerReporteConsolidado = (token: string, desde?: string, hasta?: string) => {
+export type AgrupacionReporte = 'dia' | 'mes';
+
+const queryReporte = (desde?: string, hasta?: string, agrupacion?: AgrupacionReporte) => {
   const params = new URLSearchParams();
   if (desde) params.set('desde', desde);
   if (hasta) params.set('hasta', hasta);
+  if (agrupacion) params.set('agrupacion', agrupacion);
   const query = params.toString();
-  return apiFetch<ReporteConsolidado>(`/reportes/consolidado${query ? `?${query}` : ''}`, {}, token);
+  return query ? `?${query}` : '';
 };
+
+export const obtenerReporteConsolidado = (
+  token: string,
+  desde?: string,
+  hasta?: string,
+  agrupacion?: AgrupacionReporte,
+) => apiFetch<ReporteConsolidado>(`/reportes/consolidado${queryReporte(desde, hasta, agrupacion)}`, {}, token);
+
+// Fase 14: ventas por producto y por franja horaria.
+export interface FilaReporteProducto {
+  productoId: string;
+  productoNombre: string;
+  cantidadVendida: number;
+  total: string;
+}
+
+export interface ReporteProductos {
+  desde: string;
+  hasta: string;
+  filas: FilaReporteProducto[];
+  totalGeneral: string;
+}
+
+export interface FilaReporteFranja {
+  hora: number;
+  cantidadPedidos: number;
+  totalVentas: string;
+}
+
+export interface ReporteFranjas {
+  desde: string;
+  hasta: string;
+  filas: FilaReporteFranja[];
+  totalGeneral: string;
+}
+
+export const obtenerReporteProductos = (token: string, desde?: string, hasta?: string) =>
+  apiFetch<ReporteProductos>(`/reportes/productos${queryReporte(desde, hasta)}`, {}, token);
+
+export const obtenerReporteFranjas = (token: string, desde?: string, hasta?: string) =>
+  apiFetch<ReporteFranjas>(`/reportes/franjas${queryReporte(desde, hasta)}`, {}, token);
 
 // --- Menú público (CU-03): sin token, lo consume la vista del comensal ---
 
@@ -238,6 +282,87 @@ export type ResultadoSync =
 
 export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
   apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);
+
+// --- Inventario y recetas (Fase 11, §6.2) ---
+
+export interface Insumo {
+  id: string;
+  cadenaId: string;
+  nombre: string;
+  unidad: string;
+  // Prisma serializa Decimal como string en el JSON.
+  costoUnitario: string;
+}
+
+export interface ExistenciaInsumo extends Insumo {
+  existencia: string;
+}
+
+export interface CrearInsumoInput {
+  nombre: string;
+  unidad: string;
+  costoUnitario: number;
+}
+
+export interface ActualizarInsumoInput {
+  nombre?: string;
+  unidad?: string;
+  costoUnitario?: number;
+}
+
+export type TipoMovimientoManual = 'ENTRADA' | 'MERMA';
+
+export interface CrearMovimientoInput {
+  sedeId: string;
+  insumoId: string;
+  tipo: TipoMovimientoManual;
+  cantidad: number;
+}
+
+export interface MovimientoInventario {
+  id: string;
+  sedeId: string;
+  insumoId: string;
+  tipo: TipoMovimientoManual | 'SALIDA';
+  cantidad: string;
+  fecha: string;
+}
+
+export interface ItemRecetaInput {
+  insumoId: string;
+  cantidad: number;
+}
+
+export interface ItemReceta {
+  productoId: string;
+  insumoId: string;
+  cantidad: string;
+  insumo: Insumo;
+}
+
+export const listarInsumos = (token: string) => apiFetch<Insumo[]>('/insumos', {}, token);
+
+export const crearInsumo = (input: CrearInsumoInput, token: string) =>
+  apiFetch<Insumo>('/insumos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const actualizarInsumo = (id: string, input: ActualizarInsumoInput, token: string) =>
+  apiFetch<Insumo>(`/insumos/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token);
+
+export const obtenerExistenciasSede = (sedeId: string, token: string) =>
+  apiFetch<ExistenciaInsumo[]>(`/sedes/${sedeId}/inventario`, {}, token);
+
+export const registrarMovimientoInventario = (input: CrearMovimientoInput, token: string) =>
+  apiFetch<MovimientoInventario>('/inventario/movimientos', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const listarReceta = (productoId: string, token: string) =>
+  apiFetch<ItemReceta[]>(`/productos/${productoId}/receta`, {}, token);
+
+export const reemplazarReceta = (productoId: string, items: ItemRecetaInput[], token: string) =>
+  apiFetch<ItemReceta[]>(
+    `/productos/${productoId}/receta`,
+    { method: 'PUT', body: JSON.stringify({ items }) },
+    token,
+  );
 
 // --- Documento fiscal en segundo plano (Fase 11B) ---
 
