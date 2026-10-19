@@ -86,21 +86,50 @@ async function main() {
   );
   const productos = [hamburguesa, pizza, perroCaliente, ensalada, papasFritas, limonada, gaseosa, brownie];
 
-  // Fase 11 (§6.2): insumos de la cadena y receta de los productos que sí
-  // tienen una (no todos — Perro Caliente, Ensalada César y Brownie quedan
-  // sin receta a propósito, para demostrar que PaymentsService.pagar no
-  // genera movimientos cuando un producto no la tiene).
-  const [panHamburguesa, carneRes, queso, masaPizza, papa, gaseosa350] = await Promise.all(
-    [
-      { nombre: 'Pan de hamburguesa', unidad: 'unidad', costoUnitario: 800 },
-      { nombre: 'Carne de res', unidad: 'gramos', costoUnitario: 25 },
-      { nombre: 'Queso', unidad: 'gramos', costoUnitario: 18 },
-      { nombre: 'Masa de pizza', unidad: 'unidad', costoUnitario: 2500 },
-      { nombre: 'Papa', unidad: 'gramos', costoUnitario: 4 },
-      { nombre: 'Gaseosa 350ml', unidad: 'unidad', costoUnitario: 2500 },
-    ].map((datos) => prisma.insumo.create({ data: { cadenaId: cadena.id, ...datos } })),
+  // Fase 11 (§6.2): insumos de la cadena y receta de cada producto. Todos los
+  // productos demo tienen receta, para que /inventario muestre movimiento con
+  // cualquier venta. (Un producto creado después desde /catalogo arranca sin
+  // receta, y PaymentsService.pagar simplemente no genera movimientos para él.)
+  // `existencia` es la ENTRADA inicial de cada sede, en la unidad del insumo.
+  const datosInsumos = [
+    { nombre: 'Pan de hamburguesa', unidad: 'unidad', costoUnitario: 800, existencia: 120 },
+    { nombre: 'Carne de res', unidad: 'gramos', costoUnitario: 25, existencia: 18000 },
+    { nombre: 'Queso', unidad: 'gramos', costoUnitario: 18, existencia: 12000 },
+    { nombre: 'Masa de pizza', unidad: 'unidad', costoUnitario: 2500, existencia: 60 },
+    { nombre: 'Papa', unidad: 'gramos', costoUnitario: 4, existencia: 30000 },
+    { nombre: 'Gaseosa 350ml', unidad: 'unidad', costoUnitario: 2500, existencia: 150 },
+    { nombre: 'Pan de perro', unidad: 'unidad', costoUnitario: 600, existencia: 100 },
+    { nombre: 'Salchicha', unidad: 'unidad', costoUnitario: 1800, existencia: 100 },
+    { nombre: 'Lechuga', unidad: 'gramos', costoUnitario: 6, existencia: 8000 },
+    { nombre: 'Pollo', unidad: 'gramos', costoUnitario: 22, existencia: 10000 },
+    { nombre: 'Salsa césar', unidad: 'ml', costoUnitario: 15, existencia: 3000 },
+    { nombre: 'Limón', unidad: 'unidad', costoUnitario: 300, existencia: 200 },
+    { nombre: 'Azúcar', unidad: 'gramos', costoUnitario: 3, existencia: 10000 },
+    { nombre: 'Brownie', unidad: 'unidad', costoUnitario: 2200, existencia: 50 },
+    { nombre: 'Helado de vainilla', unidad: 'ml', costoUnitario: 12, existencia: 6000 },
+  ];
+  const insumos = await Promise.all(
+    datosInsumos.map(({ existencia: _existencia, ...datos }) =>
+      prisma.insumo.create({ data: { cadenaId: cadena.id, ...datos } }),
+    ),
   );
-  const insumos = [panHamburguesa, carneRes, queso, masaPizza, papa, gaseosa350];
+  const [
+    panHamburguesa,
+    carneRes,
+    queso,
+    masaPizza,
+    papa,
+    gaseosa350,
+    panPerro,
+    salchicha,
+    lechuga,
+    pollo,
+    salsaCesar,
+    limon,
+    azucar,
+    brownieInsumo,
+    helado,
+  ] = insumos;
 
   await prisma.receta.createMany({
     data: [
@@ -111,6 +140,18 @@ async function main() {
       { productoId: pizza.id, insumoId: queso.id, cantidad: 80 },
       { productoId: papasFritas.id, insumoId: papa.id, cantidad: 200 },
       { productoId: gaseosa.id, insumoId: gaseosa350.id, cantidad: 1 },
+      { productoId: perroCaliente.id, insumoId: panPerro.id, cantidad: 1 },
+      { productoId: perroCaliente.id, insumoId: salchicha.id, cantidad: 1 },
+      { productoId: perroCaliente.id, insumoId: queso.id, cantidad: 20 },
+      { productoId: perroCaliente.id, insumoId: papa.id, cantidad: 40 },
+      { productoId: ensalada.id, insumoId: lechuga.id, cantidad: 120 },
+      { productoId: ensalada.id, insumoId: pollo.id, cantidad: 100 },
+      { productoId: ensalada.id, insumoId: queso.id, cantidad: 20 },
+      { productoId: ensalada.id, insumoId: salsaCesar.id, cantidad: 40 },
+      { productoId: limonada.id, insumoId: limon.id, cantidad: 2 },
+      { productoId: limonada.id, insumoId: azucar.id, cantidad: 25 },
+      { productoId: brownie.id, insumoId: brownieInsumo.id, cantidad: 1 },
+      { productoId: brownie.id, insumoId: helado.id, cantidad: 80 },
     ],
   });
 
@@ -118,11 +159,11 @@ async function main() {
   // /inventario no arranque la demo en cero.
   for (const s of sedes) {
     await prisma.movimientoInventario.createMany({
-      data: insumos.map((insumo) => ({
+      data: insumos.map((insumo, i) => ({
         sedeId: s.id,
         insumoId: insumo.id,
         tipo: 'ENTRADA' as const,
-        cantidad: 10000,
+        cantidad: datosInsumos[i].existencia,
       })),
     });
   }
@@ -160,7 +201,7 @@ async function main() {
 
   console.log(
     `Seed completado: 1 cadena, ${sedes.length} sedes, 3 usuarios, ${productos.length} productos, ` +
-      `${sedes.length * 6} mesas, ${insumos.length} insumos, receta en 4 productos.`,
+      `${sedes.length * 6} mesas, ${insumos.length} insumos, receta en ${productos.length} productos.`,
   );
 }
 

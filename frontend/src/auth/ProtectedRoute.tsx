@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useSedeContext } from '../sede/SedeContext';
+import { AvisoCambioSede } from '../ui/AvisoCambioSede';
 import { BarraSuperior } from '../ui/BarraSuperior';
 import { useAuth, type Rol } from './AuthContext';
 
@@ -10,6 +12,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   const { usuario, cargando } = useAuth();
+  const { sede } = useSedeContext();
 
   if (cargando) {
     return null;
@@ -25,10 +28,16 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
 
   // Toda pantalla del personal lleva la barra superior; el contenido va en
   // <main> para que lectores de pantalla y la animación de entrada lo ubiquen.
+  // key = sede: al cambiar de sede la pantalla se monta de nuevo, así entra
+  // con su animación y arranca limpia (sin el pedido o cobro abierto de la
+  // sede anterior).
   return (
     <>
       <BarraSuperior />
-      <main className="contenido">{children}</main>
+      <AvisoCambioSede />
+      <main key={sede?.id ?? 'sin-sede'} className="contenido">
+        {children}
+      </main>
     </>
   );
 }

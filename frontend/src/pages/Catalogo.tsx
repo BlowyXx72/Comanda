@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   actualizarProducto,
   crearProducto,
@@ -12,6 +12,10 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 const FORM_VACIO: CrearProductoInput = { nombre: '', precio: 0, categoria: '' };
+
+// Transición de la fila que acaba de cambiar (ver .catalogo-fila--* en App.css).
+type TipoCambio = 'nuevo' | 'guardado' | 'estado';
+const DURACION_RESALTE_MS = 1600;
 
 // Fase 10 (CU-08): "La administración actualiza precios o el menú una sola
 // vez y el cambio se propaga a todas las sedes". Esta pantalla es la única
@@ -27,6 +31,16 @@ export function CatalogoPage() {
   const [nuevo, setNuevo] = useState<CrearProductoInput>(FORM_VACIO);
   const [creando, setCreando] = useState(false);
   const [edicion, setEdicion] = useState<Record<string, ActualizarProductoInput>>({});
+  const [resaltado, setResaltado] = useState<{ id: string; tipo: TipoCambio } | null>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const resaltar = (id: string, tipo: TipoCambio) => {
+    clearTimeout(temporizador.current);
+    setResaltado({ id, tipo });
+    temporizador.current = setTimeout(() => setResaltado(null), DURACION_RESALTE_MS);
+  };
+
+  useEffect(() => () => clearTimeout(temporizador.current), []);
 
   const cargarProductos = () => {
     if (!token) return;
@@ -48,8 +62,9 @@ export function CatalogoPage() {
     setCreando(true);
     setError(null);
     try {
-      await crearProducto(nuevo, token);
+      const creado = await crearProducto(nuevo, token);
       setNuevo(FORM_VACIO);
+      resaltar(creado.id, 'nuevo');
       cargarProductos();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo crear el producto');
@@ -63,6 +78,7 @@ export function CatalogoPage() {
     setError(null);
     try {
       await actualizarProducto(id, edicion[id], token);
+      resaltar(id, 'guardado');
       setEdicion((prev) => {
         const { [id]: _omitido, ...resto } = prev;
         return resto;
@@ -82,6 +98,7 @@ export function CatalogoPage() {
       } else {
         await actualizarProducto(producto.id, { activo: true }, token);
       }
+      resaltar(producto.id, 'estado');
       cargarProductos();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo cambiar el estado del producto');
@@ -135,7 +152,16 @@ export function CatalogoPage() {
           {productos.map((producto) => {
             const cambios = edicion[producto.id];
             return (
-              <tr key={producto.id} className={producto.activo ? undefined : 'catalogo-fila-inactiva'}>
+              <tr
+                key={producto.id}
+                className={[
+                  producto.activo ? '' : 'catalogo-fila-inactiva',
+                  cambios ? 'catalogo-fila--editando' : '',
+                  resaltado?.id === producto.id ? `catalogo-fila--${resaltado.tipo}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined}
+              >
                 <td>
                   <input
                     value={cambios?.nombre ?? producto.nombre}
