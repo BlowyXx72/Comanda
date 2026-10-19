@@ -24,6 +24,8 @@ x-backend: &backend
       condition: service_healthy
     redis:
       condition: service_healthy
+    postgres-replica:
+      condition: service_healthy
 
 services:
   postgres:
@@ -193,6 +195,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      postgres-replica:
         condition: service_healthy
       minio:
         condition: service_started

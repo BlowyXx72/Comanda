@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BranchesService } from '../branches/branches.service.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { PrismaReplicaService } from '../prisma/prisma-replica.service.js';
 
 // DECISIÓN DE PROTOTIPO: el "día" se calcula en UTC por simplicidad; en
 // producción habría que usar la zona horaria de cada sede.
@@ -23,7 +23,7 @@ export interface FilaConsolidado {
 @Injectable()
 export class ReportsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly replica: PrismaReplicaService,
     private readonly branchesService: BranchesService,
   ) {}
 
@@ -34,7 +34,7 @@ export class ReportsService {
     const fin = new Date(inicio);
     fin.setUTCDate(fin.getUTCDate() + 1);
 
-    const pagos = await this.prisma.conCadena(cadenaId, (tx) =>
+    const pagos = await this.replica.conCadena(cadenaId, (tx) =>
       tx.pago.findMany({
         where: {
           creadoEn: { gte: inicio, lt: fin },
@@ -56,16 +56,15 @@ export class ReportsService {
   // Fase 9 (CU-06): base del panel multi-sede del dueño. Agrupa por sede, día
   // y canal sin asumir qué canales existen (`Pedido.canal` hoy solo tiene
   // SALON; los que agregue la Parte 2 — p. ej. DOMICILIO — aparecen solos).
-  // Sigue leyendo de la misma base transaccional: la réplica de lectura que
-  // pide la propuesta para separar reportes de la carga de venta queda
-  // `// TODO PRODUCCIÓN`.
+  // Lee de la réplica de lectura (Fase 13, §5.1) para no competir con las
+  // escrituras de venta.
   async consolidado(cadenaId: string, desde?: string, hasta?: string) {
     const inicio = inicioUtc(desde);
     const finBase = inicioUtc(hasta ?? desde);
     const fin = new Date(finBase);
     fin.setUTCDate(fin.getUTCDate() + 1);
 
-    const pagos = await this.prisma.conCadena(cadenaId, (tx) =>
+    const pagos = await this.replica.conCadena(cadenaId, (tx) =>
       tx.pago.findMany({
         where: {
           creadoEn: { gte: inicio, lt: fin },
