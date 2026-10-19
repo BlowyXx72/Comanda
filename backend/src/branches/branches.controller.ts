@@ -27,6 +27,6 @@ export class BranchesController {
   @Get(':id/mesas')
   async listarMesas(@Param('id') id: string, @UsuarioActual() usuario: UsuarioAutenticado) {
     await this.branchesService.obtenerDeCadena(id, usuario.cadenaId);
-    return this.tablesService.listarPorSede(id);
+    return this.tablesService.listarPorSede(id, usuario.cadenaId);
   }
 }

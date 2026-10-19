@@ -50,10 +50,13 @@ export class ProcesadorCorreoService implements OnApplicationBootstrap, OnModule
   }
 
   private async enviarComprobante(documentoFiscalId: string, cadenaId: string) {
-    const doc = await this.prisma.documentoFiscal.findUnique({
-      where: { id: documentoFiscalId },
-      include: { sede: true, pedido: { include: { cliente: true, detalles: { include: { producto: true } } } } },
-    });
+    // Fase 12 (§6.1): el job lleva cadenaId; el acceso va por conCadena().
+    const doc = await this.prisma.conCadena(cadenaId, (tx) =>
+      tx.documentoFiscal.findUnique({
+        where: { id: documentoFiscalId },
+        include: { sede: true, pedido: { include: { cliente: true, detalles: { include: { producto: true } } } } },
+      }),
+    );
     if (!doc || doc.sede.cadenaId !== cadenaId) {
       throw new UnrecoverableError(`Documento ${documentoFiscalId} no encontrado en la cadena ${cadenaId}`);
     }
@@ -85,6 +88,9 @@ export class ProcesadorCorreoService implements OnApplicationBootstrap, OnModule
   // Fase 9 (ReportsService) para el día pedido.
   // Nota: hoy el consolidado cuenta el día en UTC; la Fase 14 (Parte 1) lo
   // pasa a la zona de Bogotá, y entonces coincidirá con `fecha`.
+  // Fase 12: el trabajo programado recorre todas las cadenas, así que la
+  // lista de cadenas y admins se lee con el cliente dueño; el consolidado de
+  // cada una sí va por conCadena() (dentro de ReportsService).
   private async enviarResumenes(cadenaId: string | undefined, fecha: string) {
     const cadenas = await this.prisma.cadena.findMany({
       where: cadenaId ? { id: cadenaId } : {},
