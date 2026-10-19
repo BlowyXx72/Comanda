@@ -107,6 +107,10 @@ export class PaymentsService {
     this.realtimeGateway.emitirPedidoActualizado(pedido.sedeId, resultado.pedido);
     this.realtimeGateway.emitirVentaRegistrada(cadenaId, {
       sedeId: resultado.pedido.sedeId,
+      // Fase 13: /panel suma la venta con este payload sin re-consultar (la
+      // réplica puede ir unos ms atrás); sedeNombre permite crear la fila
+      // de una sede/canal que aún no aparecía en el reporte.
+      sedeNombre: resultado.pedido.sede.nombre,
       pedidoId: resultado.pedido.id,
       canal: resultado.pedido.canal,
       total: resultado.pedido.total,

@@ -34,7 +34,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 | CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
 | CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; desde la Fase 13B Nginx le limita la tasa (`429`). |
 | CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
-| CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado) ni usa réplica de lectura. |
+| CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado). Desde la Fase 13 lee de la réplica de lectura. |
 | CU-07 Operación sin conexión | **Parcial (Fase 9B).** Solo el mesero: PWA mínima (service worker + manifest), catálogo/mesas/sede en IndexedDB y cola local de pedidos que se vacía con `POST /sync` (idempotente por UUID: `CREADO`/`DUPLICADO`/`RECHAZADO`). El cobro y los consecutivos fiscales sin conexión quedan `// TODO PRODUCCIÓN`. |
 | CU-08 Catálogo centralizado | **Implementado (Fase 10).** `POST`/`PATCH`/`DELETE /productos` (solo ADMIN) + `/catalogo`: ADMIN crea, edita o desactiva un producto una sola vez y se propaga a las 3 sedes de la cadena en vivo vía `catalogo:actualizado` (lo escucha `/mesas`). Baja lógica (`activo`), no borrado físico. |
 
@@ -54,9 +54,6 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   (Fase 12B)").
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
-- **Réplica de lectura** de base de datos (la propuesta la usa específicamente
-  para separar los reportes de la carga transaccional; aquí `ReportsService`
-  lee de la misma instancia que todo lo demás).
 - **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
   con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
 - **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
@@ -363,10 +360,8 @@ dueño". Así quedó:
   `ProtectedRoute` (ver `App.tsx`); no depende de `SedeContext` porque ya
   muestra las 3 sedes a la vez (cada fila trae su propio nombre de sede desde
   el backend).
-- Sigue leyendo de la misma base transaccional que todo lo demás: la réplica
-  de lectura que la propuesta pide específicamente para separar reportes del
-  tráfico de venta (§5.1) queda `// TODO PRODUCCIÓN`; a la escala de esta
-  demo (unas pocas sedes, tráfico bajo) no hace falta.
+- Desde la Fase 13 (ver "Réplica de lectura (Fase 13)") lee de la réplica de
+  lectura, no de la base transaccional.
 
 ## Catálogo centralizado (Fase 10, CU-08)
 
@@ -473,6 +468,52 @@ dueño". Así quedó:
   otra cadena falla por `WITH CHECK` y (4) un `UPDATE` no alcanza filas ajenas.
   Corre contra la base real y limpia lo que crea:
   `docker compose run --rm backend-1 npx vitest run test/rls-aislamiento.spec.ts`.
+
+## Réplica de lectura (Fase 13, ronda 2, §5.1)
+
+- **Infraestructura**: `postgres-replica` (`postgres:16-alpine`) en streaming
+  replication física desde `postgres`. El primario arranca con
+  `wal_level=replica`, `max_wal_senders=5` y `wal_keep_size=256MB` (sin slots
+  de replicación) y un `pg_hba.conf` montado (`postgres/pg_hba.conf`) que
+  añade la línea de `replication` para el usuario `replicador`. Ese usuario lo
+  crea el servicio de un solo uso `postgres-replica-setup` (idempotente, con la
+  contraseña de `.env`), y no un script de initdb, porque initdb solo corre con
+  un volumen vacío y la base del prototipo ya existía.
+- **Arranque de la réplica**: `postgres/replica-entrypoint.sh` hace
+  `pg_basebackup -X stream -R` (con reintentos) si su `PGDATA` está vacío y
+  luego arranca en `hot_standby`; si ya hay datos, solo arranca. Variables nuevas
+  en `.env`/`.env.example`: `POSTGRES_REPLICA_PORT`,
+  `POSTGRES_REPLICATION_USER`, `POSTGRES_REPLICATION_PASSWORD`,
+  `DATABASE_URL_REPLICA`. `.gitattributes` fuerza LF en `postgres/**` para que
+  el `.sh` montado no se rompa con `core.autocrlf`.
+- **Cliente de solo lectura**: `PrismaReplicaService`
+  (`backend/src/prisma/prisma-replica.service.ts`) es un `PrismaClient`
+  contra `DATABASE_URL_REPLICA` con el rol `comanda_app` (al ser copia física,
+  el rol y las políticas ya existen allí) y un `conCadena()` igual al del
+  primario: `set_config('app.cadena_id', …, true)` es un GUC, no escribe, así
+  que funciona en `hot_standby`. **Solo** `ReportsService` lo usa
+  (`ventasDelDia` y `consolidado`); el resto del backend sigue en el primario.
+  El worker depende de la réplica porque su resumen diario usa `ReportsService`.
+- **RLS en la réplica**: se verifica con
+  `backend/test/replica-solo-lectura.spec.ts`, que escribe dos cadenas en el
+  primario con el rol dueño y lee de la réplica con `comanda_app`: sin
+  `app.cadena_id` devuelve 0 filas; con la cadena A no aparece nada de la B.
+  Además confirma `pg_is_in_recovery() = true` y que un `create` contra el
+  cliente de la réplica falla con "read-only transaction".
+  `docker compose run --rm backend-1 npx vitest run test/replica-solo-lectura.spec.ts`.
+- **`/panel` no re-consulta**: la réplica es asíncrona y un pago recién hecho
+  puede tardar unos milisegundos en aparecer. Por eso `/panel` ya no hace un
+  nuevo `GET /reportes/consolidado` al recibir `venta:registrada`: suma la venta
+  en memoria con el payload del evento (`sedeId`, `sedeNombre`, `canal`,
+  `total`, `fechaHora`), la ignora si cae fuera del rango mostrado y crea la fila
+  si esa sede/canal aún no aparecía. `sedeNombre` se agregó al payload en esta
+  fase para poder crear filas sin consultar. Los totales se suman en centavos
+  enteros para no arrastrar errores de punto flotante.
+- `// DECISIÓN DE PROTOTIPO`: replicación **asíncrona**, una sola réplica, sin
+  failover ni promoción automática. `// TODO PRODUCCIÓN`: slots de
+  replicación, monitoreo del lag, balanceo entre varias réplicas y arranque
+  desde una base primaria 100 % limpia (no se probó un volumen nuevo del
+  primario con todo el stack).
 
 ## Pulido (Fase 6)
 

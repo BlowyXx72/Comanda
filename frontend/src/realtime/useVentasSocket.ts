@@ -6,6 +6,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 export interface VentaRegistrada {
   sedeId: string;
+  sedeNombre: string;
   pedidoId: string;
   canal: string;
   total: string;

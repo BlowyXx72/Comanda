@@ -3,13 +3,51 @@ import { obtenerReporteConsolidado, type ReporteConsolidado } from '../api/coman
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { BotonResumenDiario } from '../correo/BotonResumenDiario';
-import { useVentasSocket } from '../realtime/useVentasSocket';
+import { useVentasSocket, type VentaRegistrada } from '../realtime/useVentasSocket';
 import { formatearCOP } from '../utils/formato';
 
 // Fase 9 (CU-06): "El dueño consulta desde cualquier lugar el consolidado de
 // ventas de todas las sedes en tiempo real". Por defecto muestra el día de
 // hoy; se actualiza solo al llegar `venta:registrada` (sin recargar ni
 // hacer polling), igual que /cocina y /caja con los eventos por sede.
+//
+// Fase 13: el reporte sale de la réplica de lectura, que puede ir unos ms
+// atrás del primario. Por eso el evento se SUMA en memoria con su propio
+// payload y no dispara un nuevo GET /reportes/consolidado (que podría no ver
+// aún el pago recién hecho).
+const aCentavos = (valor: string) => Math.round(Number(valor) * 100);
+const deCentavos = (centavos: number) => (centavos / 100).toFixed(2);
+
+function sumarVenta(reporte: ReporteConsolidado, venta: VentaRegistrada): ReporteConsolidado {
+  // Mismo criterio de día que ReportsService (UTC, ISO 8601).
+  const fecha = venta.fechaHora.slice(0, 10);
+  if (fecha < reporte.desde || fecha > reporte.hasta) return reporte; // fuera del rango mostrado
+
+  const centavos = aCentavos(venta.total);
+  const existe = reporte.filas.some((f) => f.sedeId === venta.sedeId && f.fecha === fecha && f.canal === venta.canal);
+  const filas = existe
+    ? reporte.filas.map((f) =>
+        f.sedeId === venta.sedeId && f.fecha === fecha && f.canal === venta.canal
+          ? { ...f, cantidadPedidos: f.cantidadPedidos + 1, totalVentas: deCentavos(aCentavos(f.totalVentas) + centavos) }
+          : f,
+      )
+    : [
+        ...reporte.filas,
+        {
+          sedeId: venta.sedeId,
+          sedeNombre: venta.sedeNombre,
+          fecha,
+          canal: venta.canal,
+          cantidadPedidos: 1,
+          totalVentas: deCentavos(centavos),
+        },
+      ].sort(
+        (a, b) => a.sedeNombre.localeCompare(b.sedeNombre) || a.fecha.localeCompare(b.fecha) || a.canal.localeCompare(b.canal),
+      );
+
+  return { ...reporte, filas, totalGeneral: deCentavos(aCentavos(reporte.totalGeneral) + centavos) };
+}
+
 export function PanelPage() {
   const { token } = useAuth();
   const [reporte, setReporte] = useState<ReporteConsolidado | null>(null);
@@ -29,7 +67,10 @@ export function PanelPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  useVentasSocket({ token, onVentaRegistrada: cargarReporte });
+  useVentasSocket({
+    token,
+    onVentaRegistrada: (venta) => setReporte((actual) => (actual ? sumarVenta(actual, venta) : actual)),
+  });
 
   if (cargando) return <p className="pantalla-info">Cargando panel…</p>;
   if (error || !reporte) return <p className="pantalla-info">{error ?? 'No se pudo cargar el panel.'}</p>;
