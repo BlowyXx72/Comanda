@@ -1,111 +1,300 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/*
+ * Sistema de diseño de Comanda (rediseño con la skill ui-ux-pro-max).
+ *
+ * Paleta base del equipo:
+ *   #FFA69E durazno · #FAF3DD crema · #B8F2E6 menta · #AED9E0 celeste · #5E6472 pizarra
+ * Los derivados (tinta, superficies, versiones suaves) salen de esos cinco
+ * para cumplir contraste AA (4.5:1 en texto normal). Ejemplo: texto pizarra
+ * sobre durazno da 3.3:1, así que los botones durazno usan la "tinta"
+ * #2A2E37 (7.3:1).
+ *
+ * Los componentes usan solo tokens semánticos (--color-*), nunca hex sueltos.
+ * El tema lo fija data-theme en <html> (ver index.html y src/tema/tema.ts).
+ */
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+:root {
+  /* Superficies */
+  --color-bg: #fbf7ea;
+  --color-bg-acento: #faf3dd;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5eed6;
+  --color-border: #ebe2c6;
+  --color-border-strong: #d8cca6;
+
+  /* Texto */
+  --color-text: #2a2e37;
+  --color-text-muted: #5e6472;
+
+  /* Marca: durazno */
+  --color-primary: #ffa69e;
+  --color-primary-hover: #ff9187;
+  --color-primary-soft: #ffe4e1;
+  --color-on-primary: #2a2e37;
+  --color-primary-ink: #9c3b32;
+
+  /* Estados (siempre acompañados de texto, nunca solo color) */
+  --color-success: #b8f2e6;
+  --color-success-soft: #e2faf4;
+  --color-success-border: #74d6c1;
+  --color-success-ink: #1d6b5c;
+  --color-info: #aed9e0;
+  --color-info-soft: #e3f2f5;
+  --color-info-border: #7fbfca;
+  --color-info-ink: #2b5d66;
+  --color-warning-soft: #ffe4e1;
+  --color-warning-border: #ffa69e;
+  --color-warning-ink: #9c3b32;
+  --color-danger: #c2364a;
+  --color-danger-soft: #fbe3e6;
+  --color-on-danger: #ffffff;
+
+  --color-ring: #5e6472;
+  --color-scrim: rgba(42, 46, 55, 0.45);
+
+  /* Elevación (tintada con la pizarra, no negro puro) */
+  --sombra-1: 0 1px 2px rgba(94, 100, 114, 0.08), 0 1px 3px rgba(94, 100, 114, 0.1);
+  --sombra-2: 0 4px 12px rgba(94, 100, 114, 0.12), 0 2px 4px rgba(94, 100, 114, 0.06);
+  --sombra-3: 0 16px 40px rgba(94, 100, 114, 0.18), 0 4px 12px rgba(94, 100, 114, 0.08);
+
+  /* Forma, espacio y tipografía */
+  --radio-s: 8px;
+  --radio-m: 12px;
+  --radio-l: 18px;
+  --radio-xl: 28px;
+  --radio-total: 999px;
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 24px;
+  --esp-6: 32px;
+  --esp-7: 48px;
+
+  --fuente: 'Karla', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --fuente-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  /* Movimiento: entrar más lento que salir; curvas de desaceleración */
+  --dur-rapida: 120ms;
+  --dur-media: 200ms;
+  --dur-lenta: 320ms;
+  --curva-salida: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --curva-resorte: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Capas */
+  --z-barra: 20;
+  --z-flotante: 30;
+
+  color-scheme: light;
+  font: 400 16px/1.5 var(--fuente);
+  color: var(--color-text);
+  background: var(--color-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* Modo oscuro: tonos de la pizarra para las superficies, crema para el
+   texto; los acentos de la paleta se mantienen y las versiones "suaves" pasan
+   a transparencias para no encandilar. */
+:root[data-theme='oscuro'] {
+  --color-bg: #1b1e24;
+  --color-bg-acento: #22262e;
+  --color-surface: #262a33;
+  --color-surface-2: #2f343e;
+  --color-border: #3a404c;
+  --color-border-strong: #4c5361;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --color-text: #faf3dd;
+  --color-text-muted: #b9bfca;
+
+  --color-primary: #ffa69e;
+  --color-primary-hover: #ffbab3;
+  --color-primary-soft: rgba(255, 166, 158, 0.16);
+  --color-on-primary: #22252c;
+  --color-primary-ink: #ffc2bc;
+
+  --color-success: #b8f2e6;
+  --color-success-soft: rgba(184, 242, 230, 0.12);
+  --color-success-border: rgba(184, 242, 230, 0.55);
+  --color-success-ink: #b8f2e6;
+  --color-info: #aed9e0;
+  --color-info-soft: rgba(174, 217, 224, 0.13);
+  --color-info-border: rgba(174, 217, 224, 0.55);
+  --color-info-ink: #aed9e0;
+  --color-warning-soft: rgba(255, 166, 158, 0.14);
+  --color-warning-border: rgba(255, 166, 158, 0.6);
+  --color-warning-ink: #ffc2bc;
+  --color-danger: #ff8fa0;
+  --color-danger-soft: rgba(255, 143, 160, 0.14);
+  --color-on-danger: #22252c;
+
+  --color-ring: #ffa69e;
+  --color-scrim: rgba(0, 0, 0, 0.6);
+
+  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sombra-2: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --sombra-3: 0 18px 44px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  background: var(--color-bg);
+  transition: background-color var(--dur-lenta) ease, color var(--dur-lenta) ease;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  font-family: var(--fuente);
+  color: var(--color-text);
+  line-height: 1.2;
+  text-wrap: balance;
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--esp-4);
 }
+
 h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--esp-3);
 }
+
+h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 var(--esp-2);
+}
+
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+a {
+  color: inherit;
 }
 
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  font-family: var(--mono);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  border-radius: var(--radio-s);
+  background: var(--color-surface-2);
+}
+
+/* --- Controles base: todo botón, campo y selector hereda esto --- */
+
+button {
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  min-height: 44px;
+  padding: 0 var(--esp-4);
+  border: 1px solid transparent;
+  border-radius: var(--radio-m);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--dur-media) var(--curva-salida),
+    border-color var(--dur-media) var(--curva-salida),
+    box-shadow var(--dur-media) var(--curva-salida),
+    transform var(--dur-rapida) var(--curva-salida);
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  box-shadow: var(--sombra-1);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+input:not([type='radio']):not([type='checkbox']),
+select,
+textarea {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radio-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition:
+    border-color var(--dur-media) var(--curva-salida),
+    box-shadow var(--dur-media) var(--curva-salida);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.85;
+}
+
+input:not([type='radio']):not([type='checkbox']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+input[type='radio'],
+input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
+::selection {
+  background: var(--color-primary-soft);
+}
+
+/* Accesibilidad: sin animaciones si la persona lo pidió en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

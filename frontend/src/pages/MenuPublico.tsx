@@ -8,7 +8,12 @@ import {
   type ProductoMenu,
 } from '../api/comanda';
 import { ApiError } from '../api/client';
+import { BotonTema } from '../ui/BotonTema';
+import { Icono } from '../ui/Icono';
 import { formatearCOP } from '../utils/formato';
+
+// Ancla de cada categoría para las fichas de atajo del encabezado.
+const anclaCategoria = (categoria: string) => `cat-${categoria.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
 interface ItemCarrito {
   producto: ProductoMenu;
@@ -82,55 +87,108 @@ export function MenuPublicoPage() {
     }
   };
 
-  if (error) return <p className="pantalla-info">{error}</p>;
-  if (!menu) return <p className="pantalla-info">Cargando menú…</p>;
+  if (error) return <p className="pantalla-info pantalla-info--menu">{error}</p>;
+  if (!menu) return <p className="pantalla-info pantalla-info--menu">Cargando menú…</p>;
+
+  const cantidadCarrito = itemsCarrito.reduce((acc, item) => acc + item.cantidad, 0);
 
   return (
     <div className="menu-publico">
       <header className="menu-publico-header">
+        <BotonTema />
+        <p className="menu-publico-eyebrow">
+          <Icono nombre="cubiertos" tamano={16} />
+          Nuestro menú
+        </p>
         <h1>{menu.sede.nombre}</h1>
-        <p>{menu.sede.direccion}</p>
-        {mesa && <span className="comanda-badge">Mesa {mesa}</span>}
+        <p>
+          <Icono nombre="ubicacion" tamano={16} />
+          {menu.sede.direccion}
+        </p>
+        {mesa && (
+          <div>
+            <span className="comanda-badge">Mesa {mesa}</span>
+          </div>
+        )}
       </header>
+
+      {menu.categorias.length > 1 && (
+        <nav className="menu-publico-chips" aria-label="Categorías">
+          {menu.categorias.map((grupo) => (
+            <a key={grupo.categoria} href={`#${anclaCategoria(grupo.categoria)}`}>
+              {grupo.categoria}
+            </a>
+          ))}
+        </nav>
+      )}
 
       {menu.categorias.length === 0 && <p className="pantalla-info">El menú está vacío por ahora.</p>}
 
       {menu.categorias.map((grupo) => (
-        <section key={grupo.categoria} className="menu-publico-categoria">
+        <section key={grupo.categoria} id={anclaCategoria(grupo.categoria)} className="menu-publico-categoria">
           <h2>{grupo.categoria}</h2>
           <ul className="lista-items">
-            {grupo.productos.map((producto) => (
-              <li key={producto.id} className="menu-publico-item">
-                <span>
-                  {producto.nombre}
-                  <br />
-                  <small>{formatearCOP(producto.precio)}</small>
-                </span>
-                <span className="carrito-item-acciones">
-                  {carrito[producto.id] && (
-                    <>
-                      <button type="button" onClick={() => cambiarCantidad(producto, -1)}>
-                        −
-                      </button>
-                      <span>{carrito[producto.id].cantidad}</span>
-                    </>
-                  )}
-                  <button type="button" onClick={() => cambiarCantidad(producto, 1)}>
-                    +
-                  </button>
-                </span>
-              </li>
-            ))}
+            {grupo.productos.map((producto) => {
+              const enCarrito = carrito[producto.id];
+              return (
+                <li key={producto.id} className={`menu-publico-item${enCarrito ? ' menu-publico-item--en-carrito' : ''}`}>
+                  <span>
+                    <span className="menu-publico-item-nombre">{producto.nombre}</span>
+                    <span className="menu-publico-item-precio">{formatearCOP(producto.precio)}</span>
+                  </span>
+                  <span className="carrito-item-acciones">
+                    {enCarrito && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => cambiarCantidad(producto, -1)}
+                          aria-label={`Quitar un ${producto.nombre}`}
+                        >
+                          <Icono nombre="menos" tamano={18} />
+                        </button>
+                        <span aria-live="polite">{enCarrito.cantidad}</span>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => cambiarCantidad(producto, 1)}
+                      aria-label={`Agregar un ${producto.nombre}`}
+                    >
+                      <Icono nombre="mas" tamano={18} />
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}
 
-      <section className="menu-publico-domicilio">
+      {cantidadCarrito > 0 && !pedidoCreado && (
+        <button
+          type="button"
+          className="menu-publico-barra"
+          onClick={() => document.getElementById('domicilio')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <span>
+            Ver pedido · {cantidadCarrito} {cantidadCarrito === 1 ? 'producto' : 'productos'}
+          </span>
+          <span className="menu-publico-barra-total">
+            <Icono nombre="bolsa" tamano={18} />
+            {formatearCOP(totalCarrito)}
+          </span>
+        </button>
+      )}
+
+      <section id="domicilio" className="menu-publico-domicilio">
         <h2>Pedir a domicilio</h2>
 
         {pedidoCreado ? (
           <div className="panel-pedido recibo">
-            <p>¡Pedido recibido! Ya está en preparación.</p>
+            <p className="estado-dian estado-dian--validado_simulado">
+              <Icono nombre="check" tamano={18} />
+              ¡Pedido recibido! Ya está en preparación.
+            </p>
             <p className="carrito-total">Total: {formatearCOP(pedidoCreado.total)}</p>
             <button type="button" onClick={() => setPedidoCreado(null)}>
               Hacer otro pedido

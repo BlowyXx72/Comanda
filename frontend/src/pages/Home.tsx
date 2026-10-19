@@ -1,31 +1,45 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Icono } from '../ui/Icono';
+import { destinosDeRol } from '../ui/navegacion';
 
-// DECISIÓN DE PROTOTIPO: landing simple con enlaces manuales en vez de un
-// redirect automático por rol; con solo tres pantallas (Mesas, Cocina, Caja)
-// no vale la pena la lógica de ruteo por rol todavía.
+const SALUDO_ROL = { ADMIN: 'Administración', CAJERO: 'Caja', MESERO: 'Salón' } as const;
+
+// Inicio del personal: accesos a las pantallas de su rol, en tarjetas grandes
+// pensadas para tablet. La lista sale de ui/navegacion.ts, la misma de la
+// barra superior.
 export function HomePage() {
-  const { usuario, logout } = useAuth();
-  const puedeVerMesas = usuario?.rol === 'MESERO' || usuario?.rol === 'ADMIN';
-  const puedeVerCaja = usuario?.rol === 'CAJERO' || usuario?.rol === 'ADMIN';
-  const puedeVerPanel = usuario?.rol === 'ADMIN';
+  const { usuario } = useAuth();
+  const destinos = destinosDeRol(usuario?.rol);
 
   return (
     <div className="home-page">
-      <h1>Bienvenido</h1>
-      <p>{usuario?.email}</p>
-      <p className="home-rol">Rol: {usuario?.rol}</p>
+      <header className="home-encabezado">
+        <p className="home-eyebrow">{usuario ? SALUDO_ROL[usuario.rol] : ''}</p>
+        <h1>Hola, ¿qué vamos a atender hoy?</h1>
+        <p className="panel-nota">{usuario?.email}</p>
+      </header>
 
-      <nav className="home-nav">
-        {puedeVerMesas && <Link to="/mesas">Ir a Mesas</Link>}
-        <Link to="/cocina">Ir a Cocina</Link>
-        {puedeVerCaja && <Link to="/caja">Ir a Caja</Link>}
-        {puedeVerPanel && <Link to="/panel">Ir a Panel</Link>}
-        {puedeVerPanel && <Link to="/catalogo">Ir a Catálogo</Link>}
-        {puedeVerPanel && <Link to="/simulador-plataforma">Simulador de plataforma</Link>}
+      <nav className="home-nav" aria-label="Accesos">
+        {destinos.map((destino) => (
+          <Link key={destino.ruta} to={destino.ruta} className={`home-tarjeta home-tarjeta--${destino.icono}`}>
+            <span className="home-tarjeta-icono">
+              <Icono nombre={destino.icono} tamano={24} />
+            </span>
+            <span className="home-tarjeta-titulo">{destino.titulo}</span>
+            <span className="home-tarjeta-texto">{destino.descripcion}</span>
+          </Link>
+        ))}
+        {usuario?.rol === 'ADMIN' && (
+          <Link to="/simulador-plataforma" className="home-tarjeta home-tarjeta--plataforma">
+            <span className="home-tarjeta-icono">
+              <Icono nombre="plataforma" tamano={24} />
+            </span>
+            <span className="home-tarjeta-titulo">Simulador de plataforma</span>
+            <span className="home-tarjeta-texto">Envía pedidos de prueba como si fueras Rappi (Fase 12B).</span>
+          </Link>
+        )}
       </nav>
-
-      <button onClick={logout}>Cerrar sesión</button>
     </div>
   );
 }

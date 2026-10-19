@@ -12,13 +12,11 @@ import { MesasPage } from './pages/Mesas'
 import { PanelPage } from './pages/Panel'
 import { SimuladorPlataformaPage } from './pages/SimuladorPlataforma'
 import { SedeProvider } from './sede/SedeContext'
-import { SelectorSedeGlobal } from './sede/SelectorSedeGlobal'
 
 function App() {
   return (
     <AuthProvider>
       <SedeProvider>
-        <SelectorSedeGlobal />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />

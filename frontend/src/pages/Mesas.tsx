@@ -16,7 +16,7 @@ import { conRespaldo, esErrorDeRed } from '../offline/cache';
 import { useColaOffline } from '../offline/useColaOffline';
 import { useSedeConRespaldo } from '../offline/useSedeConRespaldo';
 import { useComandaSocket } from '../realtime/useComandaSocket';
-import { formatearCOP } from '../utils/formato';
+import { formatearCOP, textoEstadoPedido } from '../utils/formato';
 import { reproducirBeepPedidoListo } from '../utils/sonido';
 
 // Cuánto dura resaltada la mesa cuando cocina marca su pedido LISTO.
@@ -300,7 +300,7 @@ export function MesasPage() {
                       {detalle.notas && <em> — {detalle.notas}</em>}
                     </li>
                   ))}
-                  <li className="lista-items-estado">Estado: {pedidoSeleccionado.estado}</li>
+                  <li className="lista-items-estado">Estado: {textoEstadoPedido(pedidoSeleccionado.estado)}</li>
                 </ul>
               ) : pendienteSeleccionado ? (
                 <ul className="lista-items">

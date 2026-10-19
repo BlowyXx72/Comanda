@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { BotonTema } from '../ui/BotonTema';
+import { Icono } from '../ui/Icono';
 
 export function LoginPage() {
   const { login, usuario } = useAuth();
@@ -31,7 +33,11 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
-      <form className="login-form" onSubmit={onSubmit}>
+      <BotonTema className="boton-tema-flotante" />
+      <form className="login-form login-tarjeta" onSubmit={onSubmit}>
+        <span className="barra-logo barra-logo--grande">
+          <Icono nombre="cubiertos" tamano={28} />
+        </span>
         <h1>Comanda</h1>
         <p className="login-subtitle">Ingresa con tu cuenta de la sede</p>
 
