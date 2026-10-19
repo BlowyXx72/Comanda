@@ -149,6 +149,14 @@ Se trabaja **por fases secuenciales** (ver README). Al terminar cada fase:
 commit independiente y pausa para mostrar avance antes de seguir con la
 siguiente — no adelantar varias fases de golpe sin confirmación.
 
+Diseño del frontend: paleta del equipo `#FFA69E #FAF3DD #B8F2E6 #AED9E0
+#5E6472` con modo claro/oscuro. Los colores van solo como tokens semánticos
+(`--color-*` en `frontend/src/index.css`), nunca como hex sueltos en las
+pantallas. Una pantalla nueva del personal: envolverla en `ProtectedRoute`
+(trae la barra superior), reutilizar las clases de `App.css` (`panel-pedido`,
+`comanda-card`, `panel-tabla`, `pantalla-info`...) y agregar su entrada en
+`frontend/src/ui/navegacion.ts` para que aparezca en la barra y en el inicio.
+
 Para trabajo de interfaz (frontend), el equipo usa la skill de Claude Code
 **ui-ux-pro-max**. Si no está disponible en la sesión, sugerirle al usuario
 instalarla con el comando de la sección "Skill de UI/UX para Claude Code" del

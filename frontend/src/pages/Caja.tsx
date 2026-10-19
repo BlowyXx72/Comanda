@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useSedeActual } from '../hooks/useSedeActual';
 import { useComandaSocket } from '../realtime/useComandaSocket';
-import { etiquetaPedido, formatearCOP } from '../utils/formato';
+import { etiquetaPedido, textoEstadoPedido, formatearCOP } from '../utils/formato';
 
 const TEXTO_ESTADO_DIAN: Record<EstadoDian, string> = {
   SIMULADO: 'Simulado (cobrado antes de la cola fiscal)',
@@ -152,7 +152,7 @@ export function CajaPage() {
               <div key={pedido.id} className="comanda-card comanda-card--en_preparacion">
                 <div className="comanda-card-header">
                   <strong>{etiquetaPedido(pedido)}</strong>
-                  <span className="comanda-badge">{pedido.estado}</span>
+                  <span className="comanda-badge">{textoEstadoPedido(pedido.estado)}</span>
                 </div>
               </div>
             ))}

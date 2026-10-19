@@ -15,3 +15,13 @@ export const etiquetaPedido = (pedido: {
   if (pedido.canal === 'PLATAFORMA') return pedido.referenciaExterna ? `Plataforma · ${pedido.referenciaExterna}` : 'Plataforma';
   return pedido.mesa ? `Mesa ${pedido.mesa.numero}` : 'Sin mesa';
 };
+
+// Texto legible de cada estado del pedido para badges y listas.
+const TEXTO_ESTADO_PEDIDO: Record<string, string> = {
+  ABIERTO: 'Abierto',
+  EN_PREPARACION: 'En preparación',
+  LISTO: 'Listo',
+  PAGADO: 'Pagado',
+};
+
+export const textoEstadoPedido = (estado: string) => TEXTO_ESTADO_PEDIDO[estado] ?? estado;

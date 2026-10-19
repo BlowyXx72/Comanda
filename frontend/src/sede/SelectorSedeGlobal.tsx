@@ -1,10 +1,10 @@
 import { useAuth } from '../auth/AuthContext';
 import { useSedeContext } from './SedeContext';
 
-// DECISIÓN DE PROTOTIPO (Fase 7): selector flotante y global, montado una
-// sola vez en App.tsx, en vez de agregarlo a cada página — así ninguna
-// pantalla de Mesas/Cocina/Caja hay que tocarla para esto (ver
-// docs/fases-siguientes.md, "Contratos de integración").
+// DECISIÓN DE PROTOTIPO (Fase 7): selector global en vez de agregarlo a cada
+// página — así ninguna pantalla de Mesas/Cocina/Caja hay que tocarla para
+// esto (ver docs/fases-siguientes.md, "Contratos de integración"). Desde el
+// rediseño vive dentro de la barra superior (ui/BarraSuperior.tsx).
 export function SelectorSedeGlobal() {
   const { usuario } = useAuth();
   const { sedes, sede, seleccionarSede } = useSedeContext();

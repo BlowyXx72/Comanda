@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
+import { BarraSuperior } from '../ui/BarraSuperior';
 import { useAuth, type Rol } from './AuthContext';
 
 interface ProtectedRouteProps {
@@ -22,5 +23,12 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  // Toda pantalla del personal lleva la barra superior; el contenido va en
+  // <main> para que lectores de pantalla y la animación de entrada lo ubiquen.
+  return (
+    <>
+      <BarraSuperior />
+      <main className="contenido">{children}</main>
+    </>
+  );
 }
