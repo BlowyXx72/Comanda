@@ -263,11 +263,13 @@ continúa la numeración con la misma división en dos partes:
   backend), `Fase 14B` (correo de comprobantes y resumen diario).
 
 La ronda 3 (propuesta, ver [`docs/fases-siguientes-3.md`](docs/fases-siguientes-3.md))
-cierra el proyecto y lo migra a la nube: `Fase 15` (cierre de la ronda 2 y
-deudas), Parte 1 `Fase 16`–`18` (cobro sin conexión, sede por usuario, base de
-datos y caché administradas), Parte 2 `Fase 16B`–`20B` (imágenes de
-producción, CI/CD, despliegue con TLS/DNS/CDN/SMTP, subdominio por cadena y
-monitoreo) y `Fase 20`–`21` (pruebas de carga y cierre). Antes de empezar hay
-que decidir proveedor de nube, región y dominio: la propuesta no los fija.
+cierra el proyecto y lo migra a AWS con su plan gratuito: `Fase 15` (cierre de
+la ronda 2 y deudas), Parte 1 `Fase 16`–`18` (cobro sin conexión, sede por
+usuario, datos y respaldos en AWS), Parte 2 `Fase 16B`–`21B` (imágenes de
+producto en el menú QR, imágenes de producción, CI/CD, despliegue en EC2 con
+TLS/DNS/S3/SES, subdominio por cadena y monitoreo en CloudWatch) y
+`Fase 19`–`20` (pruebas de carga y cierre). Antes de empezar hay que decidir
+región y dominio, y crear la cuenta de AWS cerca de la sustentación: el plan
+gratuito dura 6 meses.
 
 Ver el historial de `git log` para el detalle de qué trajo cada commit.
