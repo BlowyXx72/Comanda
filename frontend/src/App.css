@@ -166,6 +166,47 @@
   font-weight: 600;
 }
 
+/* Aviso "Ahora en <sede>" al cambiar de sede (ui/AvisoCambioSede.tsx) */
+.aviso-sede {
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  z-index: var(--z-flotante);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@keyframes aviso-sede {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.92);
+  }
+  12%,
+  82% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.aviso-sede-pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-2) var(--esp-4);
+  border: var(--borde);
+  border-radius: var(--radio-total);
+  background: var(--color-success);
+  color: var(--color-tinta);
+  font-weight: 600;
+  box-shadow: var(--sombra-2);
+  white-space: nowrap;
+  animation: aviso-sede 2.2s var(--curva-salida) forwards;
+}
+
 /* Contenido de cada pantalla protegida */
 .contenido {
   flex: 1;
@@ -1066,6 +1107,64 @@
 
 .catalogo-fila-inactiva td {
   opacity: 0.55;
+  transition: opacity var(--dur-lenta) var(--curva-salida);
+}
+
+/* Transiciones del catálogo (Catalogo.tsx): las filas entran escalonadas al
+   cargar y la fila que acaba de cambiar se resalta un momento. */
+.catalogo-tabla tbody tr {
+  animation: aparecer var(--dur-lenta) var(--curva-salida) backwards;
+}
+
+.catalogo-tabla tbody tr:nth-child(2) { animation-delay: 30ms; }
+.catalogo-tabla tbody tr:nth-child(3) { animation-delay: 60ms; }
+.catalogo-tabla tbody tr:nth-child(4) { animation-delay: 90ms; }
+.catalogo-tabla tbody tr:nth-child(5) { animation-delay: 120ms; }
+.catalogo-tabla tbody tr:nth-child(n + 6) { animation-delay: 150ms; }
+
+/* Cambios sin guardar: franja durazno a la izquierda */
+.catalogo-tabla tbody tr.catalogo-fila--editando td:first-child {
+  box-shadow: inset 6px 0 0 var(--color-primary);
+}
+
+@keyframes fila-nueva {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  30% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes resalte-fila {
+  0%,
+  45% {
+    background: var(--resalte);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.catalogo-tabla tbody tr.catalogo-fila--nuevo {
+  --resalte: var(--color-success);
+  animation: fila-nueva 1.6s var(--curva-salida);
+}
+
+.catalogo-tabla tbody tr.catalogo-fila--guardado {
+  --resalte: var(--color-info);
+}
+
+.catalogo-tabla tbody tr.catalogo-fila--estado {
+  --resalte: var(--color-primary-soft);
+}
+
+.catalogo-tabla tbody tr.catalogo-fila--nuevo td,
+.catalogo-tabla tbody tr.catalogo-fila--guardado td,
+.catalogo-tabla tbody tr.catalogo-fila--estado td {
+  animation: resalte-fila 1.6s ease-out;
 }
 
 /* La celda sigue siendo celda (sin flex) para no romper el borde de la fila */
