@@ -74,12 +74,12 @@ services:
       # contenedor, así que se expone vía un pequeño proxy TCP en Node (ver
       # README) en vez del puerto de Studio directo.
       - "5556:5556"
-    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:dev"
 
   backend-2:
     <<: *backend
     container_name: comanda-backend-2
-    command: sh -c "npx prisma migrate deploy && npm run start:dev:2"
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:dev:2"
 
   # Fase 11B: almacén de objetos de §5.1 (XML fiscales). Consola web en
   # http://localhost:${MINIO_CONSOLE_PORT} con MINIO_ROOT_USER/PASSWORD.
@@ -128,7 +128,7 @@ services:
         condition: service_started
     # migrate deploy también aquí por si el worker arranca antes que el
     # backend; Prisma serializa los dos con un advisory lock.
-    command: sh -c "npx prisma migrate deploy && npm run start:worker"
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:worker"
 
   frontend:
     build:
