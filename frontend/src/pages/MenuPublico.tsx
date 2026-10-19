@@ -170,9 +170,7 @@ export function MenuPublicoPage() {
           className="menu-publico-barra"
           onClick={() => document.getElementById('domicilio')?.scrollIntoView({ behavior: 'smooth' })}
         >
-          <span>
-            Ver pedido · {cantidadCarrito} {cantidadCarrito === 1 ? 'producto' : 'productos'}
-          </span>
+          <span>Ver pedido ({cantidadCarrito})</span>
           <span className="menu-publico-barra-total">
             <Icono nombre="bolsa" tamano={18} />
             {formatearCOP(totalCarrito)}

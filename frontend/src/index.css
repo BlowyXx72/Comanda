@@ -8,6 +8,10 @@
  * sobre durazno da 3.3:1, así que los botones durazno usan la "tinta"
  * #2A2E37 (7.3:1).
  *
+ * Estilo: neo-brutalista ("áspero"), recomendado por la skill para alta
+ * variación: bordes gruesos de tinta, sombras sólidas desplazadas, tipografía
+ * pesada, textura de grano y un fondo aurora suave con la paleta.
+ *
  * Los componentes usan solo tokens semánticos (--color-*), nunca hex sueltos.
  * El tema lo fija data-theme en <html> (ver index.html y src/tema/tema.ts).
  */
@@ -51,16 +55,22 @@
   --color-ring: #5e6472;
   --color-scrim: rgba(42, 46, 55, 0.45);
 
-  /* Elevación (tintada con la pizarra, no negro puro) */
-  --sombra-1: 0 1px 2px rgba(94, 100, 114, 0.08), 0 1px 3px rgba(94, 100, 114, 0.1);
-  --sombra-2: 0 4px 12px rgba(94, 100, 114, 0.12), 0 2px 4px rgba(94, 100, 114, 0.06);
-  --sombra-3: 0 16px 40px rgba(94, 100, 114, 0.18), 0 4px 12px rgba(94, 100, 114, 0.08);
+  /* Neo-brutalismo: borde de tinta y sombras sólidas desplazadas (sin blur).
+     La tinta es la misma en ambos modos para los bloques de color pastel. */
+  --color-tinta: #2a2e37;
+  --color-borde-duro: #2a2e37;
+  --borde: 2px solid var(--color-borde-duro);
+  --borde-grueso: 3px solid var(--color-borde-duro);
+  --sombra-1: 3px 3px 0 var(--color-borde-duro);
+  --sombra-2: 5px 5px 0 var(--color-borde-duro);
+  --sombra-3: 8px 8px 0 var(--color-borde-duro);
+  --sombra-presionada: 1px 1px 0 var(--color-borde-duro);
 
   /* Forma, espacio y tipografía */
-  --radio-s: 8px;
-  --radio-m: 12px;
-  --radio-l: 18px;
-  --radio-xl: 28px;
+  --radio-s: 6px;
+  --radio-m: 10px;
+  --radio-l: 14px;
+  --radio-xl: 20px;
   --radio-total: 999px;
   --esp-1: 4px;
   --esp-2: 8px;
@@ -71,7 +81,7 @@
   --esp-7: 48px;
 
   --fuente: 'Karla', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --fuente-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --fuente-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   /* Movimiento: entrar más lento que salir; curvas de desaceleración */
@@ -133,9 +143,9 @@
   --color-ring: #ffa69e;
   --color-scrim: rgba(0, 0, 0, 0.6);
 
-  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --sombra-2: 0 4px 14px rgba(0, 0, 0, 0.35);
-  --sombra-3: 0 18px 44px rgba(0, 0, 0, 0.5);
+  /* En oscuro el borde y la sombra son casi negros: se leen como bloques
+     más oscuros que la superficie. */
+  --color-borde-duro: #0b0c0f;
 
   color-scheme: dark;
 }
@@ -146,11 +156,63 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--color-bg);
+  transition: background-color var(--dur-lenta) ease;
+}
+
 body {
+  position: relative;
   margin: 0;
   min-height: 100dvh;
-  background: var(--color-bg);
-  transition: background-color var(--dur-lenta) ease, color var(--dur-lenta) ease;
+  transition: color var(--dur-lenta) ease;
+}
+
+/* Fondo aurora: manchas grandes de la paleta que se mueven muy despacio
+   (12-18 s, solo transform). Va detrás de todo el contenido. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(28vmax 28vmax at 18% 22%, color-mix(in srgb, var(--color-primary) 38%, transparent), transparent 70%),
+    radial-gradient(26vmax 26vmax at 82% 30%, color-mix(in srgb, var(--color-success) 42%, transparent), transparent 70%),
+    radial-gradient(30vmax 30vmax at 60% 85%, color-mix(in srgb, var(--color-info) 40%, transparent), transparent 70%);
+  opacity: 0.55;
+  animation: aurora 18s ease-in-out infinite alternate;
+}
+
+:root[data-theme='oscuro'] body::before {
+  opacity: 0.22;
+}
+
+@keyframes aurora {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(4vmax, -3vmax, 0) rotate(8deg);
+  }
+}
+
+/* Grano: textura de ruido SVG fija sobre todo, sin capturar clics. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='oscuro'] body::after {
+  opacity: 0.09;
+  mix-blend-mode: screen;
+  filter: invert(1);
 }
 
 #root {
@@ -162,29 +224,29 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--fuente);
+  font-family: var(--fuente-display);
   color: var(--color-text);
   line-height: 1.2;
   text-wrap: balance;
 }
 
 h1 {
-  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.9rem, 1.4rem + 2vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
   margin: 0 0 var(--esp-4);
 }
 
 h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 800;
   letter-spacing: -0.01em;
   margin: 0 0 var(--esp-3);
 }
 
 h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   margin: 0 0 var(--esp-2);
 }
 
@@ -208,17 +270,18 @@ code {
 
 button {
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--esp-2);
   min-height: 44px;
   padding: 0 var(--esp-4);
-  border: 1px solid transparent;
+  border: var(--borde);
   border-radius: var(--radio-m);
   background: var(--color-primary);
   color: var(--color-on-primary);
+  box-shadow: var(--sombra-1);
   cursor: pointer;
   touch-action: manipulation;
   transition:
@@ -228,18 +291,23 @@ button {
     transform var(--dur-rapida) var(--curva-salida);
 }
 
+/* Al pasar el mouse el botón "se levanta"; al presionar se hunde sobre su
+   sombra. Solo transform y sombra: no mueve el layout. */
 button:hover:not(:disabled) {
   background: var(--color-primary-hover);
-  box-shadow: var(--sombra-1);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--sombra-2);
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translate(2px, 2px);
+  box-shadow: var(--sombra-presionada);
 }
 
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 :focus-visible {
@@ -253,7 +321,7 @@ textarea {
   font: inherit;
   min-height: 44px;
   padding: 0 var(--esp-3);
-  border: 1px solid var(--color-border-strong);
+  border: var(--borde);
   border-radius: var(--radio-m);
   background: var(--color-surface);
   color: var(--color-text);
@@ -272,8 +340,7 @@ input:not([type='radio']):not([type='checkbox']):focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: none;
-  border-color: var(--color-ring);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  box-shadow: 3px 3px 0 var(--color-primary);
 }
 
 input[type='radio'],
