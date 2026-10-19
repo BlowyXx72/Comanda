@@ -122,8 +122,9 @@ punto de extensión. Lista completa y razonada en `docs/prototipo-slice.md`.
 De la ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)),
 la Parte 2 (Fases 11B–14B) ya está completa e integrada en `main`. De la
 Parte 1 (Fases 11–14, aprobada con el docente), la Fase 11 (inventario y
-recetas), la Fase 12 (RLS) y la Fase 13 (réplica de lectura) ya están
-implementadas: las operaciones de negocio pasan por
+recetas), la Fase 12 (RLS), la Fase 13 (réplica de lectura) y la Fase 14
+(reportes por día/mes, producto y franja horaria, en zona America/Bogota) ya
+están implementadas: las operaciones de negocio pasan por
 `PrismaService.conCadena()` (rol `comanda_app` + `app.cadena_id`) y los filtros
 por `cadena_id` de la aplicación se mantienen como segunda capa. Los reportes
 (`ReportsService`) leen de `postgres-replica` vía `PrismaReplicaService`; es lo

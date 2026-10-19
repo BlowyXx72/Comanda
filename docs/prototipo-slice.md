@@ -346,7 +346,8 @@ dueño". Así quedó:
 - `GET /reportes/consolidado?desde=&hasta=` (solo ADMIN, `@Roles('ADMIN')`
   sobre el `@Roles('CAJERO', 'ADMIN')` del controlador) agrupa los pagos de
   **todas** las sedes de la cadena por sede, día y canal. Sin `desde`/`hasta`
-  el rango es "hoy" (mismo criterio UTC que `GET /reportes/ventas`).
+  el rango es "hoy" (desde la Fase 14, en zona America/Bogota, igual que
+  `GET /reportes/ventas`; ver "Reportes ampliados (Fase 14)").
   Agrupar por `Pedido.canal` sin asumir qué valores existen es deliberado:
   hoy solo hay `SALON`, pero si la Parte 2 agrega `DOMICILIO` (Fase 8B),
   aparece solo como otra fila, sin tocar este código.
@@ -514,6 +515,38 @@ dueño". Así quedó:
   replicación, monitoreo del lag, balanceo entre varias réplicas y arranque
   desde una base primaria 100 % limpia (no se probó un volumen nuevo del
   primario con todo el stack).
+
+## Reportes ampliados (Fase 14, ronda 2, §1.4 y §6.1)
+
+- **`GET /reportes/consolidado?agrupacion=dia|mes`** (solo ADMIN): `dia` es el
+  comportamiento de siempre; con `mes` la clave `fecha` de cada fila es
+  `YYYY-MM` y se mantienen sede y canal como dimensiones. El rango
+  `desde`/`hasta` sigue siendo por días (con el rango por defecto, "hoy", el mes
+  mostrado es solo el de hoy).
+- **`GET /reportes/productos?desde=&hasta=`** (solo ADMIN): ventas por producto
+  en el rango (`cantidadVendida`, `total = precioUnitario × cantidad`), ordenado
+  por cantidad vendida descendente; considera los pedidos con algún pago en el
+  rango.
+- **`GET /reportes/franjas?desde=&hasta=`** (solo ADMIN): ventas por hora del
+  día (0-23, solo las horas con ventas) con `cantidadPedidos` y `totalVentas`.
+- Los tres leen de la réplica (`PrismaReplicaService`, Fase 13) y agrupan en
+  memoria con `Prisma.Decimal`, sin asumir canales fijos, igual que
+  `consolidado`.
+- **Zona horaria**: `ventasDelDia`, `consolidado`, `productos` y `franjas`
+  calculan día, mes y hora en `America/Bogota` (UTC-5 fijo, sin horario de
+  verano) mediante `diaBogota()` y `rangoBogota()` en `ReportsService`.
+  `// DECISIÓN DE PROTOTIPO`: zona fija del negocio, no por sede; el prototipo
+  no modela zona horaria por sede. El resumen diario por correo (Fase 14B)
+  hereda el mismo "hoy" de Bogotá.
+- **Frontend `/panel`**: selector Día/Mes que vuelve a pedir el consolidado, y
+  dos tablas nuevas (ventas por producto y por franja horaria), con el mismo
+  estilo de tabla simple. La suma en vivo de `venta:registrada` deriva el día en
+  Bogotá y, en modo mes, usa la clave `YYYY-MM`. Las tablas de productos y
+  franjas se cargan una vez y no se actualizan en vivo (el payload del evento no
+  trae el detalle).
+- `// TODO PRODUCCIÓN`: zona horaria por sede, ampliar automáticamente el rango
+  al elegir `mes`, y verificación manual en navegador real de `/panel` (solo se
+  comprobó compilación y lint).
 
 ## Pulido (Fase 6)
 

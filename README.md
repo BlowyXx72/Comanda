@@ -234,4 +234,16 @@ detallado y los contratos de integración entre ambas), ya integradas en
   CU-03), `Fase 8B` (domicilio web, CU-04), `Fase 9B` (modo offline del
   mesero, CU-07).
 
+La ronda 2 (ver [`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md))
+continúa la numeración con la misma división en dos partes:
+
+- **Parte 1** — datos y reportes: `Fase 11` (inventario y recetas, §6.2),
+  `Fase 12` (Row Level Security de Postgres, §6.1), `Fase 13` (réplica de
+  lectura para reportes, §5.1), `Fase 14` (reportes por día/mes, producto y
+  franja horaria en zona America/Bogota).
+- **Parte 2** — infraestructura y canales: `Fase 11B` (cola de trabajos y
+  validación DIAN simulada), `Fase 12B` (pedidos de plataforma simulados,
+  CU-05), `Fase 13B` (Nginx con TLS 1.3/HTTP2/WSS y dos instancias del
+  backend), `Fase 14B` (correo de comprobantes y resumen diario).
+
 Ver el historial de `git log` para el detalle de qué trajo cada commit.
