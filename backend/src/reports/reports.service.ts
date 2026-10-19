@@ -19,6 +19,19 @@ export interface FilaConsolidado {
   totalVentas: Prisma.Decimal;
 }
 
+export interface FilaProducto {
+  productoId: string;
+  productoNombre: string;
+  cantidadVendida: number;
+  total: Prisma.Decimal;
+}
+
+export interface FilaFranja {
+  hora: number;
+  cantidadPedidos: number;
+  totalVentas: Prisma.Decimal;
+}
+
 // Consumido por ReportsController (GET /reportes/ventas, GET /reportes/consolidado).
 @Injectable()
 export class ReportsService {
@@ -100,6 +113,97 @@ export class ReportsService {
     const filas = [...grupos.values()].sort(
       (a, b) => a.sedeNombre.localeCompare(b.sedeNombre) || a.fecha.localeCompare(b.fecha) || a.canal.localeCompare(b.canal),
     );
+    const totalGeneral = filas.reduce((acc, fila) => acc.plus(fila.totalVentas), new Prisma.Decimal(0));
+
+    return {
+      desde: inicio.toISOString().slice(0, 10),
+      hasta: finBase.toISOString().slice(0, 10),
+      filas,
+      totalGeneral,
+    };
+  }
+
+  // Fase 14 (§6.1): ventas por producto. Cuenta los detalles de los pedidos
+  // cobrados en el rango (por fecha del pago), con el precio unitario con que
+  // se vendió. Lee de la réplica, igual que consolidado().
+  async productos(cadenaId: string, desde?: string, hasta?: string) {
+    const inicio = inicioUtc(desde);
+    const finBase = inicioUtc(hasta ?? desde);
+    const fin = new Date(finBase);
+    fin.setUTCDate(fin.getUTCDate() + 1);
+
+    const detalles = await this.replica.conCadena(cadenaId, (tx) =>
+      tx.pedidoDetalle.findMany({
+        where: {
+          pedido: {
+            sede: { cadenaId },
+            pagos: { some: { creadoEn: { gte: inicio, lt: fin } } },
+          },
+        },
+        include: { producto: { select: { nombre: true } } },
+      }),
+    );
+
+    const grupos = new Map<string, FilaProducto>();
+    for (const detalle of detalles) {
+      const subtotal = new Prisma.Decimal(detalle.precioUnitario).times(detalle.cantidad);
+      const fila = grupos.get(detalle.productoId);
+      if (fila) {
+        fila.cantidadVendida += detalle.cantidad;
+        fila.total = fila.total.plus(subtotal);
+      } else {
+        grupos.set(detalle.productoId, {
+          productoId: detalle.productoId,
+          productoNombre: detalle.producto.nombre,
+          cantidadVendida: detalle.cantidad,
+          total: subtotal,
+        });
+      }
+    }
+
+    const filas = [...grupos.values()].sort(
+      (a, b) => b.cantidadVendida - a.cantidadVendida || a.productoNombre.localeCompare(b.productoNombre),
+    );
+    const totalGeneral = filas.reduce((acc, fila) => acc.plus(fila.total), new Prisma.Decimal(0));
+
+    return {
+      desde: inicio.toISOString().slice(0, 10),
+      hasta: finBase.toISOString().slice(0, 10),
+      filas,
+      totalGeneral,
+    };
+  }
+
+  // Fase 14 (§6.1): ventas por franja horaria. Agrupa los pagos por hora del
+  // día (0-23). Solo aparecen las horas con ventas; no se rellenan las vacías.
+  async franjas(cadenaId: string, desde?: string, hasta?: string) {
+    const inicio = inicioUtc(desde);
+    const finBase = inicioUtc(hasta ?? desde);
+    const fin = new Date(finBase);
+    fin.setUTCDate(fin.getUTCDate() + 1);
+
+    const pagos = await this.replica.conCadena(cadenaId, (tx) =>
+      tx.pago.findMany({
+        where: {
+          creadoEn: { gte: inicio, lt: fin },
+          pedido: { sede: { cadenaId } },
+        },
+      }),
+    );
+
+    const grupos = new Map<number, FilaFranja>();
+    for (const pago of pagos) {
+      const hora = pago.creadoEn.getUTCHours();
+      const fila = grupos.get(hora);
+      if (fila) {
+        fila.cantidadPedidos += 1;
+        fila.totalVentas = fila.totalVentas.plus(pago.monto);
+      } else {
+        grupos.set(hora, { hora, cantidadPedidos: 1, totalVentas: new Prisma.Decimal(pago.monto) });
+      }
+    }
+
+    const filas = [...grupos.values()].sort((a, b) => a.hora - b.hora);
     const totalGeneral = filas.reduce((acc, fila) => acc.plus(fila.totalVentas), new Prisma.Decimal(0));
 
     return {

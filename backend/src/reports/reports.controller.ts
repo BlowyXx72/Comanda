@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
 import { ReporteConsolidadoQueryDto } from './dto/reporte-consolidado-query.dto.js';
+import { ReporteRangoQueryDto } from './dto/reporte-rango-query.dto.js';
 import { ReporteVentasQueryDto } from './dto/reporte-ventas-query.dto.js';
 import { ReportsService } from './reports.service.js';
 
@@ -32,5 +33,19 @@ export class ReportsController {
   @Get('consolidado')
   consolidado(@Query() query: ReporteConsolidadoQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
     return this.reportsService.consolidado(usuario.cadenaId, query.desde, query.hasta, query.agrupacion);
+  }
+
+  @ApiOperation({ summary: 'Ventas por producto (cantidad y total) en un rango de fechas (solo ADMIN)' })
+  @Roles('ADMIN')
+  @Get('productos')
+  productos(@Query() query: ReporteRangoQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    return this.reportsService.productos(usuario.cadenaId, query.desde, query.hasta);
+  }
+
+  @ApiOperation({ summary: 'Ventas por hora del día (0-23) en un rango de fechas (solo ADMIN)' })
+  @Roles('ADMIN')
+  @Get('franjas')
+  franjas(@Query() query: ReporteRangoQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    return this.reportsService.franjas(usuario.cadenaId, query.desde, query.hasta);
   }
 }
