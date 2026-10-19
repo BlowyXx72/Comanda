@@ -181,13 +181,57 @@ export interface ReporteConsolidado {
   totalGeneral: string;
 }
 
-export const obtenerReporteConsolidado = (token: string, desde?: string, hasta?: string) => {
+export type AgrupacionReporte = 'dia' | 'mes';
+
+const queryReporte = (desde?: string, hasta?: string, agrupacion?: AgrupacionReporte) => {
   const params = new URLSearchParams();
   if (desde) params.set('desde', desde);
   if (hasta) params.set('hasta', hasta);
+  if (agrupacion) params.set('agrupacion', agrupacion);
   const query = params.toString();
-  return apiFetch<ReporteConsolidado>(`/reportes/consolidado${query ? `?${query}` : ''}`, {}, token);
+  return query ? `?${query}` : '';
 };
+
+export const obtenerReporteConsolidado = (
+  token: string,
+  desde?: string,
+  hasta?: string,
+  agrupacion?: AgrupacionReporte,
+) => apiFetch<ReporteConsolidado>(`/reportes/consolidado${queryReporte(desde, hasta, agrupacion)}`, {}, token);
+
+// Fase 14: ventas por producto y por franja horaria.
+export interface FilaReporteProducto {
+  productoId: string;
+  productoNombre: string;
+  cantidadVendida: number;
+  total: string;
+}
+
+export interface ReporteProductos {
+  desde: string;
+  hasta: string;
+  filas: FilaReporteProducto[];
+  totalGeneral: string;
+}
+
+export interface FilaReporteFranja {
+  hora: number;
+  cantidadPedidos: number;
+  totalVentas: string;
+}
+
+export interface ReporteFranjas {
+  desde: string;
+  hasta: string;
+  filas: FilaReporteFranja[];
+  totalGeneral: string;
+}
+
+export const obtenerReporteProductos = (token: string, desde?: string, hasta?: string) =>
+  apiFetch<ReporteProductos>(`/reportes/productos${queryReporte(desde, hasta)}`, {}, token);
+
+export const obtenerReporteFranjas = (token: string, desde?: string, hasta?: string) =>
+  apiFetch<ReporteFranjas>(`/reportes/franjas${queryReporte(desde, hasta)}`, {}, token);
 
 // --- Menú público (CU-03): sin token, lo consume la vista del comensal ---
 
