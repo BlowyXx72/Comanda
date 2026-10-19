@@ -57,9 +57,6 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - **Réplica de lectura** de base de datos (la propuesta la usa específicamente
   para separar los reportes de la carga transaccional; aquí `ReportsService`
   lee de la misma instancia que todo lo demás).
-- **Row Level Security (RLS)** de PostgreSQL para aislamiento multi-tenant — en
-  el prototipo el aislamiento por `cadena_id` se aplica a nivel de aplicación
-  (filtros explícitos en cada query), no a nivel de motor de base de datos.
 - **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
   con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
 - **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
@@ -440,9 +437,6 @@ dueño". Así quedó:
 
 ## Row Level Security (Fase 12, ronda 2, §6.1)
 
-*(En construcción: las historias 3–5 de la Fase 12 completan `conCadena()`, la
-prueba de aislamiento y esta sección.)*
-
 - **Rol sin privilegios de dueño** (`comanda_app`, migración `r2p1_rol_app`).
 - **Migración `r2p1_rls`**: `ENABLE` + `FORCE ROW LEVEL SECURITY` en las 13
   tablas de negocio más `integraciones_plataforma`, con una política
@@ -461,6 +455,24 @@ prueba de aislamiento y esta sección.)*
   tiene una política que le da acceso total al rol dueño (el que corre
   migraciones y seed, y las consultas previas a conocer la cadena: login por
   email, API key de plataforma). `comanda_app` nunca la cumple.
+- **`PrismaService.conCadena(cadenaId, fn)`**: segundo cliente Prisma conectado
+  como `comanda_app` (`DATABASE_URL_APP`) que abre una transacción, ejecuta
+  `set_config('app.cadena_id', cadenaId, true)` (local a la transacción, no
+  sobrevive en el pool) y corre `fn(tx)`. Lo usan los servicios de negocio
+  (sedes, catálogo, inventario, reportes, pagos, mesas, pedidos, menú público,
+  domicilio, sync vía pedidos) y los procesadores del worker con la `cadenaId`
+  del payload del job. Los filtros explícitos por `cadenaId` siguen en el
+  código como segunda capa.
+- **Quedan en el cliente dueño** (a propósito, funcionan por `dueno_total`):
+  login por email, resolución de `X-Api-Key`, `reencolarPendientes` y la lista
+  de cadenas del resumen diario — lookups previos a conocer la cadena.
+- **Prueba de aislamiento** (`backend/test/rls-aislamiento.spec.ts`, vitest):
+  crea dos cadenas con el rol dueño y verifica con `comanda_app` que (1) sin
+  `app.cadena_id` no se ve ninguna fila, (2) con la cadena A no aparecen filas
+  de la B (incluida `mesas`, con política `EXISTS`), (3) insertar una fila de
+  otra cadena falla por `WITH CHECK` y (4) un `UPDATE` no alcanza filas ajenas.
+  Corre contra la base real y limpia lo que crea:
+  `docker compose run --rm backend-1 npx vitest run test/rls-aislamiento.spec.ts`.
 
 ## Pulido (Fase 6)
 

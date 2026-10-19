@@ -121,9 +121,11 @@ punto de extensión. Lista completa y razonada en `docs/prototipo-slice.md`.
 De la ronda 2 ([`docs/fases-siguientes-2.md`](docs/fases-siguientes-2.md)),
 la Parte 2 (Fases 11B–14B) ya está completa e integrada en `main`. De la
 Parte 1 (Fases 11–14, aprobada con el docente), la Fase 11 (inventario y
-recetas) ya está implementada; **RLS (Fase 12) y réplica de lectura (Fase
-13) siguen fuera de alcance hasta que su commit aterrice** — mientras tanto
-el aislamiento multi-tenant sigue siendo solo a nivel de aplicación.
+recetas) y la Fase 12 (RLS) ya están implementadas: las operaciones de negocio
+pasan por `PrismaService.conCadena()` (rol `comanda_app` + `app.cadena_id`) y
+los filtros por `cadena_id` de la aplicación se mantienen como segunda capa.
+**La réplica de lectura (Fase 13) sigue fuera de alcance hasta que su commit
+aterrice.**
 
 Desde la Fase 11 (ronda 2, §6.2), el ER ya tiene `Insumo`, `Receta` y
 `MovimientoInventario`: `PaymentsService.pagar` descuenta inventario por
