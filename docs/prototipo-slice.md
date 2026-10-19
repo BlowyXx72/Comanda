@@ -438,6 +438,30 @@ dueño". Así quedó:
   Papas Fritas, Gaseosa), con una `ENTRADA` inicial de 10000 por insumo en
   cada una de las 3 sedes para que la demo no arranque en cero.
 
+## Row Level Security (Fase 12, ronda 2, §6.1)
+
+*(En construcción: las historias 3–5 de la Fase 12 completan `conCadena()`, la
+prueba de aislamiento y esta sección.)*
+
+- **Rol sin privilegios de dueño** (`comanda_app`, migración `r2p1_rol_app`).
+- **Migración `r2p1_rls`**: `ENABLE` + `FORCE ROW LEVEL SECURITY` en las 13
+  tablas de negocio más `integraciones_plataforma`, con una política
+  `aislamiento_cadena` (`FOR ALL`, `USING` y `WITH CHECK`) para `comanda_app`
+  que compara contra `current_setting('app.cadena_id', true)`. Sin esa
+  variable, el rol de la app no ve ni escribe ninguna fila.
+- **Decisión de prototipo — EXISTS en vez de `cadena_id` denormalizado** para
+  `mesas`, `pedidos`, `pedido_detalles`, `pagos`, `documentos_fiscales`,
+  `movimientos_inventario` y `recetas`: la política hace `EXISTS` contra el
+  padre (`sedes`, `pedidos` o `productos`). La propuesta dice que todas las
+  tablas de negocio llevan `cadena_id` y la columna sería lo más fiel, pero
+  obligaría a tocar cada INSERT (incluido el código de Parte 2) y a mantener
+  un campo redundante; con `EXISTS` el esquema y la escritura quedan intactos.
+  `TODO PRODUCCIÓN`: denormalizar e indexar `cadena_id` con volúmenes reales.
+- **Política `dueno_total`**: como `FORCE` también aplica al dueño, cada tabla
+  tiene una política que le da acceso total al rol dueño (el que corre
+  migraciones y seed, y las consultas previas a conocer la cadena: login por
+  email, API key de plataforma). `comanda_app` nunca la cumple.
+
 ## Pulido (Fase 6)
 
 - `GET /reportes/ventas` (no estaba en la lista original del §5, pero el
