@@ -92,6 +92,34 @@ $ curl -s http://localhost:3000/health
 
 Seed final: `1 cadena, 3 sedes, 3 usuarios, 8 productos, 18 mesas, 15 insumos, receta en 8 productos.`
 
+### Actualización: arranque en un solo comando (corregido)
+
+El paso manual de arriba se eliminó. `docker-compose.yml` tiene ahora un
+servicio de un solo uso, `prisma-generate`, que genera el cliente de Prisma y
+termina. `backend-1`, `backend-2` y `worker` esperan a que acabe
+(`condition: service_completed_successfully`), igual que
+`postgres-replica-setup` con la réplica. No se genera dentro de cada
+contenedor porque los tres comparten la carpeta y escribirían a la vez.
+
+Prueba repetida desde cero, el 2026-10-20, en las mismas condiciones que
+causaron el error: volúmenes borrados y sin `backend/src/generated/`.
+
+```
+docker compose down -v
+rm -rf backend/src/generated backend/dist backend/dist-2 backend/dist-worker
+docker compose up -d --build        # único comando
+```
+
+| Paso | Resultado real |
+|---|---|
+| `docker compose up -d --build` | terminó en 115 s, código de salida 0 |
+| `comanda-prisma-generate` | `✔ Generated Prisma Client (7.10.0) ... in 308ms`, `Exited (0)` |
+| `backend-1` respondiendo `/health` | a los 171 s del `up`, sin pasos manuales |
+| Errores `ENOENT` en `backend-1`, `backend-2`, `worker` | 0 en los tres; los tres arrancaron |
+| `npx prisma db seed` (paso aparte, como dice el README) | `Seed completado: ... receta en 8 productos.` |
+| `https://localhost:8443/api/health` (vía Nginx) | `{"status":"ok","dependencies":{"postgres":"up","redis":"up"}}` |
+| `npm test` | `Test Files 3 passed (3)`, `Tests 10 passed (10)` |
+
 ---
 
 ## 2. Red
@@ -242,6 +270,22 @@ $ echo | openssl s_client -connect localhost:8443 -tls1_2
 HTTP/2 se verificó por el lado del servidor (ALPN con `openssl`) en vez de
 con `curl -vk --http2` como pedía el enunciado — es una limitación de las
 herramientas del host, no de Nginx.
+
+### HTTP/2 visto desde un navegador real (complemento)
+
+Para tener también la vista del cliente, se abrió la app en Microsoft Edge
+(sin ventana, controlado por el protocolo de DevTools) a través de Nginx, y
+se leyó el campo `protocol` que el navegador reporta por cada respuesta
+(`Network.responseReceived`):
+
+```
+https://localhost:8443/login        -> 200 h2
+https://localhost:8443/api/health   -> 200 h2
+protocolos en las 55 respuestas de la carga: ["h2"]
+```
+
+Las 55 respuestas (HTML, JavaScript, CSS y la API) viajaron por HTTP/2; no
+hubo ninguna en HTTP/1.1.
 
 ---
 
@@ -402,14 +446,50 @@ Se restauró `DIAN_SIMULADA_TASA_FALLA=0.2` y se reinició el `worker`.
 
 ## 8. Modo offline
 
-**No se pudo probar de punta a punta.** Esta sesión no tiene una
-herramienta de navegador disponible (no hay forma de abrir DevTools, cortar
-la red desde el navegador, ni inspeccionar IndexedDB/el service worker), así
-que no hay evidencia real del flujo completo descrito en el enunciado
-(mesero crea pedidos sin red, reconecta, `/sync` los sube).
+### De punta a punta en un navegador real
 
-Lo que **sí** se verificó — la mitad de backend del contrato de
-idempotencia que usa ese flujo — llamando `POST /sync` directo:
+Se probó con Microsoft Edge (sin ventana, controlado por el protocolo de
+DevTools), con la sesión del mesero en `http://localhost:5173/mesas`.
+`localhost` es contexto seguro, así que el service worker se registra. La
+red se cortó y se devolvió con `Network.emulateNetworkConditions`, que es lo
+mismo que el modo "Sin conexión" de DevTools: el navegador pasa
+`navigator.onLine` a `false` y dispara el evento `offline`.
+
+| Paso | Resultado real |
+|---|---|
+| Service worker registrado y activo | `true` |
+| Cortar la red | `navigator.onLine` → `false` |
+| Tomar un pedido sin red (Mesa 1, 2 productos, "Enviar comanda") | Aviso: `Sin conexión — 1 pedido pendiente`; la mesa queda `OCUPADA · SIN SINCRONIZAR` |
+| Cola local en IndexedDB (`comanda-offline` → `cola`) | `[{"id":"be4d6b28-ea38-4fd6-a64e-21af64c3ab8e","mesa":1}]` |
+| Recargar la página **sin red** | La app abre igual (la sirve el service worker) y muestra las 6 mesas desde la caché local |
+| Devolver la red | `navigator.onLine` → `true`; la app llama sola a `POST /sync` → `200` |
+| Después de sincronizar | Aviso desaparece; cola local con `0` pedidos; Mesa 1 queda `OCUPADA` |
+
+Confirmación del lado del servidor: el pedido llegó a la base con **el
+mismo UUID** que generó el navegador sin red.
+
+```
+$ psql ... where p.id = 'be4d6b28-ea38-4fd6-a64e-21af64c3ab8e'
+ sede        | mesa | estado         | total    | lineas
+ Sede Centro |    1 | EN_PREPARACION | 13000.00 |      2
+```
+
+Capturas (en `docs/evidencia/`):
+
+| En línea | Pedido tomado sin red |
+|---|---|
+| ![Mesas en línea](evidencia/offline-01-en-linea.png) | ![Sin conexión, 1 pedido pendiente](evidencia/offline-02-pedido-sin-red.png) |
+
+| Recarga sin red (service worker) | Tras reconectar y sincronizar |
+|---|---|
+| ![Recarga sin red](evidencia/offline-03-recarga-sin-red.png) | ![Sincronizado](evidencia/offline-04-sincronizado.png) |
+
+Lo que **no** cubre: el cobro sin conexión. Solo el mesero trabaja sin red;
+cobrar requiere conexión (CU-07 parcial, Fase 16 de la ronda 3).
+
+### Idempotencia de `/sync` (prueba directa al backend)
+
+Llamando `POST /sync` directo:
 
 ```
 $ curl -X POST .../api/sync -d '{"pedidos":[{"id":"0ff1c0de-...", ...}]}'
@@ -451,13 +531,11 @@ aplica ahí, y escribir en la réplica falla).
 
 ## Lo que no funcionó o es frágil (resumen para la sustentación)
 
-1. **El arranque desde cero no es un solo comando.** `docker compose up -d
-   --build` no basta la primera vez: hace falta `docker compose run --rm
-   backend-1 npm install` después, porque el cliente de Prisma generado
-   vive en un bind mount del host que no sobrevive a una limpieza de
-   `backend/src/generated/`. Si alguien clona el repo y nunca borró esa
-   carpeta, probablemente no le pase — pero en una máquina nueva o tras un
-   `git clean -fdx`, sí.
+1. ~~**El arranque desde cero no es un solo comando.**~~ **Corregido:** el
+   servicio `prisma-generate` genera el cliente antes de que arranquen
+   backend y worker. Probado desde cero con volúmenes y carpeta generada
+   borrados: un solo `docker compose up -d --build` deja todo funcionando
+   (ver "Actualización" en la sección 1).
 2. **Redis es un punto único de falla para todo el backend**, no solo para
    el tiempo real: si Redis está caído, el backend entero no termina de
    arrancar (bloqueado reintentando conectar el adaptador de Socket.IO), no
@@ -469,11 +547,13 @@ aplica ahí, y escribir en la réplica falla).
    producción que vale la pena nombrar explícitamente.
 4. **Las herramientas de HTTP/2 del lado cliente en esta máquina Windows no
    sirven** (ni el `curl` de Git Bash ni el `curl.exe` nativo traen HTTP/2
-   compilado) — hubo que verificar HTTP/2 por el lado del servidor con
-   `openssl`/ALPN en vez de con `curl --http2`.
-5. **El modo offline no se verificó de punta a punta** — falta pasar por un
-   navegador real antes de la sustentación para confirmar visualmente la
-   cola local y el indicador de "pedidos pendientes".
+   compilado). Se verificó con `openssl`/ALPN del lado del servidor y,
+   además, desde un navegador real: las 55 respuestas de la carga llegaron
+   por `h2` (sección 5).
+5. ~~**El modo offline no se verificó de punta a punta.**~~ **Verificado** en
+   un navegador real: pedido sin red, cola en IndexedDB, recarga sin red y
+   sincronización al volver la red, con el mismo UUID en la base (sección 8).
+   Sigue sin existir el cobro sin conexión (CU-07 parcial).
 6. Con **las dos instancias de backend caídas simultáneamente**, la API cae
    por completo (502) — la tolerancia a fallas cubre una instancia, no
    ambas (comportamiento esperado, no un bug, pero hay que saber explicarlo

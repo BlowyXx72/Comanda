@@ -26,6 +26,8 @@ x-backend: &backend
       condition: service_healthy
     postgres-replica:
       condition: service_healthy
+    prisma-generate:
+      condition: service_completed_successfully
 
 services:
   postgres:
@@ -61,6 +63,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Genera el cliente de Prisma (backend/src/generated/) y termina. Ese código
+  # generado no va en git y vive en el bind mount ./backend, que tapa el que
+  # trae la imagen: en un clon nuevo (o tras borrar la carpeta) backend y
+  # worker arrancaban sin él (ver docs/EVIDENCIA_EXPOSICION.md, sección 1).
+  # DECISIÓN DE PROTOTIPO: un servicio de un solo uso, igual que
+  # postgres-replica-setup, en vez de generar en cada contenedor: backend-1,
+  # backend-2 y worker comparten la carpeta y escribirían en ella a la vez.
+  prisma-generate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: comanda-prisma-generate
+    restart: "no"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - comanda-backend-node-modules:/app/node_modules
+    command: npx prisma generate
 
   # Fase 13: crea (o actualiza) el rol de replicación en el primario y termina.
   # DECISIÓN DE PROTOTIPO: servicio de un solo uso en vez de un script de
@@ -202,6 +224,8 @@ services:
         condition: service_started
       mailpit:
         condition: service_started
+      prisma-generate:
+        condition: service_completed_successfully
     # migrate deploy también aquí por si el worker arranca antes que el
     # backend; Prisma serializa los dos con un advisory lock.
     command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:worker"
