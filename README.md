@@ -33,9 +33,32 @@ interfaz (p. ej. "mejora el diseño de /cocina").
 
 ```bash
 cp .env.example .env
-docker compose up -d
+docker compose up -d --wait
 docker compose exec backend-1 npx prisma db seed
 ```
+
+`--wait` hace que el comando termine solo cuando todo está listo de verdad
+(backend, frontend y nginx tienen healthcheck): si responde, ya se puede
+entrar. El seed solo hace falta la primera vez.
+
+**Al prender el PC o reiniciar Docker Desktop, los contenedores no arrancan
+solos** (todos usan `restart: "no"`): hay que correr `docker compose up -d
+--wait`. Es a propósito: Docker Desktop no publica bien los puertos de los
+contenedores que arranca él mismo al iniciar, y quedaban "Up" pero sin
+responder en `localhost`.
+
+Si aun así `localhost` no responde (los contenedores están "Up" pero el
+navegador se queda cargando), en Windows suele ser el reenvío de localhost de
+WSL (`wslrelay`) tapando los puertos de Docker. Se apaga una vez por máquina
+creando `%USERPROFILE%\.wslconfig` con:
+
+```ini
+[wsl2]
+localhostForwarding=false
+```
+
+y después `wsl --shutdown` y abrir Docker Desktop de nuevo. Docker Desktop
+publica los puertos con su propio proceso y no necesita ese reenvío.
 
 Esto levanta:
 
