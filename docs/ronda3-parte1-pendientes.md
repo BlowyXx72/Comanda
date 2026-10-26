@@ -15,3 +15,28 @@ demás de esas fases está hecho y probado (ver el commit de cada fase).
   `frontend/src/App.tsx` (solo cambia la ruta de import de `AuthProvider` y
   `SedeProvider`) y `frontend/src/offline/useColaOffline.ts` (la carga inicial
   de la cola). Hay que avisarlo en el PR.
+
+## Fase 16
+
+- **Archivos de la Parte 2 tocados** (el documento dice que la Parte 1
+  coordina el contrato de `/sync`): `backend/src/sync/` (DTO, servicio,
+  controlador y módulo). El contrato quedó así:
+  - `pedidos` sigue igual y ahora es opcional; `pagos` es un arreglo aparte.
+    Entre los dos tiene que venir al menos un elemento.
+  - La respuesta sigue siendo un solo arreglo `CREADO | DUPLICADO | RECHAZADO`:
+    primero los pedidos y después los pagos.
+  - Roles: MESERO solo manda pedidos, CAJERO solo pagos y ADMIN ambos (403 si
+    no).
+- **Verificación en el navegador pendiente.** El backend tiene pruebas de
+  integración (`test/cobro-offline.spec.ts`) y una prueba de humo de los
+  endpoints con la app arrancada. Falta probar la caja con el modo avión en el
+  navegador: cobrar sin red, ver el recibo provisional y ver que el cobro
+  aparece al volver la red.
+- **Huecos en la numeración.** Un bloque que una caja reservó y no alcanzó a
+  usar deja esos números sin emitir (`// DECISIÓN DE PROTOTIPO`, bloques de
+  20). Con la DIAN real habría que reportarlos o anularlos (TODO PRODUCCIÓN,
+  fuera de alcance).
+- **Cobro offline de un pedido que cocina no ha marcado LISTO.** La caja solo
+  ofrece cobrar los pedidos que vio en LISTO por última vez. Si al sincronizar
+  el pedido no está LISTO (o ya lo cobró otra caja), el cobro se rechaza y se
+  le muestra al cajero para que lo resuelva a mano.

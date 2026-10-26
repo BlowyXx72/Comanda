@@ -10,5 +10,7 @@ import { PaymentsService } from './payments.service.js';
   imports: [OrdersModule, RealtimeModule, InventoryModule, FiscalModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
+  // Fase 16: SyncModule aplica con él los cobros hechos sin conexión.
+  exports: [PaymentsService],
 })
 export class PaymentsModule {}

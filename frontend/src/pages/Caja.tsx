@@ -10,7 +10,10 @@ import {
   type ResultadoPago,
 } from '../api/comanda';
 import { useAuth } from '../auth/AuthContext';
-import { useSedeActual } from '../hooks/useSedeActual';
+import type { CobroPendiente } from '../caja-offline/db';
+import { useCobroOffline } from '../caja-offline/useCobroOffline';
+import { conRespaldo, esErrorDeRed } from '../offline/cache';
+import { useSedeConRespaldo } from '../offline/useSedeConRespaldo';
 import { useComandaSocket } from '../realtime/useComandaSocket';
 import { etiquetaPedido, textoEstadoPedido, formatearCOP } from '../utils/formato';
 
@@ -23,7 +26,8 @@ const TEXTO_ESTADO_DIAN: Record<EstadoDian, string> = {
 
 export function CajaPage() {
   const { token } = useAuth();
-  const { sede, cargando: cargandoSede, error: errorSede } = useSedeActual();
+  // Fase 16 (CU-07): la caja abre sin conexión con la última sede guardada.
+  const { sede, cargando: cargandoSede, error: errorSede } = useSedeConRespaldo();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoACobrar, setPedidoACobrar] = useState<Pedido | null>(null);
@@ -31,13 +35,20 @@ export function CajaPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recibo, setRecibo] = useState<ResultadoPago | null>(null);
+  // Fase 16: recibo provisional de un cobro hecho sin conexión.
+  const [reciboOffline, setReciboOffline] = useState<CobroPendiente | null>(null);
 
   const cargarPedidos = () => {
     if (!token || !sede) return;
-    listarPedidosActivos(sede.id, token).then(setPedidos);
+    // Sin red se muestran los últimos pedidos guardados (misma clave que /mesas).
+    conRespaldo(`pedidos:${sede.id}`, () => listarPedidosActivos(sede.id, token))
+      .then(setPedidos)
+      .catch(() => undefined);
   };
 
   useEffect(cargarPedidos, [token, sede]);
+
+  const cobroOffline = useCobroOffline(token, sede?.id ?? null, etiquetaPedido, cargarPedidos);
 
   useComandaSocket({
     token,
@@ -85,6 +96,7 @@ export function CajaPage() {
     setMedio('EFECTIVO');
     setError(null);
     setRecibo(null);
+    setReciboOffline(null);
   };
 
   const confirmarCobro = async () => {
@@ -100,21 +112,69 @@ export function CajaPage() {
       setPedidoACobrar(null);
       cargarPedidos();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo registrar el pago');
+      if (esErrorDeRed(err)) {
+        await cobrarSinConexion(pedidoACobrar);
+      } else {
+        setError(err instanceof ApiError ? err.message : 'No se pudo registrar el pago');
+      }
     } finally {
       setEnviando(false);
     }
   };
 
+  // Fase 16 (CU-07): sin red, el cobro se numera con el bloque reservado por
+  // esta caja y queda en la cola local hasta que vuelva la conexión.
+  const cobrarSinConexion = async (pedido: Pedido) => {
+    const cobro = await cobroOffline.cobrarSinConexion(pedido, medio).catch(() => null);
+    if (!cobro) {
+      setError('Sin conexión y sin numeración fiscal reservada en esta caja: no se puede cobrar hasta que vuelva la red.');
+      return;
+    }
+    setReciboOffline(cobro);
+    setPedidoACobrar(null);
+  };
+
   if (cargandoSede) return <p className="pantalla-info">Cargando sede…</p>;
   if (errorSede || !sede) return <p className="pantalla-info">No se pudo cargar la sede.</p>;
 
-  const listos = pedidos.filter((p) => p.estado === 'LISTO');
+  // Un pedido cobrado sin conexión ya no se ofrece para cobrar otra vez.
+  const cobradosSinConexion = new Set(cobroOffline.pendientes.map((c) => c.pago.pedidoId));
+  const listos = pedidos.filter((p) => p.estado === 'LISTO' && !cobradosSinConexion.has(p.id));
+  const nPendientes = cobroOffline.pendientes.length;
+  const textoPendientes = `${nPendientes} ${nPendientes === 1 ? 'cobro pendiente' : 'cobros pendientes'}`;
   const enPreparacion = pedidos.filter((p) => p.estado === 'EN_PREPARACION');
 
   return (
     <div className="caja-page">
       <h1>Caja — {sede.nombre}</h1>
+
+      {(!cobroOffline.enLinea || nPendientes > 0) && (
+        <div className={`banner-offline${cobroOffline.enLinea ? ' banner-offline--sincronizando' : ''}`}>
+          <span>
+            {!cobroOffline.enLinea
+              ? `Sin conexión — ${textoPendientes} · ${cobroOffline.disponibles} números fiscales reservados`
+              : cobroOffline.sincronizando
+                ? `Sincronizando ${textoPendientes}…`
+                : `${textoPendientes} de sincronizar`}
+          </span>
+          {cobroOffline.enLinea && !cobroOffline.sincronizando && nPendientes > 0 && (
+            <button onClick={() => cobroOffline.sincronizar()}>Sincronizar ahora</button>
+          )}
+        </div>
+      )}
+      {cobroOffline.errorSync && <p className="login-error">No se pudo sincronizar: {cobroOffline.errorSync}</p>}
+      {cobroOffline.rechazados.length > 0 && (
+        <div className="banner-offline banner-offline--rechazo">
+          <ul className="lista-items">
+            {cobroOffline.rechazados.map((r) => (
+              <li key={r.id}>
+                Cobro N.° {r.consecutivo} ({r.etiqueta}) rechazado al sincronizar: {r.motivo}
+              </li>
+            ))}
+          </ul>
+          <button onClick={cobroOffline.descartarRechazados}>Entendido</button>
+        </div>
+      )}
 
       <section>
         <h2>Listos para cobrar</h2>
@@ -186,6 +246,33 @@ export function CajaPage() {
           <button disabled={enviando} onClick={confirmarCobro}>
             {enviando ? 'Cobrando…' : 'Confirmar cobro'}
           </button>
+        </div>
+      )}
+
+      {reciboOffline && (
+        <div className="panel-pedido recibo">
+          <div className="panel-pedido-header">
+            <h2>Cobro sin conexión</h2>
+            <button onClick={() => setReciboOffline(null)}>Cerrar</button>
+          </div>
+          <p>
+            <strong>FACTURA</strong> N.° {reciboOffline.pago.consecutivo}
+          </p>
+          <p className="estado-dian estado-dian--pendiente">
+            Pendiente de sincronizar: se enviará a la DIAN (simulada) cuando vuelva la conexión.
+          </p>
+          <p className="panel-nota">Documento simulado, sin envío real a la DIAN.</p>
+          <ul className="lista-items">
+            {reciboOffline.pedido.detalles.map((detalle) => (
+              <li key={detalle.id}>
+                {detalle.cantidad}× {detalle.producto.nombre} —{' '}
+                {formatearCOP(Number(detalle.precioUnitario) * detalle.cantidad)}
+              </li>
+            ))}
+          </ul>
+          <p className="carrito-total">
+            Total pagado ({reciboOffline.pago.medio}): {formatearCOP(reciboOffline.pago.monto)}
+          </p>
         </div>
       )}
 
