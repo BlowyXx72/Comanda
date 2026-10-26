@@ -1,9 +1,10 @@
 // DECISIÓN DE PROTOTIPO (Fase 12): asigna al rol `comanda_app` (creado sin
 // contraseña por la migración r2p1_rol_app) la contraseña de DATABASE_URL_APP.
 // Así el secreto vive solo en .env y no en el SQL versionado. Se corre con el
-// rol dueño (DATABASE_URL) justo después de `prisma migrate deploy`; es
-// idempotente y seguro si backend-1, backend-2 y worker arrancan a la vez
-// (advisory lock).
+// rol dueño (DATABASE_URL) justo después de `prisma migrate deploy`, en el
+// paso único de despliegue `npm run migrar` (Fase 18: servicio `migrar` de
+// docker-compose). Es idempotente y, por el advisory lock, seguro aunque se
+// corra dos veces a la vez.
 import pg from 'pg';
 
 async function main() {

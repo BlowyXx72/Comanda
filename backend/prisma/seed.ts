@@ -10,7 +10,19 @@ const prisma = new PrismaClient({
 
 const hash = (plano: string) => bcrypt.hash(plano, 10);
 
+// Fase 18: el seed borra todo y crea datos de demo, así que solo corre en
+// ambientes de prueba (`local` y `beta`), nunca en `produccion`. Sin AMBIENTE
+// definido, NODE_ENV=production también cuenta como producción.
+function verificarAmbiente() {
+  const ambiente = process.env.AMBIENTE ?? (process.env.NODE_ENV === 'production' ? 'produccion' : 'local');
+  if (ambiente === 'produccion') {
+    throw new Error(`El seed borra todos los datos: no se corre en producción (AMBIENTE=${ambiente})`);
+  }
+}
+
 async function main() {
+  verificarAmbiente();
+
   // Seed idempotente: se limpia todo y se recrea, en orden inverso a las FK.
   await prisma.documentoFiscal.deleteMany();
   await prisma.pago.deleteMany();

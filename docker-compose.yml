@@ -36,6 +36,8 @@ x-backend: &backend
       condition: service_healthy
     prisma-generate:
       condition: service_completed_successfully
+    migrar:
+      condition: service_completed_successfully
   # "healthy" solo cuando la API responde de verdad (/health revisa Postgres y
   # Redis). Antes, "Up" no garantizaba nada: el backend tarda en compilar y
   # migrar, y un login en ese momento fallaba. Con `docker compose up -d
@@ -101,6 +103,26 @@ services:
       - ./backend:/app
       - comanda-backend-node-modules:/app/node_modules
     command: npx prisma generate
+
+  # Fase 18: las migraciones son un paso único de despliegue, no algo que
+  # corra cada instancia al arrancar. Este servicio aplica `prisma migrate
+  # deploy` y le pone la contraseña al rol comanda_app (Fase 12), y termina;
+  # backend-1, backend-2 y worker esperan a que termine bien.
+  migrar:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: comanda-migrar
+    restart: "no"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - comanda-backend-node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run migrar
 
   # Fase 13: crea (o actualiza) el rol de replicación en el primario y termina.
   # DECISIÓN DE PROTOTIPO: servicio de un solo uso en vez de un script de
@@ -188,12 +210,12 @@ services:
       # contenedor, así que se expone vía un pequeño proxy TCP en Node (ver
       # README) en vez del puerto de Studio directo.
       - "5556:5556"
-    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:dev"
+    command: npm run start:dev
 
   backend-2:
     <<: *backend
     container_name: comanda-backend-2
-    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:dev:2"
+    command: npm run start:dev:2
 
   # Fase 11B: almacén de objetos de §5.1 (XML fiscales). Consola web en
   # http://localhost:${MINIO_CONSOLE_PORT} con MINIO_ROOT_USER/PASSWORD.
@@ -244,9 +266,9 @@ services:
         condition: service_started
       prisma-generate:
         condition: service_completed_successfully
-    # migrate deploy también aquí por si el worker arranca antes que el
-    # backend; Prisma serializa los dos con un advisory lock.
-    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts && npm run start:worker"
+      migrar:
+        condition: service_completed_successfully
+    command: npm run start:worker
 
   frontend:
     build:
@@ -314,6 +336,40 @@ services:
     restart: "no"
     ports:
       - "${MAILPIT_WEB_PORT}:8025"
+
+  # Fase 18 (§5.1, "respaldos diarios"): pg_dump diario al almacén de
+  # objetos (MinIO en local, S3 en AWS) y restauración. Va en el perfil
+  # `respaldo` para que `docker compose up` no lo levante en desarrollo:
+  #   docker compose --profile respaldo up -d respaldo     (cron diario)
+  #   docker compose run --rm respaldo respaldar           (uno ahora)
+  #   docker compose run --rm -e RESTAURAR_DB=comanda_prueba respaldo restaurar
+  # Ver docs/datos-aws.md.
+  respaldo:
+    build:
+      context: ./postgres/respaldo
+    container_name: comanda-respaldo
+    restart: "no"
+    profiles: ["respaldo"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-}
+      RESPALDO_S3_BUCKET: ${RESPALDO_S3_BUCKET}
+      RESPALDO_S3_PREFIJO: ${RESPALDO_S3_PREFIJO:-postgres}
+      RESPALDO_CRON: ${RESPALDO_CRON:-0 8 * * *}
+      RESPALDO_RETENCION_DIAS: ${RESPALDO_RETENCION_DIAS:-30}
+      DOCUMENTOS_PREFIJO_FISCAL: ${DOCUMENTOS_PREFIJO_FISCAL:-fiscal/}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
 
 volumes:
   comanda-postgres-data:

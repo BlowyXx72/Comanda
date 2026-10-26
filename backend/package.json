@@ -18,6 +18,7 @@
     "start:prod": "node dist/main",
     "start:worker": "nest start --watch -p tsconfig.worker.json --entryFile worker",
     "lint": "oxlint src/ test/",
+    "migrar": "prisma migrate deploy && tsx prisma/configurar-rol-app.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",

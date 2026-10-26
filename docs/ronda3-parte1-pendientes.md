@@ -57,3 +57,31 @@ demás de esas fases está hecho y probado (ver el commit de cada fase).
   queda restringido hasta que la sesión vence (8 h) o se vuelve a iniciar.
 - **No hay pantalla para asignar la sede**: se asigna en el seed o directo en
   la base, igual que los usuarios (no hay gestión de usuarios, ver CLAUDE.md).
+
+## Fase 18
+
+Hecho solo en el repo: todavía no hay cuenta de AWS y el documento pide no
+crear recursos sin confirmarlo. La lista de lo que falta correr en AWS está en
+[`datos-aws.md`](datos-aws.md#pendiente-en-aws). Además:
+
+- **Pedido a la Parte 2:** guardar los XML fiscales con el prefijo `fiscal/`
+  (`fiscal/procesador-fiscal.service.ts`) para que les aplique la regla de 5
+  años sin tocar las imágenes de producto. Detalle en `datos-aws.md`,
+  sección 4.
+- **`docker-compose.prod.yml` (Fase 17B, Parte 2):** tiene que incluir los
+  servicios `migrar` y `respaldo`. En la beta, `respaldo` no depende de
+  `minio`.
+- **Archivos compartidos o de la Parte 2 tocados:** `docker-compose.yml`
+  (servicios `migrar` y `respaldo`; backend y worker ya no migran al
+  arrancar), `.env.example` (variables nuevas al final) y `README.md` (se
+  corrigió la frase que decía que las migraciones corren al arrancar el
+  backend y se agregó un enlace).
+- **Herramienta nueva:** `aws-cli` (paquete de Alpine) dentro de la imagen
+  `respaldo`. Es una herramienta de operación, no una librería del backend,
+  pero `CLAUDE.md` pide consultarlo: confirmar con el equipo.
+- **No se probó `docker compose up` completo con esta rama**, porque el stack
+  que corre en esta máquina es otro clon (`Comanda Proyecto\Comanda`) con el
+  mismo nombre de proyecto y los mismos `container_name`. Sí se validó con
+  `docker compose config`, y `migrar`, `respaldo` y el seed se probaron como
+  contenedores sueltos contra la base `comanda_r3p1`. Antes de integrar hay
+  que correr `docker compose up -d --wait` con esta rama.
