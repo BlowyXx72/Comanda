@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, HttpException, Injectable } from '@nestjs/common';
-import type { RolUsuario } from '../generated/prisma/enums.js';
+import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
+import { verificarSedeDelUsuario } from '../auth/sede-usuario.js';
 import type { CreatePedidoDto } from '../orders/dto/create-pedido.dto.js';
 import { OrdersService } from '../orders/orders.service.js';
 import type { PagoOfflineDto } from '../payments/dto/pago-offline.dto.js';
@@ -25,10 +26,9 @@ export class SyncService {
   // el resultado de cada pedido y luego el de cada pago.
   async aplicar(
     { pedidos = [], pagos = [] }: { pedidos?: CreatePedidoDto[]; pagos?: PagoOfflineDto[] },
-    usuarioId: string,
-    rol: RolUsuario,
-    cadenaId: string,
+    usuario: Pick<UsuarioAutenticado, 'userId' | 'rol' | 'cadenaId' | 'sedeId'>,
   ): Promise<ResultadoSync[]> {
+    const { userId, rol, cadenaId, sedeId } = usuario;
     if (pedidos.length === 0 && pagos.length === 0) {
       throw new BadRequestException('El lote debe traer al menos un pedido o un pago');
     }
@@ -44,14 +44,16 @@ export class SyncService {
     for (const dto of pedidos) {
       resultados.push(
         await this.aplicarUno(dto.id, async () => {
-          const { duplicado } = await this.ordersService.crearConResultado(dto, usuarioId, cadenaId);
+          // Fase 17: un pedido de otra sede se rechaza solo, sin tumbar el lote.
+          verificarSedeDelUsuario(usuario, dto.sedeId);
+          const { duplicado } = await this.ordersService.crearConResultado(dto, userId, cadenaId);
           return duplicado;
         }),
       );
     }
     for (const dto of pagos) {
       resultados.push(
-        await this.aplicarUno(dto.id, async () => (await this.paymentsService.pagarSincronizado(dto, cadenaId)).duplicado),
+        await this.aplicarUno(dto.id, async () => (await this.paymentsService.pagarSincronizado(dto, cadenaId, sedeId)).duplicado),
       );
     }
     return resultados;

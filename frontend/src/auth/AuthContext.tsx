@@ -11,6 +11,9 @@ export interface Usuario {
   email: string;
   rol: Rol;
   cadenaId: string;
+  // Fase 17: sede asignada (null = todas, el ADMIN). Falta en sesiones
+  // guardadas antes de la Fase 17.
+  sedeId?: string | null;
 }
 
 export interface LoginResponse {

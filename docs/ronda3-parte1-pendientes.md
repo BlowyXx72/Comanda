@@ -40,3 +40,20 @@ demás de esas fases está hecho y probado (ver el commit de cada fase).
   ofrece cobrar los pedidos que vio en LISTO por última vez. Si al sincronizar
   el pedido no está LISTO (o ya lo cobró otra caja), el cobro se rechaza y se
   le muestra al cajero para que lo resuelva a mano.
+
+## Fase 17
+
+- **Decisión que falta confirmar con el equipo** (el documento la deja
+  abierta): un usuario con `sedeId` solo opera en esa sede; sin sede (el ADMIN)
+  opera en todas. En el seed, cajero y mesero quedan en la Sede Centro.
+- **Sin política RLS por sede**: el filtro es solo de aplicación
+  (`auth/sede-usuario.ts`), encima del de cadena. El documento la deja como
+  opcional ("si se quiere").
+- **Endpoints de la Parte 2 sin el filtro por sede**: `GET
+  /documentos-fiscales/:id/xml` (`fiscal/`) y `POST /correo/resumen-diario`
+  (`mail/`, solo ADMIN). El del XML conviene agregarlo en la Parte 2 con
+  `verificarSedeDelUsuario`.
+- **Tokens viejos**: un JWT emitido antes de la Fase 17 no trae `sedeId` y no
+  queda restringido hasta que la sesión vence (8 h) o se vuelve a iniciar.
+- **No hay pantalla para asignar la sede**: se asigna en el seed o directo en
+  la base, igual que los usuarios (no hay gestión de usuarios, ver CLAUDE.md).

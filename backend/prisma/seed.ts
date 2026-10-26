@@ -24,6 +24,7 @@ async function main() {
   await prisma.producto.deleteMany();
   await prisma.insumo.deleteMany();
   await prisma.usuario.deleteMany();
+  await prisma.rangoDispositivo.deleteMany();
   await prisma.sede.deleteMany();
   await prisma.cadena.deleteMany();
 
@@ -47,6 +48,8 @@ async function main() {
     ),
   );
 
+  // Fase 17: el ADMIN ve todas las sedes; cajero y mesero quedan asignados a
+  // la Sede Centro y el backend no los deja operar en otra.
   await prisma.usuario.createMany({
     data: [
       {
@@ -59,12 +62,14 @@ async function main() {
         cadenaId: cadena.id,
         rol: 'CAJERO',
         email: 'cajero@demo.com',
+        sedeId: sedes[0].id,
         passwordHash: await hash('cajero123'),
       },
       {
         cadenaId: cadena.id,
         rol: 'MESERO',
         email: 'mesero@demo.com',
+        sedeId: sedes[0].id,
         passwordHash: await hash('mesero123'),
       },
     ],

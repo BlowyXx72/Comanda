@@ -34,6 +34,17 @@ let cadenaId: string;
 let productoId: string;
 const sedes: string[] = [];
 
+// Usuarios del JWT sin sede asignada (Fase 17): operan en cualquier sede.
+const usuario = (rol: 'ADMIN' | 'CAJERO' | 'MESERO', sedeId: string | null = null) => ({
+  userId: 'u',
+  rol,
+  cadenaId,
+  sedeId,
+});
+let admin: ReturnType<typeof usuario>;
+let cajero: ReturnType<typeof usuario>;
+let mesero: ReturnType<typeof usuario>;
+
 async function crearSede(rangoFin = 100) {
   const sede = await duenio.sede.create({
     data: { cadenaId, nombre: `Sede ${sedes.length}`, direccion: 'x', rangoInicio: 1, rangoFin, siguienteConsecutivo: 1 },
@@ -73,6 +84,9 @@ beforeAll(async () => {
   await prisma.onModuleInit();
   cadenaId = (await duenio.cadena.create({ data: { nit: `offline-${sufijo}`, nombre: 'Offline', plan: 'BASICO' } })).id;
   productoId = (await duenio.producto.create({ data: { cadenaId, nombre: 'Arepa', precio: 8000, categoria: 'x' } })).id;
+  admin = usuario('ADMIN');
+  cajero = usuario('CAJERO');
+  mesero = usuario('MESERO');
 });
 
 afterAll(async () => {
@@ -133,8 +147,8 @@ describe('cobro sincronizado (POST /sync con pagos)', () => {
     const hace10Min = new Date(Date.now() - 10 * 60_000).toISOString();
     const dto = pagoOffline(pedido.id, 3, CAJA_A, hace10Min);
 
-    expect(await sync.aplicar({ pagos: [dto] }, 'u', 'CAJERO', cadenaId)).toEqual([{ id: dto.id, resultado: 'CREADO' }]);
-    expect(await sync.aplicar({ pagos: [dto] }, 'u', 'CAJERO', cadenaId)).toEqual([
+    expect(await sync.aplicar({ pagos: [dto] }, cajero)).toEqual([{ id: dto.id, resultado: 'CREADO' }]);
+    expect(await sync.aplicar({ pagos: [dto] }, cajero)).toEqual([
       { id: dto.id, resultado: 'DUPLICADO' },
     ]);
 
@@ -167,7 +181,7 @@ describe('cobro sincronizado (POST /sync con pagos)', () => {
     const deOtraCaja = pagoOffline(p2.id, 7);
     const valido = pagoOffline(p3.id, 2);
     const repetido = pagoOffline(p4.id, 2);
-    const r = await sync.aplicar({ pagos: [fueraDeRango, deOtraCaja, valido, repetido] }, 'u', 'ADMIN', cadenaId);
+    const r = await sync.aplicar({ pagos: [fueraDeRango, deOtraCaja, valido, repetido] }, admin);
 
     expect(r.map((x) => x.resultado)).toEqual(['RECHAZADO', 'RECHAZADO', 'CREADO', 'RECHAZADO']);
     expect(r[3]).toMatchObject({ motivo: expect.stringMatching(/ya se usó/) });
@@ -182,15 +196,50 @@ describe('cobro sincronizado (POST /sync con pagos)', () => {
     const pedido = await crearPedidoListo(sedeId);
     await payments.pagar({ pedidoId: pedido.id, medio: 'TARJETA', monto: 8000 }, cadenaId);
 
-    const [r] = await sync.aplicar({ pagos: [pagoOffline(pedido.id, 1)] }, 'u', 'CAJERO', cadenaId);
+    const [r] = await sync.aplicar({ pagos: [pagoOffline(pedido.id, 1)] }, cajero);
     expect(r).toMatchObject({ resultado: 'RECHAZADO', motivo: expect.stringMatching(/LISTO/) });
   });
 
   it('aplica los mismos roles que POST /pedidos y POST /pagos', async () => {
-    await expect(sync.aplicar({ pagos: [pagoOffline(randomUUID(), 1)] }, 'u', 'MESERO', cadenaId)).rejects.toThrow(
+    await expect(sync.aplicar({ pagos: [pagoOffline(randomUUID(), 1)] }, mesero)).rejects.toThrow(
       ForbiddenException,
     );
-    await expect(sync.aplicar({ pedidos: [{} as never] }, 'u', 'CAJERO', cadenaId)).rejects.toThrow(ForbiddenException);
-    await expect(sync.aplicar({}, 'u', 'ADMIN', cadenaId)).rejects.toThrow(/al menos un pedido o un pago/);
+    await expect(sync.aplicar({ pedidos: [{} as never] }, cajero)).rejects.toThrow(ForbiddenException);
+    await expect(sync.aplicar({}, admin)).rejects.toThrow(/al menos un pedido o un pago/);
+  });
+});
+
+// Fase 17: un cajero con sede asignada no cobra ni reserva numeración en otra
+// sede, tampoco por POST /sync.
+describe('usuario con sede asignada', () => {
+  it('no cobra en línea un pedido de otra sede', async () => {
+    const [suya, otra] = [await crearSede(), await crearSede()];
+    const pedido = await crearPedidoListo(otra);
+    await expect(
+      payments.pagar({ pedidoId: pedido.id, medio: 'EFECTIVO', monto: 8000 }, cadenaId, suya),
+    ).rejects.toThrow(ForbiddenException);
+    expect((await duenio.pedido.findUniqueOrThrow({ where: { id: pedido.id } })).estado).toBe('LISTO');
+  });
+
+  it('no reserva numeración de otra sede', async () => {
+    const [suya, otra] = [await crearSede(), await crearSede()];
+    await expect(payments.reservarRango({ sedeId: otra, dispositivoId: CAJA_A }, cadenaId, suya)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(await siguiente(otra)).toBe(1);
+  });
+
+  it('en /sync rechaza solo los elementos de otra sede', async () => {
+    const [suya, otra] = [await crearSede(), await crearSede()];
+    await payments.reservarRango({ sedeId: suya, dispositivoId: CAJA_A, cantidad: 5 }, cadenaId);
+    await payments.reservarRango({ sedeId: otra, dispositivoId: CAJA_A, cantidad: 5 }, cadenaId);
+    const [deLaSuya, deOtra] = [await crearPedidoListo(suya), await crearPedidoListo(otra)];
+
+    const r = await sync.aplicar(
+      { pagos: [pagoOffline(deOtra.id, 1), pagoOffline(deLaSuya.id, 1)] },
+      usuario('CAJERO', suya),
+    );
+    expect(r.map((x) => x.resultado)).toEqual(['RECHAZADO', 'CREADO']);
+    expect(r[0]).toMatchObject({ motivo: expect.stringMatching(/sede asignada/) });
   });
 });

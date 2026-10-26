@@ -25,6 +25,6 @@ export class SyncController {
   @HttpCode(200)
   @Post()
   sincronizar(@Body() dto: SyncPedidosDto, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.syncService.aplicar(dto, usuario.userId, usuario.rol, usuario.cadenaId);
+    return this.syncService.aplicar(dto, usuario);
   }
 }

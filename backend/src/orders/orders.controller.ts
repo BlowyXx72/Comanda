@@ -5,6 +5,7 @@ import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
+import { verificarSedeDelUsuario } from '../auth/sede-usuario.js';
 import { ActualizarEstadoPedidoDto } from './dto/actualizar-estado-pedido.dto.js';
 import { CreatePedidoDto } from './dto/create-pedido.dto.js';
 import { ListarPedidosQueryDto } from './dto/listar-pedidos-query.dto.js';
@@ -23,6 +24,7 @@ export class OrdersController {
   @Roles('MESERO', 'ADMIN')
   @Post()
   crear(@Body() dto: CreatePedidoDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    verificarSedeDelUsuario(usuario, dto.sedeId);
     return this.ordersService.crear(dto, usuario.userId, usuario.cadenaId);
   }
 
@@ -31,25 +33,33 @@ export class OrdersController {
   @ApiOperation({ summary: 'Lista los pedidos activos (EN_PREPARACION/LISTO) de una sede' })
   @Get()
   listarActivos(@Query() query: ListarPedidosQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    verificarSedeDelUsuario(usuario, query.sedeId);
     return this.ordersService.listarActivos(query.sedeId, usuario.cadenaId);
   }
 
   // Consumido por: mesero/cocina/caja para ver el detalle de un pedido.
   @ApiOperation({ summary: 'Obtiene el detalle de un pedido' })
   @Get(':id')
-  obtener(@Param('id') id: string, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.ordersService.obtener(id, usuario.cadenaId);
+  async obtener(@Param('id') id: string, @UsuarioActual() usuario: UsuarioAutenticado) {
+    const pedido = await this.ordersService.obtener(id, usuario.cadenaId);
+    verificarSedeDelUsuario(usuario, pedido.sedeId);
+    return pedido;
   }
 
   // Consumido por: cocina (marca LISTO). No se restringe por rol porque el
   // modelo de datos no define un rol "cocina" propio (ver docs/prototipo-slice.md).
   @ApiOperation({ summary: 'Avanza el pedido un estado (no llega a PAGADO; eso es POST /pagos)' })
   @Patch(':id/estado')
-  actualizarEstado(
+  async actualizarEstado(
     @Param('id') id: string,
     @Body() dto: ActualizarEstadoPedidoDto,
     @UsuarioActual() usuario: UsuarioAutenticado,
   ) {
+    // Fase 17: la sede del pedido se consulta aquí para no cambiar la firma
+    // de OrdersService (es de la Parte 2).
+    if (usuario.sedeId) {
+      verificarSedeDelUsuario(usuario, (await this.ordersService.obtener(id, usuario.cadenaId)).sedeId);
+    }
     return this.ordersService.actualizarEstado(id, dto.estado, usuario.cadenaId);
   }
 }

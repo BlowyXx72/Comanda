@@ -23,7 +23,7 @@ export class PaymentsController {
   })
   @Post()
   pagar(@Body() dto: CrearPagoDto, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.paymentsService.pagar(dto, usuario.cadenaId);
+    return this.paymentsService.pagar(dto, usuario.cadenaId, usuario.sedeId);
   }
 
   // Fase 16 (CU-07): la caja lo llama mientras tiene red para poder cobrar
@@ -33,6 +33,6 @@ export class PaymentsController {
   })
   @Post('rangos-offline')
   reservarRango(@Body() dto: ReservarRangoDto, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.paymentsService.reservarRango(dto, usuario.cadenaId);
+    return this.paymentsService.reservarRango(dto, usuario.cadenaId, usuario.sedeId);
   }
 }

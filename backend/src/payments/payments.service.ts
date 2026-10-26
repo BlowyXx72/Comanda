@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { verificarSedeDelUsuario } from '../auth/sede-usuario.js';
 import { ColaFiscalService } from '../fiscal/cola-fiscal.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { InventoryService } from '../inventory/inventory.service.js';
@@ -32,8 +33,10 @@ export class PaymentsService {
     private readonly colaFiscal: ColaFiscalService,
   ) {}
 
-  async pagar(dto: CrearPagoDto, cadenaId: string) {
-    const pedido = await this.pedidoCobrable(dto.pedidoId, dto.monto, cadenaId);
+  // `sedeUsuario`: sede asignada a quien cobra (Fase 17); null = cualquiera
+  // de la cadena.
+  async pagar(dto: CrearPagoDto, cadenaId: string, sedeUsuario: string | null = null) {
+    const pedido = await this.pedidoCobrable(dto.pedidoId, dto.monto, cadenaId, sedeUsuario);
 
     const resultado = await this.prisma.conCadena(cadenaId, async (tx) => {
       // Fase 8: el consecutivo sale de un UPDATE atómico sobre la sede
@@ -68,7 +71,8 @@ export class PaymentsService {
   // un bloque de consecutivos del rango de la sede con el mismo UPDATE
   // atómico de pagar(), pero avanzando `cantidad` de una vez: los números del
   // bloque ya no los puede tomar ningún cobro en línea ni otra caja.
-  async reservarRango(dto: ReservarRangoDto, cadenaId: string) {
+  async reservarRango(dto: ReservarRangoDto, cadenaId: string, sedeUsuario: string | null = null) {
+    verificarSedeDelUsuario({ sedeId: sedeUsuario }, dto.sedeId);
     const cantidad = dto.cantidad ?? CANTIDAD_RANGO_DEFAULT;
 
     return this.prisma.conCadena(cadenaId, async (tx) => {
@@ -105,12 +109,16 @@ export class PaymentsService {
   // Idempotente por el UUID del pago (un reintento devuelve duplicado), y el
   // consecutivo tiene que estar en un bloque que ese dispositivo reservó para
   // esa sede. Lo llama SyncService por cada elemento de `pagos`.
-  async pagarSincronizado(dto: PagoOfflineDto, cadenaId: string): Promise<{ duplicado: boolean }> {
+  async pagarSincronizado(
+    dto: PagoOfflineDto,
+    cadenaId: string,
+    sedeUsuario: string | null = null,
+  ): Promise<{ duplicado: boolean }> {
     if (await this.pagoYaAplicado(dto, cadenaId)) {
       return { duplicado: true };
     }
 
-    const pedido = await this.pedidoCobrable(dto.pedidoId, dto.monto, cadenaId);
+    const pedido = await this.pedidoCobrable(dto.pedidoId, dto.monto, cadenaId, sedeUsuario);
 
     // DECISIÓN DE PROTOTIPO: la hora del cobro es la de la caja, pero nunca
     // en el futuro (un reloj adelantado no puede mover ventas a mañana).
@@ -164,8 +172,9 @@ export class PaymentsService {
     return true;
   }
 
-  private async pedidoCobrable(pedidoId: string, montoPagado: number, cadenaId: string) {
+  private async pedidoCobrable(pedidoId: string, montoPagado: number, cadenaId: string, sedeUsuario: string | null) {
     const pedido = await this.ordersService.obtener(pedidoId, cadenaId);
+    verificarSedeDelUsuario({ sedeId: sedeUsuario }, pedido.sedeId);
 
     if (pedido.estado !== 'LISTO') {
       throw new ConflictException(

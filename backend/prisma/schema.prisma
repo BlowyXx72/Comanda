@@ -109,6 +109,7 @@ model Sede {
   documentosFiscales     DocumentoFiscal[]
   movimientosInventario  MovimientoInventario[]
   rangosDispositivo      RangoDispositivo[]
+  usuarios               Usuario[]
 
   @@map("sedes")
 }
@@ -141,8 +142,14 @@ model Usuario {
   rol          RolUsuario
   email        String     @unique
   passwordHash String     @map("password_hash")
+  // Fase 17: sede donde opera el usuario. Null = todas las de la cadena (el
+  // ADMIN). Con sede, el backend rechaza operar en otra (ver
+  // auth/sede-usuario.ts).
+  // DECISIÓN DE PROTOTIPO: la propuesta no lo fija; el ER no lo tiene.
+  sedeId       String?    @map("sede_id")
 
   cadena  Cadena   @relation(fields: [cadenaId], references: [id])
+  sede    Sede?    @relation(fields: [sedeId], references: [id])
   pedidos Pedido[]
 
   @@map("usuarios")
