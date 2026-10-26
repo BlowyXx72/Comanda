@@ -187,6 +187,24 @@ de la propuesta (detalle completo y estado de cada uno en
   crear, editar y desactivar productos una sola vez; el cambio se propaga en
   vivo a `/mesas` y al menú QR de las 3 sedes, sin recargar.
 
+## Pruebas
+
+Con el stack arriba (`docker compose up -d --wait`):
+
+```bash
+# Pruebas automáticas del backend (unitarias + integración contra la base)
+docker compose exec backend-1 npx vitest run
+
+# Prueba de punta a punta por Nginx: mesa → cocina → cobro → XML fiscal,
+# plataforma y su reenvío, domicilio con correo, resumen diario, panel y
+# límite de tasa. Necesita el seed. Termina en "TODO OK" o lista lo que falló.
+docker compose exec -e NODE_TLS_REJECT_UNAUTHORIZED=0 backend-1 node scripts/prueba-integracion.mjs
+
+# Lint
+docker compose exec backend-1 npm run lint
+docker compose exec frontend npm run lint
+```
+
 ## Estructura del repositorio
 
 ```

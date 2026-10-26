@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { useUltimoValor } from '../hooks/useUltimoValor';
 
 // Fase 13B: vacío = mismo origen de la página (Nginx o el proxy de Vite).
 const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
@@ -23,8 +24,7 @@ interface UseVentasSocketOptions {
 // autenticado a la room de su propia cadena de una vez en la conexión, así
 // que acá alcanza con escuchar `venta:registrada`.
 export function useVentasSocket({ token, onVentaRegistrada }: UseVentasSocketOptions) {
-  const onVentaRegistradaRef = useRef(onVentaRegistrada);
-  onVentaRegistradaRef.current = onVentaRegistrada;
+  const onVentaRegistradaRef = useUltimoValor(onVentaRegistrada);
 
   useEffect(() => {
     if (!token) return;
@@ -35,5 +35,5 @@ export function useVentasSocket({ token, onVentaRegistrada }: UseVentasSocketOpt
     return () => {
       socket.disconnect();
     };
-  }, [token]);
+  }, [token, onVentaRegistradaRef]);
 }

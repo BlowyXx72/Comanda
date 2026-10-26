@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { apiFetch } from '../api/client';
 
 export type Rol = 'ADMIN' | 'CAJERO' | 'MESERO';
@@ -29,24 +29,26 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // evaluaría una cookie httpOnly para no exponer el JWT a JavaScript del cliente.
 const STORAGE_KEY = 'comanda.sesion';
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
-  const [cargando, setCargando] = useState(true);
+// La sesión guardada se lee una sola vez, al crear el estado (localStorage es
+// síncrono, así que no hace falta un efecto ni un estado de "cargando").
+function leerSesionGuardada(): LoginResponse | null {
+  const guardado = localStorage.getItem(STORAGE_KEY);
+  if (!guardado) return null;
+  try {
+    return JSON.parse(guardado) as LoginResponse;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
 
-  useEffect(() => {
-    const guardado = localStorage.getItem(STORAGE_KEY);
-    if (guardado) {
-      try {
-        const sesion = JSON.parse(guardado) as LoginResponse;
-        setToken(sesion.accessToken);
-        setUsuario(sesion.usuario);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setCargando(false);
-  }, []);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [sesionInicial] = useState(leerSesionGuardada);
+  const [token, setToken] = useState<string | null>(sesionInicial?.accessToken ?? null);
+  const [usuario, setUsuario] = useState<Usuario | null>(sesionInicial?.usuario ?? null);
+  // Se conserva en el contexto por compatibilidad con ProtectedRoute; con la
+  // lectura síncrona de arriba ya nunca está cargando.
+  const cargando = false;
 
   const login = async (email: string, password: string) => {
     const sesion = await apiFetch<LoginResponse>('/auth/login', {
