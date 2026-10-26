@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
-import { AuthProvider } from './auth/AuthContext'
+import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { CajaPage } from './pages/Caja'
 import { CatalogoPage } from './pages/Catalogo'
@@ -12,7 +12,7 @@ import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
 import { PanelPage } from './pages/Panel'
 import { SimuladorPlataformaPage } from './pages/SimuladorPlataforma'
-import { SedeProvider } from './sede/SedeContext'
+import { SedeProvider } from './sede/SedeProvider'
 
 function App() {
   return (

@@ -21,7 +21,9 @@ interface UseInventarioSocketOptions {
 // no hace falta `sede:unirse` para recibir `inventario:actualizado`.
 export function useInventarioSocket({ token, onInventarioActualizado }: UseInventarioSocketOptions) {
   const onInventarioActualizadoRef = useRef(onInventarioActualizado);
-  onInventarioActualizadoRef.current = onInventarioActualizado;
+  useEffect(() => {
+    onInventarioActualizadoRef.current = onInventarioActualizado;
+  });
 
   useEffect(() => {
     if (!token) return;

@@ -1,5 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { apiFetch } from '../api/client';
+import { createContext, useContext } from 'react';
+
+// Fase 15: el contexto y el hook viven aparte del componente AuthProvider
+// (AuthProvider.tsx) para que Fast Refresh funcione (regla
+// react/only-export-components de oxlint).
 
 export type Rol = 'ADMIN' | 'CAJERO' | 'MESERO';
 
@@ -10,12 +13,12 @@ export interface Usuario {
   cadenaId: string;
 }
 
-interface LoginResponse {
+export interface LoginResponse {
   accessToken: string;
   usuario: Usuario;
 }
 
-interface AuthContextValue {
+export interface AuthContextValue {
   usuario: Usuario | null;
   token: string | null;
   cargando: boolean;
@@ -23,51 +26,7 @@ interface AuthContextValue {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-// DECISIÓN DE PROTOTIPO: sesión persistida en localStorage. En producción se
-// evaluaría una cookie httpOnly para no exponer el JWT a JavaScript del cliente.
-const STORAGE_KEY = 'comanda.sesion';
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
-  const [cargando, setCargando] = useState(true);
-
-  useEffect(() => {
-    const guardado = localStorage.getItem(STORAGE_KEY);
-    if (guardado) {
-      try {
-        const sesion = JSON.parse(guardado) as LoginResponse;
-        setToken(sesion.accessToken);
-        setUsuario(sesion.usuario);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setCargando(false);
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const sesion = await apiFetch<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sesion));
-    setToken(sesion.accessToken);
-    setUsuario(sesion.usuario);
-  };
-
-  const logout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setToken(null);
-    setUsuario(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ usuario, token, cargando, login, logout }}>{children}</AuthContext.Provider>
-  );
-}
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);

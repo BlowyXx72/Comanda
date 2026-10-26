@@ -24,7 +24,9 @@ interface UseVentasSocketOptions {
 // que acá alcanza con escuchar `venta:registrada`.
 export function useVentasSocket({ token, onVentaRegistrada }: UseVentasSocketOptions) {
   const onVentaRegistradaRef = useRef(onVentaRegistrada);
-  onVentaRegistradaRef.current = onVentaRegistrada;
+  useEffect(() => {
+    onVentaRegistradaRef.current = onVentaRegistrada;
+  });
 
   useEffect(() => {
     if (!token) return;

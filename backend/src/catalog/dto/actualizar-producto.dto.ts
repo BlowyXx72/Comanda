@@ -1,10 +1,12 @@
 import { IsBoolean, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { Recortar } from './recortar.js';
 
 // Todos los campos opcionales: PATCH /productos/:id edita solo lo que venga
 // en el body. `activo` incluido acá (no solo en DELETE) para poder
 // reactivar un producto que se había dado de baja.
 export class ActualizarProductoDto {
   @IsOptional()
+  @Recortar()
   @IsString()
   @MinLength(1)
   nombre?: string;
@@ -15,6 +17,7 @@ export class ActualizarProductoDto {
   precio?: number;
 
   @IsOptional()
+  @Recortar()
   @IsString()
   @MinLength(1)
   categoria?: string;

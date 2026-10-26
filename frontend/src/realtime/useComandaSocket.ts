@@ -38,11 +38,16 @@ export function useComandaSocket({
   const onComandaNuevaRef = useRef(onComandaNueva);
   const onPedidoActualizadoRef = useRef(onPedidoActualizado);
   const onCatalogoActualizadoRef = useRef(onCatalogoActualizado);
-  onComandaNuevaRef.current = onComandaNueva;
-  onPedidoActualizadoRef.current = onPedidoActualizado;
-  onCatalogoActualizadoRef.current = onCatalogoActualizado;
   const onDocumentoActualizadoRef = useRef(onDocumentoActualizado);
-  onDocumentoActualizadoRef.current = onDocumentoActualizado;
+
+  // Los refs se actualizan en un efecto (no durante el render) y así el
+  // socket siempre llama al callback más reciente sin reconectarse.
+  useEffect(() => {
+    onComandaNuevaRef.current = onComandaNueva;
+    onPedidoActualizadoRef.current = onPedidoActualizado;
+    onCatalogoActualizadoRef.current = onCatalogoActualizado;
+    onDocumentoActualizadoRef.current = onDocumentoActualizado;
+  });
 
   useEffect(() => {
     if (!token || !sedeId) {
