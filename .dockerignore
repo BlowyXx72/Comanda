@@ -1,0 +1,15 @@
+# Fase 17B: contexto de build de nginx/Dockerfile.prod (raíz del repo). Solo
+# hace falta frontend/ y nginx/; lo demás se excluye para que el build no
+# copie gigas de node_modules ni datos locales.
+**/node_modules
+**/dist
+**/dist-*
+**/*.tsbuildinfo
+backend
+docs
+postgres
+.git
+.github
+.env
+.env.*
+.claude

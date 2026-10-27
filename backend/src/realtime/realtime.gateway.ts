@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import type { JwtPayload } from '../auth/jwt-payload.interface.js';
+import { origenesCors } from '../config/entorno.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const nombreRoomSede = (sedeId: string) => `sede:${sedeId}`;
@@ -24,7 +25,8 @@ const nombreRoomCadena = (cadenaId: string) => `cadena:${cadenaId}`;
 // para que un cliente no pueda unirse a la room de una sede de otra cadena,
 // pero no hay guards de rol aquí: no existe un rol "cocina" en el modelo de
 // datos, así que cualquier usuario autenticado de la cadena puede escuchar.
-@WebSocketGateway({ cors: { origin: '*' } })
+// Fase 17B: mismos orígenes que la API REST (CORS_ORIGENES).
+@WebSocketGateway({ cors: { origin: origenesCors() } })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() private readonly server!: Server;
 

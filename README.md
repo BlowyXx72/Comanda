@@ -208,6 +208,22 @@ docker compose exec backend-1 npm run lint
 docker compose exec frontend npm run lint
 ```
 
+## Ambiente de producción (beta en AWS)
+
+Desde la Fase 17B hay imágenes de producción (`backend/Dockerfile`,
+`nginx/Dockerfile.prod` con el frontend compilado) y un
+`docker-compose.prod.yml` sin bind mounts, sin MinIO ni Mailpit (S3 y SES por
+variables) y que solo publica 80 y 443. Las migraciones corren una vez en el
+servicio `migrate`, nunca el seed. Para probarlo en el PC antes de subirlo:
+
+```bash
+cp .env.prod.example .env.prod   # completar (para probar, sirven valores de prueba)
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build --wait
+# -> https://localhost:9443   (bajar: ... down -v)
+```
+
+El despliegue en la EC2 está en `docs/fases-siguientes-3.md` (Fases 18B–21B).
+
 ## Estructura del repositorio
 
 ```
