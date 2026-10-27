@@ -29,7 +29,13 @@ fi
 
 # TAG del entorno manda sobre el de .env.prod.
 export TAG
-COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
+ARCHIVOS="-f docker-compose.prod.yml"
+# Fase 21B: en la EC2 los logs van a CloudWatch (COMANDA_CLOUDWATCH lo define
+# ec2-user-data.sh).
+if [ "${COMANDA_CLOUDWATCH:-}" = "true" ]; then
+  ARCHIVOS="$ARCHIVOS -f docker-compose.prod.aws.yml"
+fi
+COMPOSE="docker compose $ARCHIVOS --env-file .env.prod"
 $COMPOSE pull --quiet
 # --wait: no termina hasta que todo queda healthy; si una versión nueva no
 # arranca, el despliegue falla y el workflow queda en rojo.

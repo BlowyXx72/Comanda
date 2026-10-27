@@ -255,7 +255,33 @@ en el `.env`: los navegadores resuelven `*.localhost` solos y el certificado
 de desarrollo ya cubre `*.localhost`. Con eso se abre
 `https://demo.localhost:8443/menu/<sedeId>`.
 
-## 11. Verificación
+## 11. Monitoreo, logs y alertas (Fase 21B)
+
+- **Logs:** en la EC2, `deploy/desplegar.sh` suma `docker-compose.prod.aws.yml`
+  (porque `COMANDA_CLOUDWATCH=true`).
+  - Los logs de todos los contenedores van a CloudWatch Logs, grupo
+    `/comanda/beta`, un stream por contenedor y retención de 7 días. Es el
+    equivalente al Syslog de §5.2.
+  - Backend y worker escriben JSON (`LOG_FORMATO=json`, Fase 17B).
+- **Métricas:**
+  - CPU y chequeos de estado: los da EC2.
+  - Memoria y disco: el agente de CloudWatch, que instala `ec2-user-data.sh`
+    con [`deploy/cloudwatch/agente.json`](../deploy/cloudwatch/agente.json).
+  - Colas: el worker publica cada minuto los documentos fiscales atascados y
+    los trabajos en espera y fallidos de cada cola. Usa el formato EMF, sin
+    SDK; ver `backend/src/monitoring/`.
+- **Alarmas:** desde CloudShell, una vez:
+
+  ```bash
+  REGION=us-east-1 INSTANCIA=i-0123... CORREO=equipo@ejemplo.co DOMINIO=comanda.ejemplo.co     sh deploy/cloudwatch/crear-alarmas.sh
+  ```
+
+  Crea las alarmas de instancia caída, CPU, disco, memoria, cola fiscal
+  atascada (o worker sin reportar) y sin servicio (chequeo HTTPS de Route 53
+  a `/api/health`), con aviso por correo. Qué hacer con cada una:
+  [`runbook.md`](runbook.md).
+
+## 12. Verificación
 
 ```bash
 # Desde la EC2 (Session Manager), contra el dominio real:
@@ -271,7 +297,7 @@ docker run --rm -e URL_BASE=https://comanda.ejemplo.co -e MAILPIT_URL= \
   - `https://comanda.ejemplo.co/api/docs` → 404 (Swagger apagado);
   - la PWA instalable desde un teléfono.
 
-## 12. Apagar y destruir (para no gastar créditos)
+## 13. Apagar y destruir (para no gastar créditos)
 
 | Qué | Cuándo | Cómo |
 |---|---|---|
@@ -281,6 +307,7 @@ docker run --rm -e URL_BASE=https://comanda.ejemplo.co -e MAILPIT_URL= \
 | Buckets | Al cerrar | Vaciar y borrar |
 | CloudFront | Al cerrar | Disable y luego Delete |
 | Parámetros SSM, roles, OIDC | Al cerrar | Borrar (no cuestan, pero no dejan nada colgando) |
+| Alarmas, chequeo de Route 53, temas SNS, grupo de logs | Al cerrar | Borrar (el chequeo de Route 53 cobra por mes) |
 
 Antes de destruir:
 

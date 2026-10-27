@@ -41,8 +41,17 @@ git clone "$REPO_URL" /opt/comanda
 chown -R ec2-user:ec2-user /opt/comanda
 chmod +x /opt/comanda/deploy/*.sh
 
-# deploy/desplegar.sh lee este prefijo para armar .env.prod desde SSM.
-echo "export COMANDA_SSM_PREFIJO=${SSM_PREFIJO}" > /etc/profile.d/comanda.sh
+# deploy/desplegar.sh lee este prefijo para armar .env.prod desde SSM, y con
+# COMANDA_CLOUDWATCH suma docker-compose.prod.aws.yml (logs a CloudWatch).
+cat > /etc/profile.d/comanda.sh <<PERFIL
+export COMANDA_SSM_PREFIJO=${SSM_PREFIJO}
+export COMANDA_CLOUDWATCH=true
+PERFIL
+
+# Fase 21B: agente de CloudWatch para memoria y disco (EC2 no los reporta
+# solo; la CPU y los chequeos de estado sí).
+dnf install -y amazon-cloudwatch-agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s   -c file:/opt/comanda/deploy/cloudwatch/agente.json
 
 # Renovación del certificado de Let's Encrypt dos veces al día (certbot solo
 # renueva si faltan menos de 30 días).

@@ -70,10 +70,16 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
   backend balanceadas sí existen desde la Fase 13B (ver "Proxy inverso y dos
   instancias (Fase 13B)"). La cola de mensajes + trabajador asíncrono y el almacén de
   objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
-  plano").
+  plano"). Ronda 3 (preparado para la beta en AWS, pendiente de la cuenta):
+  CloudFront opcional para las fotos (Fase 19B) y monitoreo con CloudWatch,
+  métricas de las colas, alarmas y runbook (Fase 21B, `docs/runbook.md`).
+  Los respaldos son la Fase 18 (Parte 1).
 - **SSH (solo con llaves), NTP y Syslog centralizado** (§5.2 de la
-  propuesta) — protocolos de operación de servidores de producción; no
-  aplican a un prototipo que corre en Docker local.
+  propuesta) — no aplican al prototipo en Docker local. Para la beta en AWS
+  quedan resueltos en la ronda 3:
+  - SSH: no hay; se entra por Session Manager (Fase 19B).
+  - NTP: chrony con Amazon Time Sync (Fase 19B).
+  - Syslog: logs de todos los contenedores a CloudWatch Logs (Fase 21B).
 - **Entrega real de correo.** Desde la Fase 14B el worker envía por SMTP,
   pero a Mailpit, que los muestra en su bandeja web y no los entrega (ver
   "Correo: comprobante y resumen diario (Fase 14B)").

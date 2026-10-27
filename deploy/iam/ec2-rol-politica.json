@@ -73,6 +73,17 @@
         "route53:GetChange"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "MetricasDelAgenteFase21B",
+      "Effect": "Allow",
+      "Action": "cloudwatch:PutMetricData",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "CWAgent"
+        }
+      }
     }
   ]
 }
