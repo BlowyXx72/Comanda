@@ -217,6 +217,32 @@ services:
       start_period: 10s
     <<: *logs
 
+  # Fase 18 (§5.1): respaldo diario de PostgreSQL a S3 (RESPALDO_S3_BUCKET),
+  # con el rol de IAM de la EC2 y sin llaves. A diferencia de desarrollo, aquí
+  # no va en un perfil: queda corriendo con su cron. Ver docs/datos-aws.md.
+  #   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm respaldo respaldar
+  respaldo:
+    image: ${REGISTRO:-ghcr.io/blowyxx72}/comanda-respaldo:${TAG:-latest}
+    build:
+      context: ./postgres/respaldo
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET}
+      RESPALDO_S3_BUCKET: ${RESPALDO_S3_BUCKET}
+      RESPALDO_S3_PREFIJO: ${RESPALDO_S3_PREFIJO:-postgres}
+      RESPALDO_CRON: ${RESPALDO_CRON:-0 8 * * *}
+      RESPALDO_RETENCION_DIAS: ${RESPALDO_RETENCION_DIAS:-30}
+      DOCUMENTOS_PREFIJO_FISCAL: ${DOCUMENTOS_PREFIJO_FISCAL:-fiscal/}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    <<: *logs
+
 volumes:
   postgres-data:
   postgres-replica-data:

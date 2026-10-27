@@ -73,6 +73,7 @@ propio):
 |---|---|---|
 | `comanda-documentos-<sufijo>` | XML fiscales (simulados) | `S3_BUCKET` |
 | `comanda-imagenes-<sufijo>` | Fotos de producto (Fase 16B) | `S3_BUCKET_IMAGENES` |
+| `comanda-respaldos-<sufijo>` | `pg_dump` diarios (Fase 18, [`datos-aws.md`](datos-aws.md)) | `RESPALDO_S3_BUCKET` |
 
 - Los dos con **Block all public access** activado. Las fotos las sirve el
   backend (con caché en Nginx) o CloudFront (paso 9). El bucket nunca se hace
@@ -88,7 +89,8 @@ propio):
    (Session Manager y Run Command).
 3. Agregar una política en línea con el contenido de
    [`deploy/iam/ec2-rol-politica.json`](../deploy/iam/ec2-rol-politica.json),
-   reemplazando `BUCKET_DOCUMENTOS`, `BUCKET_IMAGENES`, `REGION` y `CUENTA`.
+   reemplazando `BUCKET_DOCUMENTOS`, `BUCKET_IMAGENES`, `BUCKET_RESPALDOS`,
+   `REGION` y `CUENTA`.
 
    Esa política solo permite:
    - leer, escribir y borrar en los dos buckets;

@@ -32,6 +32,7 @@ services:
   backend-1: *cloudwatch
   backend-2: *cloudwatch
   nginx: *cloudwatch
+  respaldo: *cloudwatch
   worker:
     <<: *cloudwatch
     # Métricas de las colas en formato EMF (src/monitoring/): CloudWatch las

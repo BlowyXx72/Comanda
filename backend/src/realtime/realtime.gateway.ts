@@ -43,6 +43,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       if (!token) throw new Error('Falta token');
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       client.data.cadenaId = payload.cadenaId;
+      client.data.sedeId = payload.sedeId ?? null;
       // Fase 9: a diferencia de `sede:unirse` (que exige elegir una sede),
       // todo socket autenticado se une de una vez a la room de su propia
       // cadena — ahí solo se emiten agregados de venta (`venta:registrada`),
@@ -61,7 +62,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   @SubscribeMessage('sede:unirse')
   async unirseASede(@ConnectedSocket() client: Socket, @MessageBody() data: { sedeId: string }) {
     const sede = await this.prisma.sede.findUnique({ where: { id: data?.sedeId } });
-    if (!sede || sede.cadenaId !== client.data.cadenaId) {
+    // Fase 17: con sede asignada, solo la suya.
+    const sedeAjena = client.data.sedeId && client.data.sedeId !== data?.sedeId;
+    if (!sede || sede.cadenaId !== client.data.cadenaId || sedeAjena) {
       this.logger.warn(`Intento de unirse a una sede ajena: ${client.id} -> ${data?.sedeId}`);
       return;
     }

@@ -1,14 +1,17 @@
 import { ConflictException } from '@nestjs/common';
 import type { CreatePedidoDto } from '../orders/dto/create-pedido.dto.js';
 import type { OrdersService } from '../orders/orders.service.js';
+import type { PaymentsService } from '../payments/payments.service.js';
 import { SyncService } from './sync.service.js';
 
 // Fase 15: POST /sync (CU-07, Fase 9B) aplica la cola offline pedido a pedido.
 const pedido = (id: string) => ({ id, sedeId: 's1', detalles: [] }) as unknown as CreatePedidoDto;
+// Fase 16: el usuario del JWT completo (con rol y sede asignada, Fase 17).
+const mesero = { userId: 'u1', rol: 'MESERO' as const, cadenaId: 'c1', sedeId: null };
 
 function armar(crearConResultado: (dto: CreatePedidoDto) => Promise<{ duplicado: boolean }>) {
   const orders = { crearConResultado: vi.fn(crearConResultado) };
-  return { servicio: new SyncService(orders as unknown as OrdersService), orders };
+  return { servicio: new SyncService(orders as unknown as OrdersService, {} as PaymentsService), orders };
 }
 
 describe('SyncService', () => {
@@ -18,7 +21,10 @@ describe('SyncService', () => {
       return { duplicado: dto.id === 'p2' };
     });
 
-    const resultados = await servicio.aplicar([pedido('p1'), pedido('p2'), pedido('p3'), pedido('p4')], 'u1', 'c1');
+    const resultados = await servicio.aplicar(
+      { pedidos: [pedido('p1'), pedido('p2'), pedido('p3'), pedido('p4')] },
+      mesero,
+    );
 
     expect(resultados).toEqual([
       { id: 'p1', resultado: 'CREADO' },
@@ -34,6 +40,6 @@ describe('SyncService', () => {
     const { servicio } = armar(async () => {
       throw new Error('connection refused');
     });
-    await expect(servicio.aplicar([pedido('p1')], 'u1', 'c1')).rejects.toThrow('connection refused');
+    await expect(servicio.aplicar({ pedidos: [pedido('p1')] }, mesero)).rejects.toThrow('connection refused');
   });
 });

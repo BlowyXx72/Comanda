@@ -21,8 +21,15 @@ export default defineConfig({
         target: 'http://backend:3000',
         rewrite: (ruta) => ruta.replace(/^\/api/, ''),
       },
+      // DECISIÓN DE PROTOTIPO: el socket va siempre a backend-1 y no al alias
+      // `backend`. Docker reparte el alias entre las dos instancias por
+      // conexión, y Socket.IO necesita que el handshake y el upgrade de una
+      // sesión lleguen a la misma (si no: 400 "Session ID unknown",
+      // reconexiones y eventos perdidos). Nginx lo resuelve con ip_hash; aquí
+      // basta una instancia, porque el backplane de Redis le trae los eventos
+      // que emita backend-2.
       '/socket.io': {
-        target: 'http://backend:3000',
+        target: 'http://backend-1:3000',
         ws: true,
       },
     },

@@ -290,6 +290,33 @@ export type ResultadoSync =
 export const sincronizarPedidos = (pedidos: CrearPedidoInput[], token: string) =>
   apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pedidos }) }, token);
 
+// --- Cobro sin conexión (Fase 16, CU-07, §6.3): la caja reserva un bloque de
+// consecutivos mientras tiene red y luego sincroniza sus cobros ---
+
+export interface RangoOffline {
+  id: string;
+  sedeId: string;
+  dispositivoId: string;
+  inicio: number;
+  fin: number;
+}
+
+export interface PagoOfflineInput {
+  id: string;
+  pedidoId: string;
+  medio: MedioPago;
+  monto: number;
+  consecutivo: number;
+  dispositivoId: string;
+  fechaHora: string;
+}
+
+export const reservarRangoOffline = (sedeId: string, dispositivoId: string, token: string) =>
+  apiFetch<RangoOffline>('/pagos/rangos-offline', { method: 'POST', body: JSON.stringify({ sedeId, dispositivoId }) }, token);
+
+export const sincronizarPagos = (pagos: PagoOfflineInput[], token: string) =>
+  apiFetch<ResultadoSync[]>('/sync', { method: 'POST', body: JSON.stringify({ pagos }) }, token);
+
 // --- Inventario y recetas (Fase 11, §6.2) ---
 
 export interface Insumo {

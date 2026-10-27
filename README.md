@@ -84,9 +84,13 @@ local, pon la IP de la máquina en `NGINX_CERT_IP` y en `VITE_PUBLIC_URL`
 (`https://<ip>:8443`) y recrea el contenedor (`docker compose up -d nginx`).
 
 Las migraciones de Prisma (`prisma migrate deploy`) corren automáticamente
-cada vez que arranca el contenedor del backend; el seed (`prisma db seed`) es
+en el servicio de un solo uso `migrar` (Fase 18), antes de que arranquen el
+backend y el worker; el seed (`prisma db seed`) es
 un paso aparte y solo hace falta correrlo una vez (o de nuevo si quieres
 resetear los datos de demo — el script es idempotente, borra y recrea todo).
+Desde la Fase 18 el seed se niega a correr con `AMBIENTE=produccion`; los
+respaldos diarios (servicio `respaldo`) y la retención de los XML fiscales
+están en [`docs/datos-aws.md`](docs/datos-aws.md).
 
 Usuarios de prueba creados por el seed (contraseña de cada uno junto al
 correo): `admin@demo.com` / `admin123`, `cajero@demo.com` / `cajero123`,

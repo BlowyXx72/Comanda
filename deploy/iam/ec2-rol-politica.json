@@ -11,7 +11,8 @@
       ],
       "Resource": [
         "arn:aws:s3:::BUCKET_DOCUMENTOS/*",
-        "arn:aws:s3:::BUCKET_IMAGENES/*"
+        "arn:aws:s3:::BUCKET_IMAGENES/*",
+        "arn:aws:s3:::BUCKET_RESPALDOS/*"
       ]
     },
     {
@@ -23,7 +24,8 @@
       ],
       "Resource": [
         "arn:aws:s3:::BUCKET_DOCUMENTOS",
-        "arn:aws:s3:::BUCKET_IMAGENES"
+        "arn:aws:s3:::BUCKET_IMAGENES",
+        "arn:aws:s3:::BUCKET_RESPALDOS"
       ]
     },
     {

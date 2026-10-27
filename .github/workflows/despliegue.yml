@@ -1,6 +1,6 @@
 # Fase 18B: despliegue continuo. Cuando el CI de main termina en verde:
 #  1. publica las imágenes de producción en GitHub Container Registry
-#     (ghcr.io/<dueño>/comanda-backend, -backend-migrate y -nginx), con la
+#     (ghcr.io/<dueño>/comanda-backend, -backend-migrate, -nginx y -respaldo), con la
 #     etiqueta del commit y `latest`;
 #  2. si el despliegue está habilitado, actualiza la beta en la EC2.
 #
@@ -85,6 +85,17 @@ jobs:
             ${{ steps.datos.outputs.registro }}/comanda-nginx:latest
           cache-from: type=gha,scope=nginx
           cache-to: type=gha,mode=max,scope=nginx
+      # Fase 18: contenedor de respaldos de PostgreSQL (postgres/respaldo/).
+      - name: comanda-respaldo
+        uses: docker/build-push-action@v6
+        with:
+          context: postgres/respaldo
+          push: true
+          tags: |
+            ${{ steps.datos.outputs.registro }}/comanda-respaldo:${{ steps.datos.outputs.tag }}
+            ${{ steps.datos.outputs.registro }}/comanda-respaldo:latest
+          cache-from: type=gha,scope=respaldo
+          cache-to: type=gha,mode=max,scope=respaldo
 
   desplegar:
     name: Desplegar en la beta (EC2)

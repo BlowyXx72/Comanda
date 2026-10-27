@@ -112,8 +112,32 @@ model Sede {
   pedidos                Pedido[]
   documentosFiscales     DocumentoFiscal[]
   movimientosInventario  MovimientoInventario[]
+  rangosDispositivo      RangoDispositivo[]
+  usuarios               Usuario[]
 
   @@map("sedes")
+}
+
+// Fase 16 (§6.3, CU-07): bloque de consecutivos [inicio, fin] que una caja
+// reserva del rango de su sede mientras tiene red, para poder numerar
+// documentos fiscales sin conexión sin chocar con otra caja. Reservar el
+// bloque avanza `Sede.siguienteConsecutivo` hasta `fin + 1`, así que el cobro
+// en línea nunca usa esos números.
+// DECISIÓN DE PROTOTIPO: la propuesta pide el rango por sede, no fija cómo se
+// reparte entre dispositivos. No está en el ER: es una tabla de control.
+model RangoDispositivo {
+  id            String   @id @default(uuid())
+  sedeId        String   @map("sede_id")
+  // UUID que genera el navegador de la caja la primera vez (localStorage).
+  dispositivoId String   @map("dispositivo_id")
+  inicio        Int
+  fin           Int
+  creadoEn      DateTime @default(now()) @map("creado_en")
+
+  sede Sede @relation(fields: [sedeId], references: [id])
+
+  @@index([sedeId, dispositivoId])
+  @@map("rangos_dispositivo")
 }
 
 model Usuario {
@@ -122,8 +146,14 @@ model Usuario {
   rol          RolUsuario
   email        String     @unique
   passwordHash String     @map("password_hash")
+  // Fase 17: sede donde opera el usuario. Null = todas las de la cadena (el
+  // ADMIN). Con sede, el backend rechaza operar en otra (ver
+  // auth/sede-usuario.ts).
+  // DECISIÓN DE PROTOTIPO: la propuesta no lo fija; el ER no lo tiene.
+  sedeId       String?    @map("sede_id")
 
   cadena  Cadena   @relation(fields: [cadenaId], references: [id])
+  sede    Sede?    @relation(fields: [sedeId], references: [id])
   pedidos Pedido[]
 
   @@map("usuarios")

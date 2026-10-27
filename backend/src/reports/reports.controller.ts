@@ -5,6 +5,7 @@ import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
+import { verificarSedeDelUsuario } from '../auth/sede-usuario.js';
 import { ReporteConsolidadoQueryDto } from './dto/reporte-consolidado-query.dto.js';
 import { ReporteRangoQueryDto } from './dto/reporte-rango-query.dto.js';
 import { ReporteVentasQueryDto } from './dto/reporte-ventas-query.dto.js';
@@ -23,6 +24,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Total y cantidad de ventas del día para una sede (por defecto, hoy)' })
   @Get('ventas')
   ventasDelDia(@Query() query: ReporteVentasQueryDto, @UsuarioActual() usuario: UsuarioAutenticado) {
+    verificarSedeDelUsuario(usuario, query.sedeId);
     return this.reportsService.ventasDelDia(query.sedeId, usuario.cadenaId, query.fecha);
   }
 

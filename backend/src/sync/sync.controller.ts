@@ -8,10 +8,8 @@ import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
 import { SyncPedidosDto } from './dto/sync-pedidos.dto.js';
 import { SyncService } from './sync.service.js';
 
-// Consumido por: /mesas al recuperar la conexión (frontend/src/offline/).
-// TODO PRODUCCIÓN: cobro offline y consecutivos fiscales offline (dependen de
-// los rangos de numeración por sede de la Fase 8); hoy solo se sincronizan
-// pedidos.
+// Consumido por: /mesas (pedidos) y /caja (pagos, Fase 16) al recuperar la
+// conexión (frontend/src/offline/ y frontend/src/caja-offline/).
 @ApiTags('sync')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,11 +17,14 @@ import { SyncService } from './sync.service.js';
 export class SyncController {
   constructor(private readonly syncService: SyncService) {}
 
-  @ApiOperation({ summary: 'Aplica un lote de pedidos creados sin conexión (idempotente por UUID); resultado por pedido' })
-  @Roles('MESERO', 'ADMIN')
+  @ApiOperation({
+    summary:
+      'Aplica un lote de pedidos y/o pagos hechos sin conexión (idempotente por UUID); resultado por elemento',
+  })
+  @Roles('MESERO', 'CAJERO', 'ADMIN')
   @HttpCode(200)
   @Post()
   sincronizar(@Body() dto: SyncPedidosDto, @UsuarioActual() usuario: UsuarioAutenticado) {
-    return this.syncService.aplicar(dto.pedidos, usuario.userId, usuario.cadenaId);
+    return this.syncService.aplicar(dto, usuario);
   }
 }

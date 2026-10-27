@@ -10,7 +10,19 @@ const prisma = new PrismaClient({
 
 const hash = (plano: string) => bcrypt.hash(plano, 10);
 
+// Fase 18: el seed borra todo y crea datos de demo, así que solo corre en
+// ambientes de prueba (`local` y `beta`), nunca en `produccion`. Sin AMBIENTE
+// definido, NODE_ENV=production también cuenta como producción.
+function verificarAmbiente() {
+  const ambiente = process.env.AMBIENTE ?? (process.env.NODE_ENV === 'production' ? 'produccion' : 'local');
+  if (ambiente === 'produccion') {
+    throw new Error(`El seed borra todos los datos: no se corre en producción (AMBIENTE=${ambiente})`);
+  }
+}
+
 async function main() {
+  verificarAmbiente();
+
   // Seed idempotente: se limpia todo y se recrea, en orden inverso a las FK.
   await prisma.documentoFiscal.deleteMany();
   await prisma.pago.deleteMany();
@@ -24,6 +36,7 @@ async function main() {
   await prisma.producto.deleteMany();
   await prisma.insumo.deleteMany();
   await prisma.usuario.deleteMany();
+  await prisma.rangoDispositivo.deleteMany();
   await prisma.sede.deleteMany();
   await prisma.cadena.deleteMany();
 
@@ -48,6 +61,8 @@ async function main() {
     ),
   );
 
+  // Fase 17: el ADMIN ve todas las sedes; cajero y mesero quedan asignados a
+  // la Sede Centro y el backend no los deja operar en otra.
   await prisma.usuario.createMany({
     data: [
       {
@@ -60,12 +75,14 @@ async function main() {
         cadenaId: cadena.id,
         rol: 'CAJERO',
         email: 'cajero@demo.com',
+        sedeId: sedes[0].id,
         passwordHash: await hash('cajero123'),
       },
       {
         cadenaId: cadena.id,
         rol: 'MESERO',
         email: 'mesero@demo.com',
+        sedeId: sedes[0].id,
         passwordHash: await hash('mesero123'),
       },
     ],

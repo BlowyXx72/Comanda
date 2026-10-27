@@ -32,6 +32,7 @@ export class AuthService {
       email: usuario.email,
       rol: usuario.rol,
       cadenaId: usuario.cadenaId,
+      sedeId: usuario.sedeId,
     };
 
     return {
@@ -41,6 +42,7 @@ export class AuthService {
         email: usuario.email,
         rol: usuario.rol,
         cadenaId: usuario.cadenaId,
+        sedeId: usuario.sedeId,
       },
     };
   }
