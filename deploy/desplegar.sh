@@ -3,7 +3,7 @@
 # Lo llama el workflow de despliegue por AWS Systems Manager (sin SSH), o una
 # persona a mano desde Session Manager:
 #   /opt/comanda/deploy/desplegar.sh <tag>      (tag = commit, o latest)
-# Supone el repo clonado en /opt/comanda y .env.prod ya armado (Fase 19B).
+# Supone el repo clonado en /opt/comanda (deploy/ec2-user-data.sh).
 set -eu
 
 TAG="${1:-latest}"
@@ -12,11 +12,19 @@ cd "$(dirname "$0")/.."
 echo "== Desplegando Comanda $TAG =="
 
 # Los archivos de compose y configuración del mismo commit que las imágenes.
+git fetch --quiet origin
 if [ "$TAG" != "latest" ]; then
-  git fetch --quiet origin
   git checkout --quiet --detach "$TAG"
 else
+  git checkout --quiet main
   git pull --quiet --ff-only
+fi
+
+# Fase 19B: los secretos salen de SSM Parameter Store en cada despliegue
+# (COMANDA_SSM_PREFIJO lo define ec2-user-data.sh). Sin él, se usa el
+# .env.prod que ya haya en la carpeta.
+if [ -n "${COMANDA_SSM_PREFIJO:-}" ]; then
+  ./deploy/env-desde-ssm.sh "$COMANDA_SSM_PREFIJO"
 fi
 
 # TAG del entorno manda sobre el de .env.prod.

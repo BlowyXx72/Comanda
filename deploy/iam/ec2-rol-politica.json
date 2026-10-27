@@ -1,0 +1,61 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DocumentosFiscalesEImagenes",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::BUCKET_DOCUMENTOS/*",
+        "arn:aws:s3:::BUCKET_IMAGENES/*"
+      ]
+    },
+    {
+      "Sid": "ListarYVerificarBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3:::BUCKET_DOCUMENTOS",
+        "arn:aws:s3:::BUCKET_IMAGENES"
+      ]
+    },
+    {
+      "Sid": "SecretosDeComanda",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParametersByPath",
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": "arn:aws:ssm:REGION:CUENTA:parameter/comanda/beta/*"
+    },
+    {
+      "Sid": "DescifrarSecretos",
+      "Effect": "Allow",
+      "Action": "kms:Decrypt",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.REGION.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "LogsDeCloudWatchFase21B",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:REGION:CUENTA:log-group:/comanda/beta*"
+    }
+  ]
+}
