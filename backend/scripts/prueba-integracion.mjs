@@ -89,12 +89,24 @@ async function main() {
   if (!mesa) {
     falla(`no hay mesas libres en ${sede1.nombre}; cobra o libera alguna y repite`);
   } else {
+    const existencias = async () =>
+      Object.fromEntries(
+        (await http('GET', `/sedes/${sede1.id}/inventario`, { token: admin.accessToken })).datos.map((i) => [i.id, Number(i.existencia)]),
+      );
+    const receta = (await http('GET', `/productos/${producto.id}/receta`, { token: admin.accessToken })).datos;
+    const antes = await existencias();
+
     const pedidoId = randomUUID();
     const cuerpoPedido = { id: pedidoId, sedeId: sede1.id, mesaId: mesa.id, detalles: [{ productoId: producto.id, cantidad: 2 }] };
     const creado = await http('POST', '/pedidos', { token: mesero.accessToken, cuerpo: cuerpoPedido });
     verificar(creado.status === 201 && creado.datos.estado === 'EN_PREPARACION', `pedido creado en mesa ${mesa.numero} (EN_PREPARACION)`);
     const repetido = await http('POST', '/pedidos', { token: mesero.accessToken, cuerpo: cuerpoPedido });
     verificar(repetido.datos?.id === pedidoId, 'reenviar el mismo UUID no duplica el pedido');
+    const alPedir = await existencias();
+    verificar(
+      receta.length > 0 && receta.every((r) => alPedir[r.insumoId] === antes[r.insumoId] - Number(r.cantidad) * 2),
+      `al entrar a cocina se descuenta la receta × 2 (${receta.map((r) => `${r.insumo.nombre} −${Number(r.cantidad) * 2}`).join(', ')}), una sola vez`,
+    );
     const listo = await http('PATCH', `/pedidos/${pedidoId}/estado`, { token: admin.accessToken, cuerpo: { estado: 'LISTO' } });
     verificar(listo.status === 200 && listo.datos.estado === 'LISTO', 'cocina lo marca LISTO');
 
@@ -105,6 +117,11 @@ async function main() {
     });
     const ms = Date.now() - inicio;
     const doc = pago.datos?.documentoFiscal;
+    const alCobrar = await existencias();
+    verificar(
+      receta.every((r) => alCobrar[r.insumoId] === alPedir[r.insumoId]),
+      'al cobrar el inventario no vuelve a bajar',
+    );
     verificar(pago.status === 201 && doc?.estadoDian === 'PENDIENTE', `cobro inmediato (${ms} ms), documento N.º ${doc?.consecutivo} PENDIENTE`);
     if (doc) {
       const xml = await esperar('XML del documento en el almacén', async () => {

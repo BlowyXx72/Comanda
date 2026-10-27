@@ -186,6 +186,8 @@ model Pedido {
   pagos           Pago[]
   documentoFiscal DocumentoFiscal?
 
+  movimientosInventario MovimientoInventario[]
+
   @@unique([integracionId, referenciaExterna])
   @@map("pedidos")
 }
@@ -324,9 +326,15 @@ model MovimientoInventario {
   tipo     TipoMovimientoInventario
   cantidad Decimal                  @db.Decimal(10, 2)
   fecha    DateTime                 @default(now())
+  // Ronda 3: pedido que originó una SALIDA (null en ENTRADA/MERMA manuales y
+  // en las SALIDA anteriores a este cambio). Permite saber si un pedido ya
+  // descontó su receta y no descontarla dos veces.
+  pedidoId String?                  @map("pedido_id")
 
-  sede   Sede   @relation(fields: [sedeId], references: [id])
-  insumo Insumo @relation(fields: [insumoId], references: [id])
+  sede   Sede    @relation(fields: [sedeId], references: [id])
+  insumo Insumo  @relation(fields: [insumoId], references: [id])
+  pedido Pedido? @relation(fields: [pedidoId], references: [id])
 
+  @@index([pedidoId])
   @@map("movimientos_inventario")
 }

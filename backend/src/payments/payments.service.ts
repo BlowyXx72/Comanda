@@ -9,9 +9,9 @@ import type { CrearPagoDto } from './dto/crear-pago.dto.js';
 
 // Consumido por PaymentsController (POST /pagos), a su vez usado por caja al
 // cobrar una mesa. Cierra el ciclo del pedido: registra el pago, genera el
-// documento fiscal simulado con consecutivo por sede, descuenta el
-// inventario según la receta de cada producto (Fase 11), marca el pedido
-// como PAGADO y libera la mesa — todo en una sola transacción.
+// documento fiscal simulado con consecutivo por sede, marca el pedido como
+// PAGADO y libera la mesa — todo en una sola transacción. El inventario se
+// descuenta antes, al crear el pedido (ver OrdersService).
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -79,15 +79,12 @@ export class PaymentsService {
         },
       });
 
-      // Fase 11 (§6.2): un SALIDA por cada insumo de la receta de cada
-      // detalle, dentro de la misma transacción — si algo falla, se revierte
-      // todo, incluido el consecutivo. No bloquea el cobro si queda negativo
-      // (DECISIÓN DE PROTOTIPO, ver docs/fases-siguientes-2.md Fase 11).
-      await this.inventoryService.descontarPorVenta(
-        tx,
-        pedido.sedeId,
-        pedido.detalles.map((detalle) => ({ productoId: detalle.productoId, cantidad: detalle.cantidad })),
-      );
+      // Fase 11 (§6.2): el inventario ya se descontó al crear el pedido
+      // (OrdersService). Aquí solo se cubren los pedidos que entraron a
+      // cocina antes de ese cambio y aún no tienen SALIDA; dentro de la misma
+      // transacción, así que si algo falla se revierte todo. No bloquea el
+      // cobro si queda negativo (DECISIÓN DE PROTOTIPO, Fase 11).
+      const inventarioDescontado = await this.inventoryService.descontarSiFalta(tx, pedido);
 
       if (pedido.mesaId) {
         await tx.mesa.update({ where: { id: pedido.mesaId }, data: { estado: 'LIBRE' } });
@@ -101,7 +98,7 @@ export class PaymentsService {
         include: { sede: true, mesa: true, detalles: { include: { producto: true } } },
       });
 
-      return { pago, documentoFiscal, pedido: pedidoActualizado };
+      return { pago, documentoFiscal, pedido: pedidoActualizado, inventarioDescontado };
     });
 
     this.realtimeGateway.emitirPedidoActualizado(pedido.sedeId, resultado.pedido);
@@ -117,14 +114,14 @@ export class PaymentsService {
       fechaHora: resultado.pago.creadoEn,
     });
 
-    // Fase 11: aviso genérico de que el inventario de esta sede cambió (el
-    // descuento por receta ya se aplicó dentro de la transacción); /inventario
-    // simplemente recarga existencias al recibirlo, igual que /mesas con
-    // catalogo:actualizado.
-    this.realtimeGateway.emitirInventarioActualizado(cadenaId, {
-      sedeId: resultado.pedido.sedeId,
-      pedidoId: resultado.pedido.id,
-    });
+    // Solo si este cobro descontó (pedido anterior al descuento al pedir);
+    // lo normal es que el aviso ya haya salido al crear el pedido.
+    if (resultado.inventarioDescontado) {
+      this.realtimeGateway.emitirInventarioActualizado(cadenaId, {
+        sedeId: resultado.pedido.sedeId,
+        pedidoId: resultado.pedido.id,
+      });
+    }
 
     // Fase 11B (§5.1): la validación DIAN va por la cola, fuera de la
     // transacción y sin esperarla, ni siquiera el encolado: con Redis caído,
@@ -134,6 +131,7 @@ export class PaymentsService {
     void this.colaFiscal
       .encolar({ documentoFiscalId: resultado.documentoFiscal.id, cadenaId })
       .catch((err: Error) => this.logger.error(`No se pudo encolar el documento fiscal: ${err.message}`));
-    return resultado;
+    const { inventarioDescontado: _interno, ...respuesta } = resultado;
+    return respuesta;
   }
 }

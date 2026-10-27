@@ -81,7 +81,7 @@ intencionales por alcance:
 
 - **`Insumo`, `Receta` y `MovimientoInventario` existen desde la Fase 11**
   (ronda 2, §6.2, ver `docs/fases-siguientes-2.md`). Vender un producto con
-  receta definida descuenta inventario automáticamente; ver la sección
+  receta definida descuenta inventario automáticamente al entrar a cocina; ver la sección
   "Inventario y recetas (Fase 11)" más abajo.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
   y, desde la 12B, de plataforma (nombre, teléfono, dirección); un pedido en
@@ -403,13 +403,19 @@ dueño". Así quedó:
   de sus movimientos (`GET /sedes/:id/inventario`, calculado en memoria, igual
   que `ReportsService` con los pagos). `ENTRADA`/`MERMA` se registran a mano
   (`POST /inventario/movimientos`, solo ADMIN); `SALIDA` solo la genera
-  `PaymentsService.pagar`, nunca el endpoint manual.
-- `PaymentsService.pagar` descuenta inventario **dentro de la misma
-  transacción** del cobro: por cada detalle del pedido, busca la receta de su
-  producto y crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo
-  (cantidad de la receta × cantidad del detalle). Si un producto no tiene
-  receta definida, simplemente no genera movimientos — no todos los productos
-  demo la necesitan (ver seed).
+  el descuento automático por venta, nunca el endpoint manual.
+- Ronda 3: el inventario se descuenta **cuando la comanda entra a cocina**
+  (al crear el pedido, que nace `EN_PREPARACION`), dentro de la misma
+  transacción del `INSERT` del pedido, en los tres canales (mesa y `/sync`,
+  domicilio, plataforma). Por cada detalle se busca la receta de su producto y
+  se crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo (cantidad
+  de la receta × cantidad del detalle), con el `pedidoId` que lo originó. Un
+  reenvío del mismo pedido (reintento, cola offline, plataforma) no descuenta
+  otra vez. Antes (Fase 11) se descontaba al cobrar, y `/inventario` no
+  reflejaba lo que la cocina ya estaba preparando; `PaymentsService.pagar`
+  ahora solo descuenta los pedidos creados antes del cambio que aún no
+  tienen `SALIDA`. Si un producto no tiene receta definida, simplemente no
+  genera movimientos.
 - `// DECISIÓN DE PROTOTIPO`: si una existencia queda negativa, **no se
   bloquea el cobro** — el saldo negativo queda visible en `/inventario` como
   alerta para ADMIN. La propuesta no fija qué hacer en ese caso; bloquear la

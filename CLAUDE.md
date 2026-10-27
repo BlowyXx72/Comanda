@@ -132,8 +132,10 @@ por `cadena_id` de la aplicación se mantienen como segunda capa. Los reportes
 evento sin re-consultar.
 
 Desde la Fase 11 (ronda 2, §6.2), el ER ya tiene `Insumo`, `Receta` y
-`MovimientoInventario`: `PaymentsService.pagar` descuenta inventario por
-receta dentro de la misma transacción del cobro (`backend/src/inventory/`).
+`MovimientoInventario`: `OrdersService` descuenta inventario por receta
+cuando la comanda entra a cocina, dentro de la misma transacción que crea el
+pedido (cada `SALIDA` lleva su `pedidoId`); `PaymentsService.pagar` solo
+descuenta los pedidos viejos que aún no tenían `SALIDA` (`backend/src/inventory/`).
 `Cliente` existe desde la Fase 8B, solo para pedidos de domicilio. Detalle en
 `docs/prototipo-slice.md`.
 

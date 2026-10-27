@@ -4,6 +4,7 @@ import { BranchesService } from '../src/branches/branches.service.js';
 import { CatalogService } from '../src/catalog/catalog.service.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { hashApiKey } from '../src/integrations/api-key.js';
+import { InventoryService } from '../src/inventory/inventory.service.js';
 import { type DatosPedidoPlataforma, OrdersService } from '../src/orders/orders.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { RealtimeGateway } from '../src/realtime/realtime.gateway.js';
@@ -52,10 +53,11 @@ beforeAll(async () => {
     providers: [
       PrismaService,
       OrdersService,
+      InventoryService,
       BranchesService,
       CatalogService,
       TablesService,
-      { provide: RealtimeGateway, useValue: { emitirComandaNueva } },
+      { provide: RealtimeGateway, useValue: { emitirComandaNueva, emitirInventarioActualizado: vi.fn() } },
     ],
   }).compile();
   await modulo.init();
@@ -65,6 +67,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   const pedidos = { sedeId };
+  await duenio.movimientoInventario.deleteMany({ where: { sedeId } });
   await duenio.pedidoDetalle.deleteMany({ where: { pedido: pedidos } });
   await duenio.pedido.deleteMany({ where: pedidos });
   await duenio.cliente.deleteMany({ where: { cadenaId } });

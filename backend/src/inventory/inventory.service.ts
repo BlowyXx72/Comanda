@@ -10,8 +10,9 @@ import type { CrearInsumoDto } from './dto/crear-insumo.dto.js';
 import type { CrearMovimientoDto } from './dto/crear-movimiento.dto.js';
 
 // Consumido por: InsumosController, RecetasController, InventoryController
-// (GET /sedes/:id/inventario, POST /inventario/movimientos) y PaymentsService
-// (descuento automático de inventario al cobrar, Fase 11, §6.2).
+// (GET /sedes/:id/inventario, POST /inventario/movimientos), OrdersService
+// (descuento automático por receta al entrar la comanda a cocina, §6.2) y
+// PaymentsService (solo pedidos viejos que aún no descontaron).
 @Injectable()
 export class InventoryService {
   constructor(
@@ -123,18 +124,23 @@ export class InventoryService {
     });
   }
 
-  // Llamado por PaymentsService.pagar, dentro de la misma transacción del
-  // cobro: un SALIDA por cada insumo de la receta de cada detalle del
-  // pedido. Si un producto no tiene receta definida, simplemente no genera
+  // Llamado por OrdersService al crear un pedido (mesa, domicilio, plataforma
+  // y /sync), dentro de la misma transacción del INSERT: un SALIDA por cada
+  // insumo de la receta de cada detalle. El descuento ocurre cuando la
+  // comanda entra a cocina (el pedido nace EN_PREPARACION), que es cuando de
+  // verdad se gastan los insumos, y no al cobrar: así /inventario refleja lo
+  // que la cocina está preparando aunque la mesa todavía no haya pagado.
+  // Si un producto no tiene receta definida, simplemente no genera
   // movimientos (no todos los productos demo la necesitan).
   async descontarPorVenta(
     tx: Prisma.TransactionClient,
     sedeId: string,
     detalles: { productoId: string; cantidad: number }[],
+    pedidoId: string,
   ) {
     const productoIds = [...new Set(detalles.map((detalle) => detalle.productoId))];
     const recetas = await tx.receta.findMany({ where: { productoId: { in: productoIds } } });
-    if (recetas.length === 0) return;
+    if (recetas.length === 0) return false;
 
     const movimientos = detalles.flatMap((detalle) =>
       recetas
@@ -142,12 +148,26 @@ export class InventoryService {
         .map((receta) => ({
           sedeId,
           insumoId: receta.insumoId,
+          pedidoId,
           tipo: 'SALIDA' as const,
           cantidad: receta.cantidad.times(detalle.cantidad),
         })),
     );
-    if (movimientos.length > 0) {
-      await tx.movimientoInventario.createMany({ data: movimientos });
-    }
+    if (movimientos.length === 0) return false;
+    await tx.movimientoInventario.createMany({ data: movimientos });
+    return true;
+  }
+
+  // Llamado por PaymentsService.pagar. Los pedidos que entraron a cocina
+  // antes de que el descuento pasara a la creación del pedido no tienen
+  // SALIDA asociada: esos se descuentan al cobrarlos, una sola vez. Para
+  // cualquier pedido nuevo no hace nada (ya descontó al crearse).
+  async descontarSiFalta(
+    tx: Prisma.TransactionClient,
+    pedido: { id: string; sedeId: string; detalles: { productoId: string; cantidad: number }[] },
+  ) {
+    const yaDescontado = await tx.movimientoInventario.count({ where: { pedidoId: pedido.id } });
+    if (yaDescontado > 0) return false;
+    return this.descontarPorVenta(tx, pedido.sedeId, pedido.detalles, pedido.id);
   }
 }

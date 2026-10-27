@@ -260,8 +260,9 @@ export function InventarioPage() {
       <section>
         <h2>Existencias {sede ? `— ${sede.nombre}` : ''}</h2>
         <p className="panel-nota">
-          Cambia de sede con el selector de arriba. Un saldo negativo significa que la sede vendió más de lo que
-          tenía registrado como ENTRADA (no se bloquea el cobro, ver docs/fases-siguientes-2.md Fase 11).
+          Cambia de sede con el selector de arriba. Los insumos bajan cuando la comanda entra a cocina, según la
+          receta de cada producto. Un saldo negativo significa que la sede vendió más de lo que tenía registrado como
+          ENTRADA (no se bloquea la venta, ver docs/fases-siguientes-2.md Fase 11).
         </p>
         {cargandoExistencias ? (
           <p className="pantalla-info">Cargando existencias…</p>

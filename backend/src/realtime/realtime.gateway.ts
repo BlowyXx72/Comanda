@@ -91,7 +91,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   // Llamado por InventoryService tras un movimiento manual (ENTRADA/MERMA) o
-  // por PaymentsService tras el descuento automático (SALIDA). Lo escucha
+  // por OrdersService tras el descuento automático al crear un pedido
+  // (SALIDA; PaymentsService solo en pedidos viejos). Lo escucha
   // /inventario (Fase 11, §6.2) para refrescar existencias sin recargar.
   emitirInventarioActualizado(cadenaId: string, evento: unknown) {
     this.server.to(nombreRoomCadena(cadenaId)).emit('inventario:actualizado', evento);
