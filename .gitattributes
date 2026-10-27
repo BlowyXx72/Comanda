@@ -1,3 +1,5 @@
-# Scripts de shell siempre con finales de línea LF: se ejecutan en Linux
-# (contenedores y la EC2) y un retorno de carro al final los rompe.
+# Archivos montados en contenedores Linux: siempre LF aunque core.autocrlf=true.
+postgres/** text eol=lf
+# Fase 19B: también todos los scripts de shell (contenedores y la EC2); un
+# retorno de carro al final de la línea los rompe.
 *.sh text eol=lf
