@@ -17,6 +17,7 @@ import { PublicMenuModule } from './public-menu/public-menu.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { TablesModule } from './tables/tables.module.js';
+import { TenancyModule } from './tenancy/tenancy.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TablesModule } from './tables/tables.module.js';
     IntegracionesModule,
     MailModule,
     ImagenesProductoModule,
+    TenancyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

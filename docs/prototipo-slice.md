@@ -55,10 +55,15 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
 - **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
-  con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
-- **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
-  `lacadena.comandacentral.co`) — en el prototipo el tenant se resuelve por el
-  `cadena_id` embebido en el JWT, no por subdominio.
+  con TLS 1.3, HTTP/2 y WSS. En local el certificado es autofirmado; desde la
+  Fase 19B la beta en AWS queda preparada para Let's Encrypt
+  (`deploy/certificado.sh`), pendiente de crear la cuenta.
+- **Subdominio por cadena** (p. ej. `lacadena.comandacentral.co`): implementado
+  en la Fase 20B. `Cadena.subdominio`; por el subdominio, el menú QR, el
+  domicilio y el login quedan restringidos a esa cadena, y los QR apuntan a
+  él. Se activa con `URL_PUBLICA_CADENA`. Las rutas privadas siguen
+  resolviendo el tenant por el `cadena_id` del JWT. El DNS comodín y el
+  certificado comodín son de la beta en AWS (`docs/despliegue-aws.md`).
 - **Resto de la infraestructura de alta disponibilidad** de la propuesta
   (§5.1): CDN, monitoreo y respaldos. Postgres, Redis y Nginx son una sola
   instancia. El proxy inverso con límite de tasa y las dos instancias de

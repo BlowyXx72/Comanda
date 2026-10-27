@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   crearPedidoDomicilio,
+  obtenerCadenaDelSubdominio,
   obtenerMenuPublico,
   type MenuPublico,
   type PedidoDomicilioCreado,
@@ -25,7 +26,11 @@ interface ItemCarrito {
 // y el layout es de una sola columna. Desde aquí mismo un cliente remoto
 // puede pedir a domicilio (CU-04).
 export function MenuPublicoPage() {
-  const { cadenaId, sedeId } = useParams();
+  const { cadenaId: cadenaDeLaRuta, sedeId } = useParams();
+  // Fase 20B: desde el subdominio de la cadena (lacadena.dominio/menu/:sedeId)
+  // la ruta no trae la cadena; sale del subdominio (GET /public/cadena).
+  const [cadenaDelSubdominio, setCadenaDelSubdominio] = useState<string | null>(null);
+  const cadenaId = cadenaDeLaRuta ?? cadenaDelSubdominio ?? undefined;
   const [searchParams] = useSearchParams();
   const mesa = searchParams.get('mesa');
 
@@ -37,6 +42,17 @@ export function MenuPublicoPage() {
   const [enviando, setEnviando] = useState(false);
   const [errorPedido, setErrorPedido] = useState<string | null>(null);
   const [pedidoCreado, setPedidoCreado] = useState<PedidoDomicilioCreado | null>(null);
+
+  useEffect(() => {
+    if (cadenaDeLaRuta) return;
+    let vigente = true;
+    obtenerCadenaDelSubdominio()
+      .then((cadena) => vigente && setCadenaDelSubdominio(cadena.id))
+      .catch(() => vigente && setError('Este menú no existe.'));
+    return () => {
+      vigente = false;
+    };
+  }, [cadenaDeLaRuta]);
 
   useEffect(() => {
     if (!cadenaId || !sedeId) return;

@@ -25,7 +25,7 @@ fi
 if [ ! -f "$PROVISIONAL/fullchain.pem" ] || [ "$(cat "$PROVISIONAL/dominio.txt" 2>/dev/null)" != "$DOMINIO" ]; then
   openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
     -subj "/CN=$DOMINIO/O=Comanda Central (provisional)" \
-    -addext "subjectAltName=DNS:$DOMINIO,DNS:localhost,IP:127.0.0.1" \
+    -addext "subjectAltName=DNS:$DOMINIO,DNS:*.$DOMINIO,DNS:localhost,IP:127.0.0.1" \
     -keyout "$PROVISIONAL/privkey.pem" -out "$PROVISIONAL/fullchain.pem" 2>/dev/null
   echo "$DOMINIO" > "$PROVISIONAL/dominio.txt"
 fi

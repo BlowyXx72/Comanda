@@ -146,6 +146,8 @@ Los parámetros estándar son gratis.
    - **Par de llaves:** ninguno, porque se entra por Session Manager.
    - **Grupo de seguridad:** entrada **solo TCP 80 y 443** desde `0.0.0.0/0`;
      sin el 22.
+   - **Metadata options:** IMDSv2 obligatorio y **hop limit 2**, para que los
+     contenedores lleguen a las credenciales del rol.
    - **Advanced details → IAM instance profile:** `comanda-beta-ec2`.
    - **User data:** el contenido de
      [`deploy/ec2-user-data.sh`](../deploy/ec2-user-data.sh). Instala Docker,
@@ -216,7 +218,44 @@ basta para la beta. Para la CDN de la propuesta:
    Las llaves de las fotos son inmutables (`productos/{cadena}/{producto}-{versión}-{400|800}.webp`),
    así que no hay que invalidar nada al cambiar una foto.
 
-## 10. Verificación
+## 10. Subdominio por cadena (Fase 20B, §5.2)
+
+Cada cadena entra por su subdominio, p. ej. `demo.comanda.ejemplo.co`
+(`Cadena.subdominio`; la del seed es `demo`). Por el subdominio de una cadena:
+
+- el menú QR y el domicilio solo muestran y aceptan esa cadena (otro
+  `cadenaId` da 404);
+- el login solo acepta a sus usuarios (otro da el mismo 401 que una clave
+  mala);
+- los QR de las mesas apuntan a `https://<subdominio>.dominio/menu/<sede>?mesa=N`,
+  y la URL la arma el backend (`GET /cadena`).
+
+Por el dominio principal todo sigue igual que antes.
+
+1. **DNS:** además del `A` de `comanda.ejemplo.co`, un registro comodín `A` de
+   `*.comanda.ejemplo.co` a la misma Elastic IP. Para el certificado comodín,
+   la zona tiene que estar en **Route 53**.
+2. **Permisos:** las dos declaraciones `CertificadoComodin*` de
+   [`deploy/iam/ec2-rol-politica.json`](../deploy/iam/ec2-rol-politica.json),
+   con el `ID_ZONA` de la zona hospedada.
+3. **Metadatos de la instancia:** en EC2 → Actions → Instance settings →
+   *Modify instance metadata options*, **hop limit = 2**. Sin esto los
+   contenedores no alcanzan las credenciales del rol, ni el backend (S3) ni
+   certbot (Route 53).
+4. Parámetro `URL_PUBLICA_CADENA=https://{subdominio}.comanda.ejemplo.co`, y
+   volver a desplegar.
+5. Certificado comodín (reemplaza al del paso 7; las renovaciones siguen solas):
+
+   ```bash
+   /opt/comanda/deploy/certificado.sh comodin   # DOMINIO y *.DOMINIO, validando por DNS
+   ```
+
+En local se prueba con `URL_PUBLICA_CADENA=https://{subdominio}.localhost:8443`
+en el `.env`: los navegadores resuelven `*.localhost` solos y el certificado
+de desarrollo ya cubre `*.localhost`. Con eso se abre
+`https://demo.localhost:8443/menu/<sedeId>`.
+
+## 11. Verificación
 
 ```bash
 # Desde la EC2 (Session Manager), contra el dominio real:
@@ -232,7 +271,7 @@ docker run --rm -e URL_BASE=https://comanda.ejemplo.co -e MAILPIT_URL= \
   - `https://comanda.ejemplo.co/api/docs` → 404 (Swagger apagado);
   - la PWA instalable desde un teléfono.
 
-## 11. Apagar y destruir (para no gastar créditos)
+## 12. Apagar y destruir (para no gastar créditos)
 
 | Qué | Cuándo | Cómo |
 |---|---|---|

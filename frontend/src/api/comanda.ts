@@ -458,3 +458,26 @@ export async function subirImagenProducto(productoId: string, archivo: File, tok
 
 export const quitarImagenProducto = (productoId: string, token: string) =>
   apiFetch<Producto>(`/productos/${productoId}/imagen`, { method: 'DELETE' }, token);
+
+// Fase 20B (§5.2): subdominio por cadena.
+export interface CadenaPublica {
+  id: string;
+  nombre: string;
+  subdominio: string;
+}
+
+export interface MiCadena {
+  id: string;
+  nombre: string;
+  subdominio: string | null;
+  // https://lacadena.dominio, o null si la cadena no tiene subdominio o los
+  // subdominios están apagados (URL_PUBLICA_CADENA vacía).
+  urlPublica: string | null;
+}
+
+// La cadena del subdominio por el que se abrió la página (sin JWT); 404 si
+// no es el de ninguna.
+export const obtenerCadenaDelSubdominio = () => apiFetch<CadenaPublica>('/public/cadena');
+
+export const obtenerMiCadena = (token: string) => apiFetch<MiCadena>('/cadena', {}, token);
+

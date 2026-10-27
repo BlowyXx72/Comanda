@@ -1,5 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CadenaPorHostService } from '../tenancy/cadena-por-host.service.js';
 import { CreatePedidoDomicilioDto } from './dto/create-pedido-domicilio.dto.js';
 import { OrdersService } from './orders.service.js';
 
@@ -13,11 +14,16 @@ import { OrdersService } from './orders.service.js';
 @ApiTags('pedidos-publicos')
 @Controller('public/pedidos')
 export class PublicOrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly cadenaPorHost: CadenaPorHostService,
+  ) {}
 
   @ApiOperation({ summary: 'Crea un pedido de domicilio desde la web (sin autenticación, idempotente por UUID)' })
   @Post('domicilio')
-  async crearDomicilio(@Body() dto: CreatePedidoDomicilioDto) {
+  async crearDomicilio(@Body() dto: CreatePedidoDomicilioDto, @Headers('host') host: string | undefined) {
+    // Fase 20B: por el subdominio de una cadena solo se le pide a ella.
+    await this.cadenaPorHost.verificar(host, dto.cadenaId);
     const pedido = await this.ordersService.crearDomicilio(dto);
     // Al cliente externo solo se le confirma lo suyo, no el pedido completo
     // con la sede y los productos internos.

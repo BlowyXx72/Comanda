@@ -73,6 +73,10 @@ model Cadena {
   nombre   String
   plan     String
   creadoEn DateTime @default(now()) @map("creado_en")
+  // Fase 20B (§5.2, DNS multi-tenant): {subdominio}.dominio lleva al menú y
+  // al login de esta cadena, p. ej. lacadena.comandacentral.co. Opcional: una
+  // cadena sin subdominio solo se usa por el dominio principal.
+  subdominio String? @unique
 
   sedes     Sede[]
   usuarios  Usuario[]

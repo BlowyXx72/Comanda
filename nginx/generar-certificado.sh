@@ -9,7 +9,8 @@
 set -eu
 
 DIR=/etc/nginx/certs
-SAN="DNS:localhost,IP:127.0.0.1"
+# Fase 20B: *.localhost para probar el subdominio por cadena (demo.localhost).
+SAN="DNS:localhost,DNS:*.localhost,IP:127.0.0.1"
 if [ -n "${NGINX_CERT_IP:-}" ]; then
   SAN="$SAN,IP:$NGINX_CERT_IP"
 fi

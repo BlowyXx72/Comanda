@@ -56,6 +56,23 @@
         "logs:DescribeLogStreams"
       ],
       "Resource": "arn:aws:logs:REGION:CUENTA:log-group:/comanda/beta*"
+    },
+    {
+      "Sid": "CertificadoComodinFase20B",
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets"
+      ],
+      "Resource": "arn:aws:route53:::hostedzone/ID_ZONA"
+    },
+    {
+      "Sid": "CertificadoComodinConsultas",
+      "Effect": "Allow",
+      "Action": [
+        "route53:ListHostedZones",
+        "route53:GetChange"
+      ],
+      "Resource": "*"
     }
   ]
 }

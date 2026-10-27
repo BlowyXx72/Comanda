@@ -73,7 +73,8 @@ pedidos de plataforma por API con `X-Api-Key`, contra un simulador) y
 resumen diario), `ImagenesProductoModule` (Fase 16B, `backend/src/product-images/`:
 fotos de producto para el catálogo y el menú QR, procesadas con `sharp`) y
 `StorageModule` (Fase 16B: el almacén de objetos S3/MinIO que comparten fiscal
-e imágenes). El procesamiento de las colas corre en un proceso aparte,
+e imágenes) y `TenancyModule` (Fase 20B, `backend/src/tenancy/`: subdominio
+por cadena; resuelve la cadena por el `Host` en menú QR, domicilio y login). El procesamiento de las colas corre en un proceso aparte,
 el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que junta
 `FiscalWorkerModule`, `IntegracionesWorkerModule` y `MailWorkerModule`), con
 el mismo código del backend. Deben quedar
@@ -111,7 +112,7 @@ DIAN real y Rappi real quedan fuera bajo cualquier circunstancia (regla
 dura): los "proveedores" de la ronda 2 son simuladores locales. Fuera de eso,
 sigue fuera el resto de la infraestructura de alta disponibilidad de la
 propuesta que la ronda 2 no cubre completa (§5.1: CDN, monitoreo/respaldos,
-SSH/NTP/Syslog, DNS por subdominio; el SMTP existe desde la Fase 14B, pero
+SSH/NTP/Syslog; el subdominio por cadena existe desde la Fase 20B y el SMTP desde la 14B, pero
 contra Mailpit, que no entrega correos de verdad) — el prototipo es una sola
 instancia de cada pieza salvo donde una fase concreta la amplíe. La cola de
 mensajes + worker asíncrono y el almacén de objetos existen desde la Fase
