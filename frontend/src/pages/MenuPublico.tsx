@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   crearPedidoDomicilio,
+  obtenerCadenaDelSubdominio,
   obtenerMenuPublico,
   type MenuPublico,
   type PedidoDomicilioCreado,
@@ -25,7 +26,11 @@ interface ItemCarrito {
 // y el layout es de una sola columna. Desde aquí mismo un cliente remoto
 // puede pedir a domicilio (CU-04).
 export function MenuPublicoPage() {
-  const { cadenaId, sedeId } = useParams();
+  const { cadenaId: cadenaDeLaRuta, sedeId } = useParams();
+  // Fase 20B: desde el subdominio de la cadena (lacadena.dominio/menu/:sedeId)
+  // la ruta no trae la cadena; sale del subdominio (GET /public/cadena).
+  const [cadenaDelSubdominio, setCadenaDelSubdominio] = useState<string | null>(null);
+  const cadenaId = cadenaDeLaRuta ?? cadenaDelSubdominio ?? undefined;
   const [searchParams] = useSearchParams();
   const mesa = searchParams.get('mesa');
 
@@ -37,6 +42,17 @@ export function MenuPublicoPage() {
   const [enviando, setEnviando] = useState(false);
   const [errorPedido, setErrorPedido] = useState<string | null>(null);
   const [pedidoCreado, setPedidoCreado] = useState<PedidoDomicilioCreado | null>(null);
+
+  useEffect(() => {
+    if (cadenaDeLaRuta) return;
+    let vigente = true;
+    obtenerCadenaDelSubdominio()
+      .then((cadena) => vigente && setCadenaDelSubdominio(cadena.id))
+      .catch(() => vigente && setError('Este menú no existe.'));
+    return () => {
+      vigente = false;
+    };
+  }, [cadenaDeLaRuta]);
 
   useEffect(() => {
     if (!cadenaId || !sedeId) return;
@@ -132,7 +148,23 @@ export function MenuPublicoPage() {
               const enCarrito = carrito[producto.id];
               return (
                 <li key={producto.id} className={`menu-publico-item${enCarrito ? ' menu-publico-item--en-carrito' : ''}`}>
-                  <span>
+                  {/* Fase 16B: foto del producto. Diferida (lazy) y con tamaño fijo 4:3
+                      para que la página no salte al cargar; la de 400 px basta en un
+                      celular y la de 800 px se usa en pantallas densas. */}
+                  {producto.imagenMiniaturaUrl && (
+                    <img
+                      className="menu-publico-item-foto"
+                      src={producto.imagenMiniaturaUrl}
+                      srcSet={`${producto.imagenMiniaturaUrl} 400w, ${producto.imagenUrl} 800w`}
+                      sizes="(min-width: 640px) 120px, 88px"
+                      width={400}
+                      height={300}
+                      loading="lazy"
+                      decoding="async"
+                      alt={producto.nombre}
+                    />
+                  )}
+                  <span className="menu-publico-item-texto">
                     <span className="menu-publico-item-nombre">{producto.nombre}</span>
                     <span className="menu-publico-item-precio">{formatearCOP(producto.precio)}</span>
                   </span>

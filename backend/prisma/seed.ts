@@ -41,7 +41,8 @@ async function main() {
   await prisma.cadena.deleteMany();
 
   const cadena = await prisma.cadena.create({
-    data: { nit: '900123456-7', nombre: 'Demo', plan: 'BASICO' },
+    // subdominio: Fase 20B (Parte 2), demo.<dominio> abre el menú de esta cadena.
+    data: { nit: '900123456-7', nombre: 'Demo', plan: 'BASICO', subdominio: 'demo' },
   });
 
   // DECISIÓN DE PROTOTIPO (Fase 7): 3 sedes en vez de 1, para poder demostrar

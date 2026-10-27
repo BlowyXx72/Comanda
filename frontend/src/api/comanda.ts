@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchTexto } from './client';
+import { API_URL, ApiError, apiFetch, apiFetchTexto } from './client';
 
 export interface Sede {
   id: string;
@@ -28,6 +28,10 @@ export interface Producto {
   categoria: string;
   // Fase 10 (CU-08): baja lógica del catálogo centralizado.
   activo: boolean;
+  // Fase 16B: URL pública de la foto (800 px y 400 px), ya armada por el
+  // backend; null si el producto no tiene foto.
+  imagenUrl: string | null;
+  imagenMiniaturaUrl: string | null;
 }
 
 export interface CrearProductoInput {
@@ -239,6 +243,9 @@ export interface ProductoMenu {
   id: string;
   nombre: string;
   precio: string;
+  // Fase 16B: igual que en Producto.
+  imagenUrl: string | null;
+  imagenMiniaturaUrl: string | null;
 }
 
 export interface CategoriaMenu {
@@ -455,3 +462,49 @@ export const listarAcusesPlataforma = (apiKey: string) =>
 
 export const enviarResumenDiario = (token: string, fecha?: string) =>
   apiFetch<{ encolado: boolean }>('/correo/resumen-diario', { method: 'POST', body: JSON.stringify({ fecha }) }, token);
+
+// Fase 16B: foto de producto (solo ADMIN). Va en multipart/form-data, así
+// que no usa apiFetch (que fija Content-Type JSON): el navegador pone el
+// boundary del multipart.
+export async function subirImagenProducto(productoId: string, archivo: File, token: string): Promise<Producto> {
+  const datos = new FormData();
+  datos.append('imagen', archivo);
+  const response = await fetch(`${API_URL}/productos/${productoId}/imagen`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: datos,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const mensaje =
+      response.status === 413 ? 'La foto pesa más de 2 MB' : (body?.message ?? 'No se pudo subir la foto');
+    throw new ApiError(mensaje, response.status);
+  }
+  return (await response.json()) as Producto;
+}
+
+export const quitarImagenProducto = (productoId: string, token: string) =>
+  apiFetch<Producto>(`/productos/${productoId}/imagen`, { method: 'DELETE' }, token);
+
+// Fase 20B (§5.2): subdominio por cadena.
+export interface CadenaPublica {
+  id: string;
+  nombre: string;
+  subdominio: string;
+}
+
+export interface MiCadena {
+  id: string;
+  nombre: string;
+  subdominio: string | null;
+  // https://lacadena.dominio, o null si la cadena no tiene subdominio o los
+  // subdominios están apagados (URL_PUBLICA_CADENA vacía).
+  urlPublica: string | null;
+}
+
+// La cadena del subdominio por el que se abrió la página (sin JWT); 404 si
+// no es el de ninguna.
+export const obtenerCadenaDelSubdominio = () => apiFetch<CadenaPublica>('/public/cadena');
+
+export const obtenerMiCadena = (token: string) => apiFetch<MiCadena>('/cadena', {}, token);
+

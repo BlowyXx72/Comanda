@@ -85,3 +85,40 @@ crear recursos sin confirmarlo. La lista de lo que falta correr en AWS está en
   `docker compose config`, y `migrar`, `respaldo` y el seed se probaron como
   contenedores sueltos contra la base `comanda_r3p1`. Antes de integrar hay
   que correr `docker compose up -d --wait` con esta rama.
+
+## Integración con `r3-parte-2` (27/10/2026)
+
+`r3-parte-1` se integró con `main` (que ya traía `r3-parte-2`, PR #8). Lo que
+eso cerró o cambió de lo de arriba:
+
+- **Fase 15:** la prueba de integración final y las pruebas de la Parte 2 ya
+  existen (`backend/scripts/prueba-integracion.mjs`, CI de la Fase 18B). Con
+  las dos partes juntas pasan: `docker compose up -d --build --wait`, seed,
+  89/89 pruebas del backend, `tsc`, `oxlint` en backend y frontend, `npm run
+  build` y `prueba-integracion.mjs` por Nginx (`TODO OK`).
+- **Las dos partes arreglaron el mismo lint:** se quedaron `AuthProvider.tsx`
+  y `SedeProvider.tsx` (Parte 1, traen la sede asignada de la Fase 17) y
+  `hooks/useUltimoValor` en los sockets y la guarda `vigente` de
+  `useColaOffline` (Parte 2).
+- **Inventario al pedir (Parte 2):** el descuento pasó a la creación del
+  pedido. `PaymentsService.registrarCobro` (lo comparten el cobro en línea y
+  el sincronizado de la Fase 16) ahora usa `descontarSiFalta`, así que un
+  cobro offline tampoco descuenta dos veces.
+  `test/cobro-inventario.spec.ts` quedó cubriendo los pedidos sin `SALIDA`
+  previa.
+- **`sync.service.spec.ts` (Parte 2)** se adaptó a la firma nueva de
+  `SyncService.aplicar` (`{ pedidos, pagos }` + usuario del JWT).
+- **Fase 18 en la beta:** `docker-compose.prod.yml` ya traía `migrate` con
+  `configurar-rol-app`. Se agregó el servicio `respaldo` (siempre activo, sin
+  MinIO, logs a CloudWatch con `docker-compose.prod.aws.yml`), su imagen
+  `comanda-respaldo` al workflow de despliegue, las variables en
+  `.env.prod.example` (`AMBIENTE=beta`, `RESPALDO_*`) y el bucket
+  `BUCKET_RESPALDOS` en la política de IAM de la EC2.
+- **El `docker compose up` completo ya se probó** con la rama integrada, y un
+  `respaldar` subió el `.dump` a MinIO.
+
+Sigue pendiente: probar en el navegador la caja en modo avión (Fase 16), el
+prefijo `fiscal/` de los XML (Parte 2), el filtro por sede en `GET
+/documentos-fiscales/:id/xml` y todo lo que requiere la cuenta de AWS.
+`docs/despliegue-aws.md` recomienda no correr el seed en la beta aunque
+`AMBIENTE=beta` lo permite.

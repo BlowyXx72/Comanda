@@ -1,0 +1,42 @@
+# Fase 21B (§5.1 monitoreo, §5.2 Syslog): en la EC2, los logs de todos los
+# contenedores van a CloudWatch Logs (grupo /comanda/beta, un stream por
+# contenedor) en vez de quedarse en el disco. Se suma a docker-compose.prod.yml;
+# deploy/desplegar.sh lo incluye cuando COMANDA_CLOUDWATCH=true (lo define
+# deploy/ec2-user-data.sh).
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.aws.yml --env-file .env.prod up -d --wait
+#
+# El daemon de Docker usa el rol de IAM de la instancia (logs:PutLogEvents en
+# deploy/iam/ec2-rol-politica.json). El grupo y su retención corta (7 días,
+# para no gastar créditos) los crea deploy/cloudwatch/crear-alarmas.sh.
+# `docker compose logs` sigue funcionando: Docker guarda además una copia local.
+
+x-cloudwatch: &cloudwatch
+  logging:
+    driver: awslogs
+    options:
+      awslogs-region: ${AWS_REGION:-us-east-1}
+      awslogs-group: /comanda/beta
+      # Con el driver awslogs, el tag es el nombre del stream: uno por
+      # contenedor (comanda-backend-1-1, comanda-worker-1...).
+      tag: "{{.Name}}"
+      # No bloquear el contenedor si CloudWatch tarda: se descarta lo que no
+      # quepa en el búfer antes que frenar la caja.
+      mode: non-blocking
+      max-buffer-size: 4m
+
+services:
+  postgres: *cloudwatch
+  postgres-replica: *cloudwatch
+  redis: *cloudwatch
+  migrate: *cloudwatch
+  backend-1: *cloudwatch
+  backend-2: *cloudwatch
+  nginx: *cloudwatch
+  respaldo: *cloudwatch
+  worker:
+    <<: *cloudwatch
+    # Métricas de las colas en formato EMF (src/monitoring/): CloudWatch las
+    # saca de este stream y sobre ellas van las alarmas.
+    environment:
+      METRICAS_EMF: "true"
+      METRICAS_AMBIENTE: beta

@@ -19,6 +19,7 @@
     "start:worker": "nest start --watch -p tsconfig.worker.json --entryFile worker",
     "lint": "oxlint src/ test/",
     "migrar": "prisma migrate deploy && tsx prisma/configurar-rol-app.ts",
+    "seed:imagenes": "tsx prisma/seed-imagenes.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -49,6 +50,7 @@
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1"
   },

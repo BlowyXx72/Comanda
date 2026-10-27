@@ -22,6 +22,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/menu/:cadenaId/:sedeId" element={<MenuPublicoPage />} />
+            {/* Fase 20B: desde el subdominio de la cadena (lacadena.dominio/menu/:sedeId) */}
+            <Route path="/menu/:sedeId" element={<MenuPublicoPage />} />
             {/* Fase 12B: hace de plataforma externa, así que no usa sesión (va con API key). */}
             <Route path="/simulador-plataforma" element={<SimuladorPlataformaPage />} />
             <Route

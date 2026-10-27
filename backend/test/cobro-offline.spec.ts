@@ -23,8 +23,8 @@ const gateway = {
   emitirInventarioActualizado: vi.fn(),
 };
 const colaFiscal = { encolar: vi.fn().mockResolvedValue(undefined) };
-const ordersService = new OrdersService(prisma, nada(), nada(), nada(), nada());
 const inventoryService = new InventoryService(prisma, nada(), nada(), nada());
+const ordersService = new OrdersService(prisma, nada(), nada(), nada(), nada(), inventoryService);
 const payments = new PaymentsService(prisma, ordersService, gateway as never, inventoryService, colaFiscal as never);
 const sync = new SyncService(ordersService, payments);
 

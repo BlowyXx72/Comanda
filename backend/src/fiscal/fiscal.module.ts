@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RealtimeModule } from '../realtime/realtime.module.js';
-import { AlmacenObjetosService } from './almacen-objetos.service.js';
+import { StorageModule } from '../storage/storage.module.js';
 import { ColaFiscalService } from './cola-fiscal.service.js';
 import { FiscalEventosService } from './fiscal-eventos.service.js';
 import { FiscalController } from './fiscal.controller.js';
@@ -9,9 +9,9 @@ import { FiscalController } from './fiscal.controller.js';
 // resultados por WebSocket y servir el XML. El procesamiento vive en
 // FiscalWorkerModule, que solo arranca el contenedor `worker`.
 @Module({
-  imports: [RealtimeModule],
+  imports: [RealtimeModule, StorageModule],
   controllers: [FiscalController],
-  providers: [ColaFiscalService, FiscalEventosService, AlmacenObjetosService],
+  providers: [ColaFiscalService, FiscalEventosService],
   exports: [ColaFiscalService],
 })
 export class FiscalModule {}

@@ -1,0 +1,141 @@
+# Fase 17B: Nginx de producción (beta en EC2), §5.1 y §5.2. Misma idea que
+# nginx/nginx.conf (desarrollo) —TLS 1.3, HTTP/2, WSS, límite de tasa y
+# balanceo entre backend-1 y backend-2—, con tres diferencias:
+#  - el frontend son archivos estáticos compilados, no el servidor de Vite;
+#  - escucha también en 80, para el reto de Let's Encrypt y redirigir a HTTPS;
+#  - el certificado es real (Fase 19B) o uno provisional (certificado-prod.sh).
+# ${DOMINIO} lo reemplaza envsubst al arrancar; las variables de Nginx ($host,
+# $remote_addr...) no se tocan porque no existen en el entorno.
+
+log_format comanda '$remote_addr "$request" $status -> $upstream_addr ($request_time s)';
+access_log /dev/stdout comanda;
+server_tokens off;
+
+resolver 127.0.0.11 valid=5s ipv6=off;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# Mismos límites que en desarrollo (ver nginx/nginx.conf). En la nube cada
+# cliente llega con su propia IP, así que aquí sí son por persona.
+limit_req_zone $binary_remote_addr zone=publico:10m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=imagenes:10m rate=30r/s;
+limit_req_status 429;
+
+proxy_cache_path /var/cache/nginx/imagenes levels=1:2 keys_zone=cache_imagenes:10m max_size=200m inactive=7d use_temp_path=off;
+
+upstream backend_api {
+    zone backend_api 64k;
+    server backend-1:3000 resolve max_fails=1 fail_timeout=10s;
+    server backend-2:3000 resolve max_fails=1 fail_timeout=10s;
+}
+
+upstream backend_ws {
+    zone backend_ws 64k;
+    ip_hash;
+    server backend-1:3000 resolve max_fails=1 fail_timeout=10s;
+    server backend-2:3000 resolve max_fails=1 fail_timeout=10s;
+}
+
+# Puerto 80: solo el reto HTTP-01 de Let's Encrypt (certbot --webroot,
+# Fase 19B) y la redirección a HTTPS.
+server {
+    listen 80;
+    server_name _;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/actual/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/actual/privkey.pem;
+    ssl_protocols TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1h;
+
+    # El navegador solo usará HTTPS con este dominio durante un año.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    gzip on;
+    gzip_proxied any;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript text/javascript application/json application/xml image/svg+xml application/manifest+json;
+
+    proxy_http_version 1.1;
+    proxy_connect_timeout 2s;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    location /api/menu/imagenes/ {
+        limit_req zone=imagenes burst=60 nodelay;
+        proxy_cache cache_imagenes;
+        proxy_cache_valid 200 7d;
+        proxy_cache_valid 404 1m;
+        add_header X-Cache $upstream_cache_status always;
+        proxy_pass http://backend_api/menu/imagenes/;
+    }
+
+    location /api/menu/ {
+        limit_req zone=publico burst=10 nodelay;
+        proxy_pass http://backend_api/menu/;
+    }
+
+    location /api/public/ {
+        limit_req zone=publico burst=10 nodelay;
+        proxy_pass http://backend_api/public/;
+    }
+
+    location /api/ {
+        client_max_body_size 4m;
+        proxy_pass http://backend_api/;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://backend_ws;
+        proxy_read_timeout 1h;
+    }
+
+    # Frontend compilado (SPA).
+    root /usr/share/nginx/html;
+
+    # Archivos de Vite con hash en el nombre: nunca cambian, caché de un año.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        try_files $uri =404;
+    }
+
+    # El shell de la PWA y su service worker siempre se revalidan, para que
+    # un despliegue nuevo llegue en la siguiente visita.
+    location = /sw.js {
+        add_header Cache-Control "no-cache" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        try_files $uri =404;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        # Rutas del SPA (/mesas, /menu/...): todas sirven index.html.
+        try_files $uri $uri/ /index.html;
+    }
+}
+

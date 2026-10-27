@@ -1,0 +1,252 @@
+# Fase 17B: ambiente beta (una EC2, docs/fases-siguientes-3.md). Mismas
+# piezas que docker-compose.yml —Nginx, dos backends, worker, Postgres con
+# réplica y Redis—, pero:
+#  - imágenes de producción (backend/Dockerfile, nginx/Dockerfile.prod): sin
+#    bind mounts ni --watch, el frontend compilado dentro de Nginx;
+#  - sin MinIO ni Mailpit: Amazon S3 y SES por variables (.env.prod);
+#  - solo se publican 80 y 443 (sin 3000, 5432, Prisma Studio...);
+#  - las migraciones corren una vez, en el servicio `migrate`, no en cada
+#    instancia;
+#  - restart: unless-stopped (en Linux no aplica el problema de puertos de
+#    Docker Desktop que obligó a usar "no" en desarrollo).
+#
+# Uso en la EC2 (Fase 19B). --env-file hace falta porque este archivo también
+# lee variables (${POSTGRES_USER}...) y Compose solo carga .env por defecto:
+#   cp .env.prod.example .env.prod   # y completar
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod pull   # imágenes de GHCR (Fase 18B)
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --wait
+# Probar en el PC: ver docker-compose.prod.local.yml.
+
+x-logs: &logs
+  # Logs en archivos rotados para no llenar el disco de la EC2.
+  # TODO PRODUCCIÓN: Fase 21B los manda a CloudWatch Logs.
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-backend: &backend
+  image: ${REGISTRO:-ghcr.io/blowyxx72}/comanda-backend:${TAG:-latest}
+  build:
+    context: ./backend
+    target: runtime
+  restart: unless-stopped
+  # tini como PID 1: le pasa SIGTERM a Node y recoge el proceso. Así el
+  # apagado ordenado de Nest (enableShutdownHooks) cierra todo y sale en
+  # menos de un segundo con 143 (SIGTERM), en vez de terminar con 137 (SIGKILL).
+  init: true
+  env_file:
+    - .env.prod
+  environment:
+    PORT: 3000
+    REDIS_HOST: redis
+    REDIS_PORT_INTERNAL: 6379
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+    postgres-replica:
+      condition: service_healthy
+  <<: *logs
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=5
+      - -c
+      - wal_keep_size=256MB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *logs
+
+  postgres-replica-setup:
+    image: postgres:16-alpine
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      REPL_USER: ${POSTGRES_REPLICATION_USER}
+      REPL_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        psql -v ON_ERROR_STOP=1 -v u="$$REPL_USER" -v p="$$REPL_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I WITH LOGIN REPLICATION PASSWORD %L', :'u', :'p')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'u')
+        \gexec
+        SELECT format('ALTER ROLE %I WITH LOGIN REPLICATION PASSWORD %L', :'u', :'p') \gexec
+        SQL
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres-replica:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER}
+      POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+    entrypoint: ["/replica-entrypoint.sh"]
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+      - ./postgres/replica-entrypoint.sh:/replica-entrypoint.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    <<: *logs
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF: las colas (documentos fiscales, acuses, correos) sobreviven a un
+    # reinicio de Redis.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *logs
+
+  # Migraciones como paso único del despliegue (no en el arranque de cada
+  # instancia, como en desarrollo). Usa la etapa `build` de la imagen, que
+  # trae la CLI de Prisma. Nunca corre el seed: los datos de demo son solo
+  # para ambientes de prueba (ver docs/despliegue-aws.md).
+  migrate:
+    image: ${REGISTRO:-ghcr.io/blowyxx72}/comanda-backend-migrate:${TAG:-latest}
+    build:
+      context: ./backend
+      target: build
+    restart: "no"
+    env_file:
+      - .env.prod
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/configurar-rol-app.ts"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    <<: *logs
+
+  backend-1:
+    <<: *backend
+    networks:
+      default:
+        aliases:
+          - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend-2:
+    <<: *backend
+    networks:
+      default:
+        aliases:
+          - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    <<: *backend
+    command: ["node", "dist/worker.js"]
+
+  nginx:
+    image: ${REGISTRO:-ghcr.io/blowyxx72}/comanda-nginx:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile.prod
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Certificados de Let's Encrypt y carpeta del reto HTTP-01 (Fase 19B).
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+      - nginx-certs:/etc/nginx/certs
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -skf -o /dev/null https://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    <<: *logs
+
+  # Fase 18 (§5.1): respaldo diario de PostgreSQL a S3 (RESPALDO_S3_BUCKET),
+  # con el rol de IAM de la EC2 y sin llaves. A diferencia de desarrollo, aquí
+  # no va en un perfil: queda corriendo con su cron. Ver docs/datos-aws.md.
+  #   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm respaldo respaldar
+  respaldo:
+    image: ${REGISTRO:-ghcr.io/blowyxx72}/comanda-respaldo:${TAG:-latest}
+    build:
+      context: ./postgres/respaldo
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET}
+      RESPALDO_S3_BUCKET: ${RESPALDO_S3_BUCKET}
+      RESPALDO_S3_PREFIJO: ${RESPALDO_S3_PREFIJO:-postgres}
+      RESPALDO_CRON: ${RESPALDO_CRON:-0 8 * * *}
+      RESPALDO_RETENCION_DIAS: ${RESPALDO_RETENCION_DIAS:-30}
+      DOCUMENTOS_PREFIJO_FISCAL: ${DOCUMENTOS_PREFIJO_FISCAL:-fiscal/}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    <<: *logs
+
+volumes:
+  postgres-data:
+  postgres-replica-data:
+  redis-data:
+  letsencrypt:
+  certbot-www:
+  nginx-certs:

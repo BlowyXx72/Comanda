@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { useUltimoValor } from '../hooks/useUltimoValor';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3000';
 
@@ -20,10 +21,7 @@ interface UseInventarioSocketOptions {
 // backend une cada socket autenticado a la room de su cadena en la conexión,
 // no hace falta `sede:unirse` para recibir `inventario:actualizado`.
 export function useInventarioSocket({ token, onInventarioActualizado }: UseInventarioSocketOptions) {
-  const onInventarioActualizadoRef = useRef(onInventarioActualizado);
-  useEffect(() => {
-    onInventarioActualizadoRef.current = onInventarioActualizado;
-  });
+  const onInventarioActualizadoRef = useUltimoValor(onInventarioActualizado);
 
   useEffect(() => {
     if (!token) return;
@@ -36,5 +34,5 @@ export function useInventarioSocket({ token, onInventarioActualizado }: UseInven
     return () => {
       socket.disconnect();
     };
-  }, [token]);
+  }, [token, onInventarioActualizadoRef]);
 }

@@ -8,7 +8,10 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 
 // Fase 15 (ronda 3, Parte 1): el cobro descuenta inventario por receta dentro
 // de la misma transacción (Fase 11, §6.2) y, si el cobro falla, no queda
-// ningún movimiento ni se consume el consecutivo.
+// ningún movimiento ni se consume el consecutivo. Desde que el descuento pasó
+// a la creación del pedido (Parte 2), eso solo aplica a pedidos sin SALIDA
+// previa, como los que esta prueba inserta directo en la base; el caso normal
+// lo cubre inventario-al-pedir.spec.ts.
 // DECISIÓN DE PROTOTIPO: prueba de integración contra la base real, igual que
 // rls-aislamiento.spec.ts; PaymentsService corre con el PrismaService de
 // verdad (rol comanda_app + RLS) y solo se reemplazan los WebSocket y la cola.
@@ -23,8 +26,8 @@ const gateway = {
   emitirInventarioActualizado: vi.fn(),
 };
 const colaFiscal = { encolar: vi.fn().mockResolvedValue(undefined) };
-const ordersService = new OrdersService(prisma, never(), never(), never(), never());
 const inventoryService = new InventoryService(prisma, never(), never(), never());
+const ordersService = new OrdersService(prisma, never(), never(), never(), never(), inventoryService);
 const payments = new PaymentsService(prisma, ordersService, gateway as never, inventoryService, colaFiscal as never);
 
 // Dependencias que pagar() no usa en este camino.
@@ -98,7 +101,7 @@ afterAll(async () => {
   await duenio.$disconnect();
 });
 
-describe('PaymentsService.pagar con descuento de inventario', () => {
+describe('PaymentsService.pagar de un pedido sin descuento previo de inventario', () => {
   it('descuenta la receta por cantidad, numera, libera la mesa y encola el documento', async () => {
     const sedeId = await crearSede(100, 1);
     const pedido = await crearPedidoListo(sedeId);

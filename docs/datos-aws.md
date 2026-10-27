@@ -21,10 +21,9 @@ npm run migrar   # = prisma migrate deploy && tsx prisma/configurar-rol-app.ts
 ```
 
 `configurar-rol-app.ts` le pone al rol `comanda_app` (RLS, Fase 12) la
-contraseña de `DATABASE_URL_APP`. En la beta y en producción se corre igual:
-`docker compose run --rm migrar` antes de levantar o actualizar los
-contenedores de la app (el `docker-compose.prod.yml` de la Fase 17B debe
-incluir el servicio `migrar`).
+contraseña de `DATABASE_URL_APP`. En la beta lo hace el servicio `migrate`
+de `docker-compose.prod.yml` (Fase 17B), con el mismo comando, antes de que
+arranquen `backend-1`, `backend-2` y `worker`.
 
 ## 2. Seed solo en ambientes de prueba
 
@@ -41,7 +40,9 @@ incluir el servicio `migrar`).
 
 El contenedor `respaldo` (`postgres/respaldo/`) trae `pg_dump`/`pg_restore`
 16 y `aws-cli`. Va en el perfil `respaldo`, así que `docker compose up` no lo
-levanta en desarrollo.
+levanta en desarrollo. En la beta, `docker-compose.prod.yml` sí lo levanta
+siempre (imagen `comanda-respaldo`, publicada por el workflow de despliegue)
+y escribe en `RESPALDO_S3_BUCKET` con el rol de la EC2.
 
 ```bash
 # Cron diario (RESPALDO_CRON, en UTC; por defecto 08:00 UTC = 03:00 Bogotá)

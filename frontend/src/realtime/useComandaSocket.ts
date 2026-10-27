@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { DocumentoActualizado, Pedido } from '../api/comanda';
+import { useUltimoValor } from '../hooks/useUltimoValor';
 
 // Fase 13B: vacío = mismo origen de la página (Nginx o el proxy de Vite).
 const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
@@ -35,19 +36,10 @@ export function useComandaSocket({
   onCatalogoActualizado,
   onDocumentoActualizado,
 }: UseComandaSocketOptions) {
-  const onComandaNuevaRef = useRef(onComandaNueva);
-  const onPedidoActualizadoRef = useRef(onPedidoActualizado);
-  const onCatalogoActualizadoRef = useRef(onCatalogoActualizado);
-  const onDocumentoActualizadoRef = useRef(onDocumentoActualizado);
-
-  // Los refs se actualizan en un efecto (no durante el render) y así el
-  // socket siempre llama al callback más reciente sin reconectarse.
-  useEffect(() => {
-    onComandaNuevaRef.current = onComandaNueva;
-    onPedidoActualizadoRef.current = onPedidoActualizado;
-    onCatalogoActualizadoRef.current = onCatalogoActualizado;
-    onDocumentoActualizadoRef.current = onDocumentoActualizado;
-  });
+  const onComandaNuevaRef = useUltimoValor(onComandaNueva);
+  const onPedidoActualizadoRef = useUltimoValor(onPedidoActualizado);
+  const onCatalogoActualizadoRef = useUltimoValor(onCatalogoActualizado);
+  const onDocumentoActualizadoRef = useUltimoValor(onDocumentoActualizado);
 
   useEffect(() => {
     if (!token || !sedeId) {
@@ -67,5 +59,5 @@ export function useComandaSocket({
     return () => {
       socket.disconnect();
     };
-  }, [token, sedeId]);
+  }, [token, sedeId, onComandaNuevaRef, onPedidoActualizadoRef, onCatalogoActualizadoRef, onDocumentoActualizadoRef]);
 }

@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { urlPublicaImagen } from '../product-images/imagen-publica.js';
 
 export interface CategoriaMenu {
   categoria: string;
-  productos: { id: string; nombre: string; precio: string }[];
+  // Fase 16B: URL pública de la foto (800 px y 400 px), o null si no tiene.
+  productos: { id: string; nombre: string; precio: string; imagenUrl: string | null; imagenMiniaturaUrl: string | null }[];
 }
 
 export interface MenuPublico {
@@ -27,7 +29,7 @@ export class PublicMenuService {
         // Igual que GET /productos (Fase 10): los dados de baja no se muestran.
         where: { cadenaId, activo: true },
         orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
-        select: { id: true, nombre: true, precio: true, categoria: true },
+        select: { id: true, nombre: true, precio: true, categoria: true, imagenUrl: true },
       }),
     }));
     // Mismo criterio que BranchesService: 404 si la sede no es de esa cadena.
@@ -42,7 +44,13 @@ export class PublicMenuService {
         grupo = { categoria: producto.categoria, productos: [] };
         porCategoria.set(producto.categoria, grupo);
       }
-      grupo.productos.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio.toString() });
+      grupo.productos.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio.toString(),
+        imagenUrl: urlPublicaImagen(producto.imagenUrl, 800),
+        imagenMiniaturaUrl: urlPublicaImagen(producto.imagenUrl, 400),
+      });
     }
 
     return {
