@@ -3,6 +3,7 @@ import { BranchesService } from '../branches/branches.service.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { EstadoPedido } from '../generated/prisma/enums.js';
+import { InventoryService } from '../inventory/inventory.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { TablesService } from '../tables/tables.service.js';
@@ -46,6 +47,7 @@ export class OrdersService {
     private readonly catalogService: CatalogService,
     private readonly tablesService: TablesService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   // Consumido por: /cocina al montar, para hidratar el tablero antes de que
@@ -90,8 +92,8 @@ export class OrdersService {
     }
 
     const pedido = await this.crearOResolverColision(dto.id, cadenaId, () =>
-      this.prisma.conCadena(cadenaId, (tx) =>
-        tx.pedido.create({
+      this.prisma.conCadena(cadenaId, async (tx) =>
+        this.descontarInventario(tx, await tx.pedido.create({
           data: {
             id: dto.id,
             sedeId: dto.sedeId,
@@ -105,12 +107,12 @@ export class OrdersService {
             detalles: { create: detallesData },
           },
           include: INCLUDE_PEDIDO,
-        }),
+        })),
       ),
     );
     if (!pedido.nuevo) return { pedido: pedido.pedido, duplicado: true };
 
-    this.realtimeGateway.emitirComandaNueva(dto.sedeId, pedido.pedido);
+    this.avisarPedidoNuevo(cadenaId, pedido.pedido);
     return { pedido: pedido.pedido, duplicado: false };
   }
 
@@ -127,8 +129,8 @@ export class OrdersService {
     const { total, detallesData } = await this.armarDetalles(dto.detalles, dto.cadenaId);
 
     const creado = await this.crearOResolverColision(dto.id, dto.cadenaId, () =>
-      this.prisma.conCadena(dto.cadenaId, (tx) =>
-        tx.pedido.create({
+      this.prisma.conCadena(dto.cadenaId, async (tx) =>
+        this.descontarInventario(tx, await tx.pedido.create({
           data: {
             id: dto.id,
             sede: { connect: { id: dto.sedeId } },
@@ -143,12 +145,12 @@ export class OrdersService {
             detalles: { create: detallesData },
           },
           include: INCLUDE_PEDIDO,
-        }),
+        })),
       ),
     );
     if (!creado.nuevo) return creado.pedido;
 
-    this.realtimeGateway.emitirComandaNueva(dto.sedeId, creado.pedido);
+    this.avisarPedidoNuevo(dto.cadenaId, creado.pedido);
     return creado.pedido;
   }
 
@@ -174,8 +176,8 @@ export class OrdersService {
 
     let pedido;
     try {
-      pedido = await this.prisma.conCadena(datos.cadenaId, (tx) =>
-        tx.pedido.create({
+      pedido = await this.prisma.conCadena(datos.cadenaId, async (tx) =>
+        this.descontarInventario(tx, await tx.pedido.create({
           data: {
             sede: { connect: { id: datos.sedeId } },
             canal: 'PLATAFORMA',
@@ -189,7 +191,7 @@ export class OrdersService {
             detalles: { create: detallesData },
           },
           include: INCLUDE_PEDIDO,
-        }),
+        })),
       );
     } catch (err) {
       // Dos reenvíos simultáneos: el primero gana por el índice único y el
@@ -203,8 +205,29 @@ export class OrdersService {
       throw err;
     }
 
-    this.realtimeGateway.emitirComandaNueva(datos.sedeId, pedido);
+    this.avisarPedidoNuevo(datos.cadenaId, pedido);
     return { pedido, duplicado: false };
+  }
+
+  // Fase 11 (§6.2), ronda 3: la receta se descuenta cuando la comanda entra
+  // a cocina, dentro de la misma transacción que crea el pedido. Un reintento
+  // que choca con el pedido existente (P2002) revierte la transacción entera,
+  // así que un duplicado nunca descuenta dos veces.
+  private async descontarInventario(tx: Prisma.TransactionClient, pedido: PedidoConRelaciones) {
+    await this.inventoryService.descontarPorVenta(
+      tx,
+      pedido.sedeId,
+      pedido.detalles.map((detalle) => ({ productoId: detalle.productoId, cantidad: detalle.cantidad })),
+      pedido.id,
+    );
+    return pedido;
+  }
+
+  // Comanda nueva al KDS de la sede y aviso a /inventario de que bajaron los
+  // insumos (mismo evento que un movimiento manual).
+  private avisarPedidoNuevo(cadenaId: string, pedido: PedidoConRelaciones) {
+    this.realtimeGateway.emitirComandaNueva(pedido.sedeId, pedido);
+    this.realtimeGateway.emitirInventarioActualizado(cadenaId, { sedeId: pedido.sedeId, pedidoId: pedido.id });
   }
 
   // El UUID lo genera el cliente. Con RLS, el pedido de otra cadena es

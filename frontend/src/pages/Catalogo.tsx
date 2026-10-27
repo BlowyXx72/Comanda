@@ -10,6 +10,7 @@ import {
 } from '../api/comanda';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { FotoProducto } from '../catalogo/FotoProducto';
 
 const FORM_VACIO: CrearProductoInput = { nombre: '', precio: 0, categoria: '' };
 
@@ -141,6 +142,7 @@ export function CatalogoPage() {
       <table className="catalogo-tabla">
         <thead>
           <tr>
+            <th>Foto</th>
             <th>Nombre</th>
             <th>Categoría</th>
             <th>Precio</th>
@@ -162,6 +164,7 @@ export function CatalogoPage() {
                   .filter(Boolean)
                   .join(' ') || undefined}
               >
+                <td><FotoProducto producto={producto} alCambiar={cargarProductos} /></td>
                 <td>
                   <input
                     value={cambios?.nombre ?? producto.nombre}

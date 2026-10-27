@@ -12,6 +12,7 @@ import {
 } from '../api/comanda';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useUrlMenuMesa } from '../cadena/useUrlMenuMesa';
 import { conRespaldo, esErrorDeRed } from '../offline/cache';
 import { useColaOffline } from '../offline/useColaOffline';
 import { useSedeConRespaldo } from '../offline/useSedeConRespaldo';
@@ -22,15 +23,6 @@ import { reproducirBeepPedidoListo } from '../utils/sonido';
 // Cuánto dura resaltada la mesa cuando cocina marca su pedido LISTO.
 const DURACION_ALERTA_MS = 4000;
 
-// DECISIÓN DE PROTOTIPO: el QR se genera en el navegador con `qrcode.react`
-// (la propuesta pide el QR por mesa, no cómo generarlo). Apunta a la vista
-// pública del menú; VITE_PUBLIC_URL permite usar la IP de la red local para
-// escanearlo con un teléfono real (ver .env.example).
-const PUBLIC_URL = import.meta.env.VITE_PUBLIC_URL || window.location.origin;
-
-const urlMenuMesa = (cadenaId: string, sedeId: string, numeroMesa: number) =>
-  `${PUBLIC_URL}/menu/${cadenaId}/${sedeId}?mesa=${numeroMesa}`;
-
 interface ItemCarrito {
   producto: Producto;
   cantidad: number;
@@ -39,6 +31,8 @@ interface ItemCarrito {
 
 export function MesasPage() {
   const { token } = useAuth();
+  // URL del QR de cada mesa (con el subdominio de la cadena si tiene, Fase 20B).
+  const urlMenuMesa = useUrlMenuMesa(token);
   const { sede, cargando: cargandoSede, error: errorSede } = useSedeConRespaldo();
 
   const [mesas, setMesas] = useState<Mesa[]>([]);
@@ -321,6 +315,9 @@ export function MesasPage() {
               <div className="lista-productos">
                 {productos.map((producto) => (
                   <button key={producto.id} className="producto-boton" onClick={() => agregarProducto(producto)}>
+                    {producto.imagenMiniaturaUrl && (
+                      <img className="producto-boton-foto" src={producto.imagenMiniaturaUrl} alt="" width={400} height={300} loading="lazy" decoding="async" />
+                    )}
                     <span>{producto.nombre}</span>
                     <span>{formatearCOP(producto.precio)}</span>
                   </button>

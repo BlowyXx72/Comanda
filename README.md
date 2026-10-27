@@ -35,11 +35,14 @@ interfaz (p. ej. "mejora el diseño de /cocina").
 cp .env.example .env
 docker compose up -d --wait
 docker compose exec backend-1 npx prisma db seed
+docker compose exec backend-1 npm run seed:imagenes   # fotos de demo del menú (Fase 16B)
 ```
 
 `--wait` hace que el comando termine solo cuando todo está listo de verdad
 (backend, frontend y nginx tienen healthcheck): si responde, ya se puede
-entrar. El seed solo hace falta la primera vez.
+entrar. El seed solo hace falta la primera vez. Las fotos de los productos
+se cambian desde `/catalogo` (ADMIN): JPEG, PNG o WebP de hasta 2 MB; el
+backend las recorta a 4:3 y las pasa a WebP de 800 y 400 px.
 
 **Al prender el PC o reiniciar Docker Desktop, los contenedores no arrancan
 solos** (todos usan `restart: "no"`): hay que correr `docker compose up -d
@@ -186,6 +189,59 @@ de la propuesta (detalle completo y estado de cada uno en
 - **Catálogo centralizado (CU-08)** — `/catalogo` (solo ADMIN) permite
   crear, editar y desactivar productos una sola vez; el cambio se propaga en
   vivo a `/mesas` y al menú QR de las 3 sedes, sin recargar.
+
+## Pruebas
+
+Con el stack arriba (`docker compose up -d --wait`):
+
+```bash
+# Pruebas automáticas del backend (unitarias + integración contra la base)
+docker compose exec backend-1 npx vitest run
+
+# Prueba de punta a punta por Nginx: mesa → cocina → cobro → XML fiscal,
+# plataforma y su reenvío, domicilio con correo, resumen diario, panel y
+# límite de tasa. Necesita el seed. Termina en "TODO OK" o lista lo que falló.
+docker compose exec -e NODE_TLS_REJECT_UNAUTHORIZED=0 backend-1 node scripts/prueba-integracion.mjs
+
+# Lint
+docker compose exec backend-1 npm run lint
+docker compose exec frontend npm run lint
+```
+
+## Ambiente de producción (beta en AWS)
+
+Desde la Fase 17B hay imágenes de producción (`backend/Dockerfile`,
+`nginx/Dockerfile.prod` con el frontend compilado) y un
+`docker-compose.prod.yml` sin bind mounts, sin MinIO ni Mailpit (S3 y SES por
+variables) y que solo publica 80 y 443. Las migraciones corren una vez en el
+servicio `migrate`, nunca el seed. Para probarlo en el PC antes de subirlo:
+
+```bash
+cp .env.prod.example .env.prod   # completar (para probar, sirven valores de prueba)
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build --wait
+# -> https://localhost:9443   (bajar: ... down -v)
+```
+
+El despliegue en la EC2 está en `docs/fases-siguientes-3.md` (Fases 18B–21B).
+
+### CI/CD (GitHub Actions, Fase 18B)
+
+- **`CI`** (`.github/workflows/ci.yml`), en cada PR y en cada push a `main`:
+  - lint, tipos y pruebas unitarias del backend;
+  - lint y `vite build` del frontend;
+  - el stack completo con Docker Compose: seed, todas las pruebas y la prueba
+    de punta a punta por Nginx;
+  - en los PR, además, comprueba que las imágenes de producción compilan.
+- **`Despliegue`** (`.github/workflows/despliegue.yml`), cuando el CI de
+  `main` queda en verde:
+  - publica `comanda-backend`, `comanda-backend-migrate` y `comanda-nginx` en
+    GitHub Container Registry (`ghcr.io/blowyxx72/...`);
+  - si la variable del repo `DESPLIEGUE_HABILITADO` es `true`, actualiza la
+    EC2 con `deploy/desplegar.sh` por AWS Systems Manager. Entra por OIDC,
+    sin llaves de AWS ni SSH.
+- Para que un PR en rojo no se pueda integrar: Settings → Branches → regla
+  para `main` con "Require status checks to pass" (Backend, Frontend,
+  Integración).
 
 ## Estructura del repositorio
 

@@ -1,0 +1,112 @@
+# Fase 18B: integración continua. Corre en cada PR y en cada push a main.
+# Un PR solo se integra si todo esto queda en verde (regla de protección de
+# la rama main, ver docs/despliegue-aws.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, tipos, pruebas unitarias)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Solo para que `prisma generate` (postinstall) resuelva la variable.
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit -p tsconfig.json
+      # Las de src/ no necesitan base de datos; las de test/ corren en el
+      # trabajo de integración, contra el stack completo.
+      - run: npx vitest run src
+
+  frontend:
+    name: Frontend (lint, tipos, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  integracion:
+    name: Integración (stack completo con Docker Compose)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v5
+      # El mismo docker-compose.yml de desarrollo, con los valores de
+      # .env.example: Postgres con RLS y réplica, Redis, MinIO, Mailpit, dos
+      # backends, worker y Nginx.
+      - name: Levantar el stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build --wait
+      - name: Datos de demo
+        run: |
+          docker compose exec -T backend-1 npx prisma db seed
+          docker compose exec -T backend-1 npm run seed:imagenes
+      - name: Pruebas del backend (unitarias + integración contra la base)
+        run: docker compose exec -T backend-1 npx vitest run
+      - name: Prueba de punta a punta por Nginx
+        run: docker compose exec -T -e NODE_TLS_REJECT_UNAUTHORIZED=0 backend-1 node scripts/prueba-integracion.mjs
+      - name: Logs si algo falló
+        if: failure()
+        run: docker compose logs --tail=200
+      - name: Bajar el stack
+        if: always()
+        run: docker compose down -v
+
+  imagenes:
+    name: Imágenes de producción (compilan)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    # En main las construye y publica despliegue.yml; aquí solo se comprueba
+    # que un PR no las rompa.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Nginx con el frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile.prod
+          push: false
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx

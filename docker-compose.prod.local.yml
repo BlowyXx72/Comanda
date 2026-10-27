@@ -1,0 +1,61 @@
+# Fase 17B: probar el ambiente de producción en el PC, antes de subirlo a
+# AWS (y en el CI, Fase 18B). Se suma a docker-compose.prod.yml y reemplaza
+# lo que en la nube es de AWS: MinIO en vez de S3 y Mailpit en vez de SES.
+# Proyecto aparte ("comanda-prod-local"): no toca los contenedores ni los
+# volúmenes del ambiente de desarrollo.
+#
+#   cp .env.prod.example .env.prod    # para probar, sirven valores de prueba
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build --wait
+#   -> https://localhost:9443 (certificado provisional autofirmado)
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod down -v
+name: comanda-prod-local
+
+x-almacen-y-correo-locales: &locales
+  environment:
+    PORT: 3000
+    REDIS_HOST: redis
+    REDIS_PORT_INTERNAL: 6379
+    S3_ENDPOINT: http://minio:9000
+    S3_ACCESS_KEY: comanda
+    S3_SECRET_KEY: comanda_minio_prueba
+    S3_FORCE_PATH_STYLE: "true"
+    S3_BUCKET: comanda-documentos
+    S3_BUCKET_IMAGENES: comanda-imagenes
+    SMTP_HOST: mailpit
+    SMTP_PORT: 1025
+    SMTP_SECURE: "false"
+    SMTP_USER: ""
+    SMTP_PASS: ""
+    CORS_ORIGENES: https://localhost:9443
+
+services:
+  backend-1:
+    <<: *locales
+  backend-2:
+    <<: *locales
+  worker:
+    <<: *locales
+
+  nginx:
+    # 9443/8080 para no chocar con el Nginx de desarrollo (8443).
+    ports: !override
+      - "9443:443"
+      - "8080:80"
+    environment:
+      DOMINIO: localhost
+
+  minio:
+    image: bitnamilegacy/minio:2025.5.24
+    environment:
+      MINIO_ROOT_USER: comanda
+      MINIO_ROOT_PASSWORD: comanda_minio_prueba
+    volumes:
+      - minio-data:/bitnami/minio/data
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8026:8025"
+
+volumes:
+  minio-data:

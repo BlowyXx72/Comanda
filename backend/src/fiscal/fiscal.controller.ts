@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { UsuarioAutenticado } from '../auth/jwt-payload.interface.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { AlmacenObjetosService } from './almacen-objetos.service.js';
+import { AlmacenObjetosService } from '../storage/almacen-objetos.service.js';
 
 // Consumido por: /caja ("Ver XML" en el recibo). El navegador no habla con
 // MinIO directo: el XML pasa por aquí para aplicar JWT y aislamiento por

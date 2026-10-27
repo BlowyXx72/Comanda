@@ -34,3 +34,6 @@ docker-data/
 
 # Ralph (loop autónomo de Claude Code, tooling personal de Miguel — no es parte de Comanda)
 scripts/ralph/
+
+# Fase 17B: secretos del ambiente beta (ver .env.prod.example)
+.env.prod

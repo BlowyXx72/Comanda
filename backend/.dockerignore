@@ -1,0 +1,11 @@
+# Fase 17B: lo que no entra al contexto de build de las imágenes del backend.
+# node_modules y el cliente de Prisma se generan dentro de la imagen; los
+# dist* son de los contenedores de desarrollo (bind mount).
+node_modules
+dist
+dist-2
+dist-worker
+*.tsbuildinfo
+src/generated
+.env
+coverage

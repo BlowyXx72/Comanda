@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { CadenaPorHostService } from '../tenancy/cadena-por-host.service.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
@@ -10,13 +11,18 @@ import type { UsuarioAutenticado } from './jwt-payload.interface.js';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly cadenaPorHost: CadenaPorHostService,
+  ) {}
 
   @ApiOperation({ summary: 'Login con email/password, devuelve el JWT y el usuario autenticado' })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  async login(@Body() dto: LoginDto, @Headers('host') host: string | undefined) {
+    // Fase 20B: por el subdominio de una cadena, solo entran sus usuarios.
+    const cadenaDelHost = await this.cadenaPorHost.resolver(host);
+    return this.authService.login(dto.email, dto.password, cadenaDelHost?.id);
   }
 
   // Usado por el frontend para validar el token guardado y recuperar el

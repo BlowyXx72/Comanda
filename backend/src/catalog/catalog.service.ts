@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RealtimeGateway } from '../realtime/realtime.gateway.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { conImagenPublica } from '../product-images/imagen-publica.js';
 import type { ActualizarProductoDto } from './dto/actualizar-producto.dto.js';
 import type { CrearProductoDto } from './dto/crear-producto.dto.js';
 
@@ -13,13 +14,16 @@ export class CatalogService {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-  listar(cadenaId: string, incluirInactivos = false) {
-    return this.prisma.conCadena(cadenaId, (tx) =>
+  // Fase 16B: lo que sale por la API lleva la URL pública de la foto, nunca
+  // la URI interna del almacén (conImagenPublica).
+  async listar(cadenaId: string, incluirInactivos = false) {
+    const productos = await this.prisma.conCadena(cadenaId, (tx) =>
       tx.producto.findMany({
         where: { cadenaId, ...(incluirInactivos ? {} : { activo: true }) },
         orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
       }),
     );
+    return productos.map(conImagenPublica);
   }
 
   async obtenerDeCadena(productoId: string, cadenaId: string) {
@@ -40,7 +44,7 @@ export class CatalogService {
       tx.producto.create({ data: { cadenaId, ...dto } }),
     );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'CREADO' });
-    return producto;
+    return conImagenPublica(producto);
   }
 
   async actualizar(id: string, cadenaId: string, dto: ActualizarProductoDto) {
@@ -49,7 +53,7 @@ export class CatalogService {
       tx.producto.update({ where: { id }, data: dto }),
     );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'ACTUALIZADO' });
-    return producto;
+    return conImagenPublica(producto);
   }
 
   async desactivar(id: string, cadenaId: string) {
@@ -58,6 +62,6 @@ export class CatalogService {
       tx.producto.update({ where: { id }, data: { activo: false } }),
     );
     this.realtimeGateway.emitirCatalogoActualizado(cadenaId, { productoId: producto.id, accion: 'DESACTIVADO' });
-    return producto;
+    return conImagenPublica(producto);
   }
 }

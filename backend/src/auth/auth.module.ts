@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { TenancyModule } from '../tenancy/tenancy.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { RolesGuard } from './guards/roles.guard.js';
@@ -13,6 +14,8 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    // Fase 20B: el login por el subdominio de una cadena solo acepta a sus usuarios.
+    TenancyModule,
     JwtModule.register({
       // DECISIÓN DE PROTOTIPO: mismo fallback que en JwtStrategy.
       secret: process.env.JWT_SECRET ?? 'inseguro-solo-para-desarrollo-local',

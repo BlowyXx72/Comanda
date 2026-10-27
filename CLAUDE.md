@@ -70,7 +70,11 @@ Fase 11, §6.2 — tampoco estaba en la lista original), `FiscalModule` (Fase
 segundo plano y XML en MinIO), `IntegracionesModule` (Fase 12B, CU-05:
 pedidos de plataforma por API con `X-Api-Key`, contra un simulador) y
 `MailModule` (Fase 14B: correo SMTP a Mailpit, comprobante de domicilio y
-resumen diario). El procesamiento de las colas corre en un proceso aparte,
+resumen diario), `ImagenesProductoModule` (Fase 16B, `backend/src/product-images/`:
+fotos de producto para el catálogo y el menú QR, procesadas con `sharp`) y
+`StorageModule` (Fase 16B: el almacén de objetos S3/MinIO que comparten fiscal
+e imágenes) y `TenancyModule` (Fase 20B, `backend/src/tenancy/`: subdominio
+por cadena; resuelve la cadena por el `Host` en menú QR, domicilio y login). El procesamiento de las colas corre en un proceso aparte,
 el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que junta
 `FiscalWorkerModule`, `IntegracionesWorkerModule` y `MailWorkerModule`), con
 el mismo código del backend. Deben quedar
@@ -108,7 +112,7 @@ DIAN real y Rappi real quedan fuera bajo cualquier circunstancia (regla
 dura): los "proveedores" de la ronda 2 son simuladores locales. Fuera de eso,
 sigue fuera el resto de la infraestructura de alta disponibilidad de la
 propuesta que la ronda 2 no cubre completa (§5.1: CDN, monitoreo/respaldos,
-SSH/NTP/Syslog, DNS por subdominio; el SMTP existe desde la Fase 14B, pero
+SSH/NTP/Syslog; el subdominio por cadena existe desde la Fase 20B y el SMTP desde la 14B, pero
 contra Mailpit, que no entrega correos de verdad) — el prototipo es una sola
 instancia de cada pieza salvo donde una fase concreta la amplíe. La cola de
 mensajes + worker asíncrono y el almacén de objetos existen desde la Fase
@@ -132,8 +136,10 @@ por `cadena_id` de la aplicación se mantienen como segunda capa. Los reportes
 evento sin re-consultar.
 
 Desde la Fase 11 (ronda 2, §6.2), el ER ya tiene `Insumo`, `Receta` y
-`MovimientoInventario`: `PaymentsService.pagar` descuenta inventario por
-receta dentro de la misma transacción del cobro (`backend/src/inventory/`).
+`MovimientoInventario`: `OrdersService` descuenta inventario por receta
+cuando la comanda entra a cocina, dentro de la misma transacción que crea el
+pedido (cada `SALIDA` lleva su `pedidoId`); `PaymentsService.pagar` solo
+descuenta los pedidos viejos que aún no tenían `SALIDA` (`backend/src/inventory/`).
 `Cliente` existe desde la Fase 8B, solo para pedidos de domicilio. Detalle en
 `docs/prototipo-slice.md`.
 

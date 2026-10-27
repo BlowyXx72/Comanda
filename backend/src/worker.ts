@@ -1,4 +1,6 @@
+import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { logsEnJson } from './config/entorno.js';
 import { WorkerModule } from './worker.module.js';
 
 // Punto de entrada del contenedor `worker` (Fase 11B, "trabajador asíncrono +
@@ -7,7 +9,10 @@ import { WorkerModule } from './worker.module.js';
 // Fase 12B también entrega los acuses a las plataformas de domicilios, y desde
 // la 14B envía los correos (comprobantes y resumen diario).
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(WorkerModule);
+  // Fase 17B: mismo formato de logs que el backend (LOG_FORMATO=json en la beta).
+  const app = await NestFactory.createApplicationContext(WorkerModule, {
+    logger: new ConsoleLogger({ json: logsEnJson() }),
+  });
   app.enableShutdownHooks();
 }
 await bootstrap();

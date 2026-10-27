@@ -31,7 +31,7 @@ propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
 |---|---|
 | CU-01 Pedido en mesa | **Parcial.** Sin tablet dedicada ni impresora; el resto del flujo (mesero → WebSocket → cocina) sí corre. |
 | CU-02 Cobro y documento fiscal | **Parcial/simulado.** Se cobra y se genera el documento con consecutivo por sede. Desde la Fase 11B el documento queda `PENDIENTE` y un worker aparte genera el XML (sin firma), lo guarda en MinIO y lo "valida" contra un proveedor DIAN **simulado**, sin bloquear la caja; el estado llega a `/caja` en vivo. No se transmite a la DIAN real. |
-| CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. |
+| CU-03 Menú QR | **Implementado (Fase 7B).** `GET /menu/:cadenaId/:sedeId` sin JWT (solo productos activos, valida que la sede sea de la cadena) + vista pública `/menu/...`; `/mesas` genera el QR de cada mesa en el navegador. **Fase 16B:** foto por producto (ADMIN la sube en `/catalogo`; `sharp` la recorta a 4:3 y genera WebP de 800 y 400 px sin EXIF), guardada en un bucket propio del almacén de objetos y servida por `GET /menu/imagenes/...` con caché en Nginx (en AWS, CloudFront vía `URL_PUBLICA_IMAGENES`). Fotos de demo: ilustraciones propias (`npm run seed:imagenes`). |
 | CU-04 Domicilio web | **Implementado (Fase 8B).** `POST /public/pedidos/domicilio` sin JWT, idempotente por UUID, crea el `Cliente` y el pedido (`canal = DOMICILIO`, sin mesa) en `EN_PREPARACION` y lo emite con `comanda:nueva`; cocina y caja lo muestran como "Domicilio". Sin pago en línea ni seguimiento del repartidor; desde la Fase 13B Nginx le limita la tasa (`429`). |
 | CU-05 Pedido de plataforma (Rappi) | **Implementado contra un simulador (Fase 12B).** `POST /integraciones/plataformas/pedidos` recibe el pedido con API key (`X-Api-Key`), lo crea en `EN_PREPARACION` con canal `PLATAFORMA` y llega a `/cocina` por `comanda:nueva`, sin re-digitación. Idempotente por `orderId` de la plataforma. El acuse de vuelta sale por la cola del worker. La "plataforma" es la página `/simulador-plataforma`; no se integra Rappi real. |
 | CU-06 Panel multi-sede | **Implementado (Fase 9).** `GET /reportes/consolidado` + `/panel` (solo ADMIN): ventas de las 3 sedes de la cadena agrupadas por sede/día/canal, en vivo vía `venta:registrada`. No cruza varias cadenas (no aplica: cada cadena es un tenant separado). Desde la Fase 13 lee de la réplica de lectura. |
@@ -55,20 +55,31 @@ verdad** en este prototipo. Donde hay un stub, está marcado en el código como
 - **Cobro y facturación sin conexión** (CU-07): el modo offline solo encola
   pedidos; cobrar requiere red.
 - **Certificado TLS de una CA real.** Desde la Fase 13B todo entra por Nginx
-  con TLS 1.3, HTTP/2 y WSS, pero el certificado es autofirmado.
-- **DNS / subdominio por cadena** para multi-tenant en producción (p. ej.
-  `lacadena.comandacentral.co`) — en el prototipo el tenant se resuelve por el
-  `cadena_id` embebido en el JWT, no por subdominio.
+  con TLS 1.3, HTTP/2 y WSS. En local el certificado es autofirmado; desde la
+  Fase 19B la beta en AWS queda preparada para Let's Encrypt
+  (`deploy/certificado.sh`), pendiente de crear la cuenta.
+- **Subdominio por cadena** (p. ej. `lacadena.comandacentral.co`): implementado
+  en la Fase 20B. `Cadena.subdominio`; por el subdominio, el menú QR, el
+  domicilio y el login quedan restringidos a esa cadena, y los QR apuntan a
+  él. Se activa con `URL_PUBLICA_CADENA`. Las rutas privadas siguen
+  resolviendo el tenant por el `cadena_id` del JWT. El DNS comodín y el
+  certificado comodín son de la beta en AWS (`docs/despliegue-aws.md`).
 - **Resto de la infraestructura de alta disponibilidad** de la propuesta
   (§5.1): CDN, monitoreo y respaldos. Postgres, Redis y Nginx son una sola
   instancia. El proxy inverso con límite de tasa y las dos instancias de
   backend balanceadas sí existen desde la Fase 13B (ver "Proxy inverso y dos
   instancias (Fase 13B)"). La cola de mensajes + trabajador asíncrono y el almacén de
   objetos sí existen desde la Fase 11B (ver "Documento fiscal en segundo
-  plano").
+  plano"). Ronda 3 (preparado para la beta en AWS, pendiente de la cuenta):
+  CloudFront opcional para las fotos (Fase 19B) y monitoreo con CloudWatch,
+  métricas de las colas, alarmas y runbook (Fase 21B, `docs/runbook.md`).
+  Los respaldos son la Fase 18 (Parte 1).
 - **SSH (solo con llaves), NTP y Syslog centralizado** (§5.2 de la
-  propuesta) — protocolos de operación de servidores de producción; no
-  aplican a un prototipo que corre en Docker local.
+  propuesta) — no aplican al prototipo en Docker local. Para la beta en AWS
+  quedan resueltos en la ronda 3:
+  - SSH: no hay; se entra por Session Manager (Fase 19B).
+  - NTP: chrony con Amazon Time Sync (Fase 19B).
+  - Syslog: logs de todos los contenedores a CloudWatch Logs (Fase 21B).
 - **Entrega real de correo.** Desde la Fase 14B el worker envía por SMTP,
   pero a Mailpit, que los muestra en su bandeja web y no los entrega (ver
   "Correo: comprobante y resumen diario (Fase 14B)").
@@ -81,7 +92,7 @@ intencionales por alcance:
 
 - **`Insumo`, `Receta` y `MovimientoInventario` existen desde la Fase 11**
   (ronda 2, §6.2, ver `docs/fases-siguientes-2.md`). Vender un producto con
-  receta definida descuenta inventario automáticamente; ver la sección
+  receta definida descuenta inventario automáticamente al entrar a cocina; ver la sección
   "Inventario y recetas (Fase 11)" más abajo.
 - **`Cliente`** existe desde la Fase 8B, solo para los pedidos de domicilio
   y, desde la 12B, de plataforma (nombre, teléfono, dirección); un pedido en
@@ -403,13 +414,19 @@ dueño". Así quedó:
   de sus movimientos (`GET /sedes/:id/inventario`, calculado en memoria, igual
   que `ReportsService` con los pagos). `ENTRADA`/`MERMA` se registran a mano
   (`POST /inventario/movimientos`, solo ADMIN); `SALIDA` solo la genera
-  `PaymentsService.pagar`, nunca el endpoint manual.
-- `PaymentsService.pagar` descuenta inventario **dentro de la misma
-  transacción** del cobro: por cada detalle del pedido, busca la receta de su
-  producto y crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo
-  (cantidad de la receta × cantidad del detalle). Si un producto no tiene
-  receta definida, simplemente no genera movimientos — no todos los productos
-  demo la necesitan (ver seed).
+  el descuento automático por venta, nunca el endpoint manual.
+- Ronda 3: el inventario se descuenta **cuando la comanda entra a cocina**
+  (al crear el pedido, que nace `EN_PREPARACION`), dentro de la misma
+  transacción del `INSERT` del pedido, en los tres canales (mesa y `/sync`,
+  domicilio, plataforma). Por cada detalle se busca la receta de su producto y
+  se crea un `MovimientoInventario` de tipo `SALIDA` por cada insumo (cantidad
+  de la receta × cantidad del detalle), con el `pedidoId` que lo originó. Un
+  reenvío del mismo pedido (reintento, cola offline, plataforma) no descuenta
+  otra vez. Antes (Fase 11) se descontaba al cobrar, y `/inventario` no
+  reflejaba lo que la cocina ya estaba preparando; `PaymentsService.pagar`
+  ahora solo descuenta los pedidos creados antes del cambio que aún no
+  tienen `SALIDA`. Si un producto no tiene receta definida, simplemente no
+  genera movimientos.
 - `// DECISIÓN DE PROTOTIPO`: si una existencia queda negativa, **no se
   bloquea el cobro** — el saldo negativo queda visible en `/inventario` como
   alerta para ADMIN. La propuesta no fija qué hacer en ese caso; bloquear la

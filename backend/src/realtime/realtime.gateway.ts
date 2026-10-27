@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import type { JwtPayload } from '../auth/jwt-payload.interface.js';
+import { origenesCors } from '../config/entorno.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const nombreRoomSede = (sedeId: string) => `sede:${sedeId}`;
@@ -24,7 +25,8 @@ const nombreRoomCadena = (cadenaId: string) => `cadena:${cadenaId}`;
 // para que un cliente no pueda unirse a la room de una sede de otra cadena,
 // pero no hay guards de rol aquí: no existe un rol "cocina" en el modelo de
 // datos, así que cualquier usuario autenticado de la cadena puede escuchar.
-@WebSocketGateway({ cors: { origin: '*' } })
+// Fase 17B: mismos orígenes que la API REST (CORS_ORIGENES).
+@WebSocketGateway({ cors: { origin: origenesCors() } })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() private readonly server!: Server;
 
@@ -91,7 +93,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   // Llamado por InventoryService tras un movimiento manual (ENTRADA/MERMA) o
-  // por PaymentsService tras el descuento automático (SALIDA). Lo escucha
+  // por OrdersService tras el descuento automático al crear un pedido
+  // (SALIDA; PaymentsService solo en pedidos viejos). Lo escucha
   // /inventario (Fase 11, §6.2) para refrescar existencias sin recargar.
   emitirInventarioActualizado(cadenaId: string, evento: unknown) {
     this.server.to(nombreRoomCadena(cadenaId)).emit('inventario:actualizado', evento);

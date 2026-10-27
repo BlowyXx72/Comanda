@@ -1,2 +1,5 @@
 # Archivos montados en contenedores Linux: siempre LF aunque core.autocrlf=true.
 postgres/** text eol=lf
+# Fase 19B: también todos los scripts de shell (contenedores y la EC2); un
+# retorno de carro al final de la línea los rompe.
+*.sh text eol=lf

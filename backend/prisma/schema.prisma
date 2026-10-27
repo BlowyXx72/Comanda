@@ -73,6 +73,10 @@ model Cadena {
   nombre   String
   plan     String
   creadoEn DateTime @default(now()) @map("creado_en")
+  // Fase 20B (§5.2, DNS multi-tenant): {subdominio}.dominio lleva al menú y
+  // al login de esta cadena, p. ej. lacadena.comandacentral.co. Opcional: una
+  // cadena sin subdominio solo se usa por el dominio principal.
+  subdominio String? @unique
 
   sedes     Sede[]
   usuarios  Usuario[]
@@ -135,6 +139,11 @@ model Producto {
   // desactivado no aparece en GET /productos (mesero) pero sigue existiendo
   // para los PedidoDetalle históricos que ya lo referencian.
   activo    Boolean @default(true)
+  // Fase 16B (CU-03, §4.3): foto del producto en el almacén de objetos, como
+  // URI s3://bucket/productos/{cadenaId}/{productoId}-{version} (sin tamaño
+  // ni extensión: hay una variante -800.webp y otra -400.webp). La API la
+  // devuelve ya convertida en URL pública (URL_PUBLICA_IMAGENES).
+  imagenUrl String? @map("imagen_url")
 
   cadena   Cadena          @relation(fields: [cadenaId], references: [id])
   detalles PedidoDetalle[]
@@ -185,6 +194,8 @@ model Pedido {
   detalles        PedidoDetalle[]
   pagos           Pago[]
   documentoFiscal DocumentoFiscal?
+
+  movimientosInventario MovimientoInventario[]
 
   @@unique([integracionId, referenciaExterna])
   @@map("pedidos")
@@ -324,9 +335,15 @@ model MovimientoInventario {
   tipo     TipoMovimientoInventario
   cantidad Decimal                  @db.Decimal(10, 2)
   fecha    DateTime                 @default(now())
+  // Ronda 3: pedido que originó una SALIDA (null en ENTRADA/MERMA manuales y
+  // en las SALIDA anteriores a este cambio). Permite saber si un pedido ya
+  // descontó su receta y no descontarla dos veces.
+  pedidoId String?                  @map("pedido_id")
 
-  sede   Sede   @relation(fields: [sedeId], references: [id])
-  insumo Insumo @relation(fields: [insumoId], references: [id])
+  sede   Sede    @relation(fields: [sedeId], references: [id])
+  insumo Insumo  @relation(fields: [insumoId], references: [id])
+  pedido Pedido? @relation(fields: [pedidoId], references: [id])
 
+  @@index([pedidoId])
   @@map("movimientos_inventario")
 }

@@ -21,34 +21,38 @@ const SedeContext = createContext<SedeContextValue | undefined>(undefined);
 
 export function SedeProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
-  const [sedes, setSedes] = useState<Sede[]>([]);
   const [sedeId, setSedeId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Resultado de la última carga, atado al token con el que se pidió: si el
+  // token cambia, el resultado viejo deja de valer sin tener que limpiarlo.
+  const [carga, setCarga] = useState<{ token: string; sedes: Sede[]; error: string | null } | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setSedes([]);
-      setCargando(false);
-      return;
-    }
-    setCargando(true);
-    setError(null);
+    if (!token) return;
+    let vigente = true;
     listarSedes(token)
-      .then((resultado) => {
-        setSedes(resultado);
-        setSedeId((actual) => (actual && resultado.some((s) => s.id === actual) ? actual : (resultado[0]?.id ?? null)));
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'No se pudieron cargar las sedes'))
-      .finally(() => setCargando(false));
+      .then((resultado) => vigente && setCarga({ token, sedes: resultado, error: null }))
+      .catch(
+        (err) =>
+          vigente &&
+          setCarga({ token, sedes: [], error: err instanceof Error ? err.message : 'No se pudieron cargar las sedes' }),
+      );
+    return () => {
+      vigente = false;
+    };
   }, [token]);
+
+  const actual = token && carga?.token === token ? carga : null;
+  const sedes = actual?.sedes ?? [];
+  const cargando = !!token && !actual;
+  const error = actual?.error ?? null;
 
   const seleccionarSede = (id: string) => {
     setSedeId(id);
     localStorage.setItem(STORAGE_KEY, id);
   };
 
-  const sede = sedes.find((s) => s.id === sedeId) ?? null;
+  // Si la sede guardada ya no es de la cadena (o no hay), se usa la primera.
+  const sede = sedes.find((s) => s.id === sedeId) ?? sedes[0] ?? null;
 
   return (
     <SedeContext.Provider value={{ sedes, sede, cargando, error, seleccionarSede }}>

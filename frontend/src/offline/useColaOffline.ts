@@ -102,10 +102,18 @@ export function useColaOffline(token: string | null, alSincronizar?: () => void)
 
   // Al abrir la pantalla: cargar la cola y, si hay red, vaciarla.
   useEffect(() => {
-    recargarPendientes().then(() => {
-      if (navigator.onLine) sincronizar();
-    });
-  }, [recargarPendientes, sincronizar]);
+    let vigente = true;
+    listarCola()
+      .catch(() => [])
+      .then((cola) => {
+        if (!vigente) return;
+        setPendientes(cola);
+        if (navigator.onLine) sincronizar();
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [sincronizar]);
 
   const hayPendientes = pendientes.length > 0;
   useEffect(() => {

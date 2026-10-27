@@ -13,14 +13,17 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async login(email: string, password: string) {
+  // cadenaIdRequerida (Fase 20B): la cadena del subdominio por el que se
+  // entró; un usuario de otra cadena recibe el mismo 401 que una clave mala,
+  // para no confirmar que el correo existe.
+  async login(email: string, password: string, cadenaIdRequerida?: string) {
     const usuario = await this.prisma.usuario.findUnique({ where: { email } });
     if (!usuario) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
     const passwordValida = await bcrypt.compare(password, usuario.passwordHash);
-    if (!passwordValida) {
+    if (!passwordValida || (cadenaIdRequerida && usuario.cadenaId !== cadenaIdRequerida)) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 

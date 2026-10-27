@@ -82,7 +82,8 @@ services:
       timeout: 5s
       retries: 10
 
-  # Genera el cliente de Prisma (backend/src/generated/) y termina. Ese código
+  # Instala dependencias, genera el cliente de Prisma (backend/src/generated/)
+  # y termina. Ese código
   # generado no va en git y vive en el bind mount ./backend, que tapa el que
   # trae la imagen: en un clon nuevo (o tras borrar la carpeta) backend y
   # worker arrancaban sin él (ver docs/EVIDENCIA_EXPOSICION.md, sección 1).
@@ -100,7 +101,11 @@ services:
     volumes:
       - ./backend:/app
       - comanda-backend-node-modules:/app/node_modules
-    command: npx prisma generate
+    # Fase 16B: también instala lo que falte. node_modules vive en un volumen
+    # que se creó con las dependencias de ese momento: sin esto, quien ya
+    # tenía el volumen (p. ej. antes de sharp) arrancaba sin la librería
+    # nueva. Si no falta nada, npm termina en segundos.
+    command: sh -c "npm install --no-audit --no-fund && npx prisma generate"
 
   # Fase 13: crea (o actualiza) el rol de replicación en el primario y termina.
   # DECISIÓN DE PROTOTIPO: servicio de un solo uso en vez de un script de

@@ -1568,3 +1568,143 @@
 .pantalla-info--menu {
   margin: var(--esp-7) var(--esp-4);
 }
+
+/* ============ Fotos de producto (Fase 16B) ============ */
+
+/* /catalogo: marco de la foto, botón que abre el selector de archivo */
+.foto-producto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--esp-1);
+  min-width: 96px;
+}
+
+.foto-producto-marco {
+  position: relative;
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: var(--borde);
+  border-radius: var(--radio-m);
+  background: var(--color-surface-2);
+  box-shadow: var(--sombra-1);
+  transition:
+    transform var(--dur-rapida) var(--curva-salida),
+    box-shadow var(--dur-rapida) var(--curva-salida);
+}
+
+.foto-producto-marco:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--sombra-2);
+}
+
+.foto-producto-marco:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--sombra-presionada);
+}
+
+.foto-producto-marco img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Sin foto: rayado diagonal, para que se lea como "espacio por llenar" */
+.foto-producto-vacia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-surface-2) 0 6px,
+    var(--color-bg-acento) 6px 12px
+  );
+}
+
+.foto-producto-estado {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-surface);
+  background: var(--color-scrim);
+}
+
+.foto-producto-quitar {
+  min-height: 0;
+  padding: 0 var(--esp-1);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+}
+
+.foto-producto-quitar:hover:not(:disabled) {
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-danger);
+}
+
+.foto-producto-error {
+  max-width: 140px;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+/* Menú QR: miniatura a la izquierda de cada producto, 4:3 fijo */
+.menu-publico-item-foto {
+  flex: none;
+  width: 88px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: var(--borde);
+  border-radius: var(--radio-m);
+  background: var(--color-surface-2);
+}
+
+.menu-publico-item-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .menu-publico-item-foto {
+    width: 120px;
+  }
+}
+
+/* /mesas: miniatura en el botón de cada producto */
+.producto-boton-foto {
+  flex: none;
+  width: 48px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: var(--borde);
+  border-radius: var(--radio-s);
+}
+
+.producto-boton-foto + span {
+  flex: 1;
+  margin-left: var(--esp-3);
+}
+
