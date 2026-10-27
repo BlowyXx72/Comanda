@@ -70,7 +70,10 @@ Fase 11, §6.2 — tampoco estaba en la lista original), `FiscalModule` (Fase
 segundo plano y XML en MinIO), `IntegracionesModule` (Fase 12B, CU-05:
 pedidos de plataforma por API con `X-Api-Key`, contra un simulador) y
 `MailModule` (Fase 14B: correo SMTP a Mailpit, comprobante de domicilio y
-resumen diario). El procesamiento de las colas corre en un proceso aparte,
+resumen diario), `ImagenesProductoModule` (Fase 16B, `backend/src/product-images/`:
+fotos de producto para el catálogo y el menú QR, procesadas con `sharp`) y
+`StorageModule` (Fase 16B: el almacén de objetos S3/MinIO que comparten fiscal
+e imágenes). El procesamiento de las colas corre en un proceso aparte,
 el contenedor `worker` (`src/worker.ts` + `WorkerModule`, que junta
 `FiscalWorkerModule`, `IntegracionesWorkerModule` y `MailWorkerModule`), con
 el mismo código del backend. Deben quedar

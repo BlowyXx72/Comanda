@@ -1,7 +1,7 @@
 import { UnrecoverableError, type Job } from 'bullmq';
 import type { ColaCorreoService } from '../mail/cola-correo.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
-import type { AlmacenObjetosService } from './almacen-objetos.service.js';
+import type { AlmacenObjetosService } from '../storage/almacen-objetos.service.js';
 import type { ColaFiscalService } from './cola-fiscal.service.js';
 import type { ResultadoFiscal, TrabajoFiscal } from './fiscal.types.js';
 import { ProcesadorFiscalService } from './procesador-fiscal.service.js';

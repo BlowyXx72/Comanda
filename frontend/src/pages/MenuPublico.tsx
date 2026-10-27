@@ -132,7 +132,23 @@ export function MenuPublicoPage() {
               const enCarrito = carrito[producto.id];
               return (
                 <li key={producto.id} className={`menu-publico-item${enCarrito ? ' menu-publico-item--en-carrito' : ''}`}>
-                  <span>
+                  {/* Fase 16B: foto del producto. Diferida (lazy) y con tamaño fijo 4:3
+                      para que la página no salte al cargar; la de 400 px basta en un
+                      celular y la de 800 px se usa en pantallas densas. */}
+                  {producto.imagenMiniaturaUrl && (
+                    <img
+                      className="menu-publico-item-foto"
+                      src={producto.imagenMiniaturaUrl}
+                      srcSet={`${producto.imagenMiniaturaUrl} 400w, ${producto.imagenUrl} 800w`}
+                      sizes="(min-width: 640px) 120px, 88px"
+                      width={400}
+                      height={300}
+                      loading="lazy"
+                      decoding="async"
+                      alt={producto.nombre}
+                    />
+                  )}
+                  <span className="menu-publico-item-texto">
                     <span className="menu-publico-item-nombre">{producto.nombre}</span>
                     <span className="menu-publico-item-precio">{formatearCOP(producto.precio)}</span>
                   </span>

@@ -3,7 +3,7 @@ import { type Job, UnrecoverableError, Worker } from 'bullmq';
 import { ColaCorreoService } from '../mail/cola-correo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { conexionRedis } from '../queue/conexion-redis.js';
-import { AlmacenObjetosService } from './almacen-objetos.service.js';
+import { AlmacenObjetosService } from '../storage/almacen-objetos.service.js';
 import { ColaFiscalService } from './cola-fiscal.service.js';
 import { COLA_FISCAL, type ResultadoFiscal, type TrabajoFiscal } from './fiscal.types.js';
 import { ProveedorDianNoDisponibleError, ProveedorDianSimuladoService } from './proveedor-dian-simulado.service.js';

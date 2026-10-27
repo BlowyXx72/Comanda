@@ -12,6 +12,7 @@ import { MailModule } from './mail/mail.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { ImagenesProductoModule } from './product-images/imagenes-producto.module.js';
 import { PublicMenuModule } from './public-menu/public-menu.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SyncModule } from './sync/sync.module.js';
@@ -34,6 +35,7 @@ import { TablesModule } from './tables/tables.module.js';
     FiscalModule,
     IntegracionesModule,
     MailModule,
+    ImagenesProductoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

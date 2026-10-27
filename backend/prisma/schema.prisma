@@ -135,6 +135,11 @@ model Producto {
   // desactivado no aparece en GET /productos (mesero) pero sigue existiendo
   // para los PedidoDetalle históricos que ya lo referencian.
   activo    Boolean @default(true)
+  // Fase 16B (CU-03, §4.3): foto del producto en el almacén de objetos, como
+  // URI s3://bucket/productos/{cadenaId}/{productoId}-{version} (sin tamaño
+  // ni extensión: hay una variante -800.webp y otra -400.webp). La API la
+  // devuelve ya convertida en URL pública (URL_PUBLICA_IMAGENES).
+  imagenUrl String? @map("imagen_url")
 
   cadena   Cadena          @relation(fields: [cadenaId], references: [id])
   detalles PedidoDetalle[]

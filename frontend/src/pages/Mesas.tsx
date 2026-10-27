@@ -321,6 +321,9 @@ export function MesasPage() {
               <div className="lista-productos">
                 {productos.map((producto) => (
                   <button key={producto.id} className="producto-boton" onClick={() => agregarProducto(producto)}>
+                    {producto.imagenMiniaturaUrl && (
+                      <img className="producto-boton-foto" src={producto.imagenMiniaturaUrl} alt="" width={400} height={300} loading="lazy" decoding="async" />
+                    )}
                     <span>{producto.nombre}</span>
                     <span>{formatearCOP(producto.precio)}</span>
                   </button>

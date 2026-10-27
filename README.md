@@ -35,11 +35,14 @@ interfaz (p. ej. "mejora el diseño de /cocina").
 cp .env.example .env
 docker compose up -d --wait
 docker compose exec backend-1 npx prisma db seed
+docker compose exec backend-1 npm run seed:imagenes   # fotos de demo del menú (Fase 16B)
 ```
 
 `--wait` hace que el comando termine solo cuando todo está listo de verdad
 (backend, frontend y nginx tienen healthcheck): si responde, ya se puede
-entrar. El seed solo hace falta la primera vez.
+entrar. El seed solo hace falta la primera vez. Las fotos de los productos
+se cambian desde `/catalogo` (ADMIN): JPEG, PNG o WebP de hasta 2 MB; el
+backend las recorta a 4:3 y las pasa a WebP de 800 y 400 px.
 
 **Al prender el PC o reiniciar Docker Desktop, los contenedores no arrancan
 solos** (todos usan `restart: "no"`): hay que correr `docker compose up -d
