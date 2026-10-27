@@ -1,0 +1,130 @@
+# Fase 18B: despliegue continuo. Cuando el CI de main termina en verde:
+#  1. publica las imágenes de producción en GitHub Container Registry
+#     (ghcr.io/<dueño>/comanda-backend, -backend-migrate y -nginx), con la
+#     etiqueta del commit y `latest`;
+#  2. si el despliegue está habilitado, actualiza la beta en la EC2.
+#
+# El paso 2 queda apagado hasta que exista la cuenta de AWS (Fase 19B). Para
+# encenderlo, en Settings > Secrets and variables > Actions > Variables:
+#   DESPLIEGUE_HABILITADO = true
+#   AWS_REGION            = p. ej. us-east-1
+#   AWS_ROLE_ARN          = rol de IAM que GitHub asume por OIDC (sin llaves)
+#   EC2_INSTANCE_ID       = i-0123456789abcdef0
+# El rol solo necesita ssm:SendCommand sobre esa instancia y
+# ssm:GetCommandInvocation (ver docs/despliegue-aws.md). No se abre SSH: el
+# comando llega a la EC2 por AWS Systems Manager.
+name: Despliegue
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Para volver a desplegar a mano (p. ej. tras crear la EC2).
+  workflow_dispatch:
+
+concurrency:
+  group: despliegue
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Publicar imágenes en GHCR
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.datos.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: datos
+        name: Registro y etiqueta
+        run: |
+          # GHCR solo acepta minúsculas en el nombre del dueño.
+          echo "registro=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: comanda-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          push: true
+          tags: |
+            ${{ steps.datos.outputs.registro }}/comanda-backend:${{ steps.datos.outputs.tag }}
+            ${{ steps.datos.outputs.registro }}/comanda-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: comanda-backend-migrate
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: build
+          push: true
+          tags: |
+            ${{ steps.datos.outputs.registro }}/comanda-backend-migrate:${{ steps.datos.outputs.tag }}
+            ${{ steps.datos.outputs.registro }}/comanda-backend-migrate:latest
+          cache-from: type=gha,scope=backend
+      - name: comanda-nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.datos.outputs.registro }}/comanda-nginx:${{ steps.datos.outputs.tag }}
+            ${{ steps.datos.outputs.registro }}/comanda-nginx:latest
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
+
+  desplegar:
+    name: Desplegar en la beta (EC2)
+    needs: publicar
+    if: vars.DESPLIEGUE_HABILITADO == 'true'
+    runs-on: ubuntu-latest
+    # En Settings > Environments se le puede exigir aprobación manual; la
+    # producción administrada (si llega a existir) iría en otro environment
+    # con aprobación obligatoria.
+    environment: beta
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Ejecutar deploy/desplegar.sh en la EC2 (SSM)
+        env:
+          TAG: ${{ needs.publicar.outputs.tag }}
+          INSTANCIA: ${{ vars.EC2_INSTANCE_ID }}
+        run: |
+          id=$(aws ssm send-command \
+            --instance-ids "$INSTANCIA" \
+            --document-name AWS-RunShellScript \
+            --comment "Comanda $TAG" \
+            --parameters "commands=[\"sudo -iu ec2-user /opt/comanda/deploy/desplegar.sh $TAG\"]" \
+            --timeout-seconds 900 \
+            --query Command.CommandId --output text)
+          echo "Comando SSM $id"
+          # `aws ssm wait` se rinde a los ~100 s; un despliegue puede tardar más.
+          for _ in $(seq 1 90); do
+            estado=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCIA" --query Status --output text 2>/dev/null || echo Pending)
+            case "$estado" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCIA" \
+            --query '[StandardOutputContent, StandardErrorContent]' --output text
+          echo "Estado final: $estado"
+          test "$estado" = Success

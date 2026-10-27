@@ -224,6 +224,25 @@ docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env
 
 El despliegue en la EC2 está en `docs/fases-siguientes-3.md` (Fases 18B–21B).
 
+### CI/CD (GitHub Actions, Fase 18B)
+
+- **`CI`** (`.github/workflows/ci.yml`), en cada PR y en cada push a `main`:
+  - lint, tipos y pruebas unitarias del backend;
+  - lint y `vite build` del frontend;
+  - el stack completo con Docker Compose: seed, todas las pruebas y la prueba
+    de punta a punta por Nginx;
+  - en los PR, además, comprueba que las imágenes de producción compilan.
+- **`Despliegue`** (`.github/workflows/despliegue.yml`), cuando el CI de
+  `main` queda en verde:
+  - publica `comanda-backend`, `comanda-backend-migrate` y `comanda-nginx` en
+    GitHub Container Registry (`ghcr.io/blowyxx72/...`);
+  - si la variable del repo `DESPLIEGUE_HABILITADO` es `true`, actualiza la
+    EC2 con `deploy/desplegar.sh` por AWS Systems Manager. Entra por OIDC,
+    sin llaves de AWS ni SSH.
+- Para que un PR en rojo no se pueda integrar: Settings → Branches → regla
+  para `main` con "Require status checks to pass" (Backend, Frontend,
+  Integración).
+
 ## Estructura del repositorio
 
 ```
