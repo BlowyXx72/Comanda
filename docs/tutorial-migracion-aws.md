@@ -1143,8 +1143,16 @@ Con esto, cada vez que se integra algo a `main` y el CI queda en verde,
 GitHub publica las imágenes y actualiza el servidor solo. Sin este paso, se
 actualiza a mano con `desplegar.sh` (sección 27).
 
-**Requiere ser administrador del repositorio** (`BlowyXx72`), porque hay que
-entrar a *Settings*.
+**Permisos en GitHub.** El repositorio es de una cuenta personal
+(`BlowyXx72`). En ese tipo de repositorio GitHub no permite dar permiso de
+administrador a un colaborador, pero tampoco hace falta:
+
+- las **variables de Actions** las puede crear cualquier **colaborador** con
+  permiso de escritura;
+- el *environment* `beta` se **crea solo** la primera vez que corre el
+  trabajo de despliegue;
+- solo **configurar** ese *environment* (por ejemplo, exigir aprobación
+  manual) es exclusivo del dueño, y es opcional.
 
 ### 21.1 En AWS: el proveedor de identidad de GitHub
 
@@ -1177,22 +1185,44 @@ Luego **Add provider**.
 
 ### 21.3 En GitHub
 
-1. Repo → **Settings** → **Environments** → **New environment** → nombre
-   `beta` → **Configure environment**. Opcional: **Required reviewers**, para
-   aprobar cada despliegue a mano.
-2. **Settings** → **Secrets and variables** → **Actions** → pestaña
-   **Variables** → **New repository variable**, cuatro veces:
+1. Saca los dos datos de AWS. Desde CloudShell:
+
+   ```bash
+   aws iam get-role --role-name comanda-github-despliegue --query Role.Arn --output text
+   aws ec2 describe-instances --filters Name=tag:Name,Values=comanda-beta \
+     --query 'Reservations[].Instances[].InstanceId' --output text
+   ```
+
+2. Crea las cuatro variables del repositorio.
 
    | Name | Value |
    |---|---|
    | `DESPLIEGUE_HABILITADO` | `true` |
    | `AWS_REGION` | `us-east-1` |
-   | `AWS_ROLE_ARN` | el ARN del paso 21.2 |
+   | `AWS_ROLE_ARN` | el ARN del paso anterior |
    | `EC2_INSTANCE_ID` | tu `<ID_INSTANCIA>` |
 
-3. Prueba: **Actions** → **Despliegue** → **Run workflow**. El trabajo
+   Hay dos formas:
+   - **Con la CLI de GitHub** (`gh`), desde Git Bash en el PC:
+
+     ```bash
+     gh variable set DESPLIEGUE_HABILITADO --body true -R BlowyXx72/Comanda
+     gh variable set AWS_REGION --body us-east-1 -R BlowyXx72/Comanda
+     gh variable set AWS_ROLE_ARN --body "arn:aws:iam::<ID_CUENTA>:role/comanda-github-despliegue" -R BlowyXx72/Comanda
+     gh variable set EC2_INSTANCE_ID --body "<ID_INSTANCIA>" -R BlowyXx72/Comanda
+     ```
+
+   - **En la web:** repo → **Settings** → **Secrets and variables** →
+     **Actions** → pestaña **Variables** → **New repository variable**.
+
+   Si GitHub responde 403 o no te muestra *Settings*, pídele al dueño
+   (`BlowyXx72`) que las cree; tarda unos 3 minutos. Los valores no son
+   secretos: AWS confía en GitHub por OIDC, sin llaves.
+3. (Opcional, solo el dueño) Repo → **Settings** → **Environments** →
+   `beta` → **Required reviewers**, para aprobar cada despliegue a mano.
+4. Prueba: **Actions** → **Despliegue** → **Run workflow**. El trabajo
    *Desplegar en la beta (EC2)* debe terminar en verde y mostrar la salida de
-   `desplegar.sh`.
+   `desplegar.sh`. Si es la primera vez, ahí se crea el *environment* `beta`.
 
 ---
 
