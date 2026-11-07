@@ -15,7 +15,9 @@ SSM_PREFIJO="/comanda/beta/"
 dnf install -y docker git
 mkdir -p /usr/local/lib/docker/cli-plugins
 ARQ=$(uname -m)
-curl -fsSL "https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-${ARQ}" \
+# La última versión publicada: una versión fija que ya no existiera cortaría
+# todo este script (set -e) y la instancia quedaría a medio preparar.
+curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${ARQ}" \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 systemctl enable --now docker
@@ -43,9 +45,14 @@ chmod +x /opt/comanda/deploy/*.sh
 
 # deploy/desplegar.sh lee este prefijo para armar .env.prod desde SSM, y con
 # COMANDA_CLOUDWATCH suma docker-compose.prod.aws.yml (logs a CloudWatch).
+# AWS_DEFAULT_REGION: la región de la instancia (metadatos, IMDSv2), para que
+# la CLI de aws (env-desde-ssm.sh) sepa dónde buscar los parámetros.
+TOKEN_IMDS=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+REGION=$(curl -fsS -H "X-aws-ec2-metadata-token: ${TOKEN_IMDS}" http://169.254.169.254/latest/meta-data/placement/region)
 cat > /etc/profile.d/comanda.sh <<PERFIL
 export COMANDA_SSM_PREFIJO=${SSM_PREFIJO}
 export COMANDA_CLOUDWATCH=true
+export AWS_DEFAULT_REGION=${REGION}
 PERFIL
 
 # Fase 21B: agente de CloudWatch para memoria y disco (EC2 no los reporta

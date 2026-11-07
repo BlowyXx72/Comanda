@@ -1,7 +1,10 @@
 #!/bin/sh
 # Fase 19B: certificado TLS real de Let's Encrypt para la beta (§5.2).
 #   deploy/certificado.sh emitir    primera vez (el DNS de $DOMINIO ya debe
-#                                   apuntar a la EC2 y el puerto 80 estar abierto)
+#                                   apuntar a la EC2 y el puerto 80 estar abierto).
+#                                   Incluye también DOMINIOS_EXTRA (p. ej. el
+#                                   subdominio demo.$DOMINIO), separados por coma
+#                                   y validados igual, sin comodín ni Route 53.
 #   deploy/certificado.sh comodin   Fase 20B: DOMINIO y *.DOMINIO (subdominio por
 #                                   cadena), validando por DNS en Route 53
 #   deploy/certificado.sh renovar   lo corre cron dos veces al día
@@ -14,11 +17,12 @@ set -eu
 
 ACCION="${1:-renovar}"
 cd "$(dirname "$0")/.."
-# Solo se leen estas dos variables (no se carga .env.prod con `.`: los $$
+# Solo se leen estas variables (no se carga .env.prod con `.`: los $$
 # escapados para Compose el shell los tomaría como el PID).
 leer() { grep "^$1=" .env.prod | tail -1 | cut -d= -f2- | sed 's/^"//; s/"$//'; }
 DOMINIO=$(leer DOMINIO)
 CORREO_LETSENCRYPT=$(leer CORREO_LETSENCRYPT)
+DOMINIOS_EXTRA=$(leer DOMINIOS_EXTRA)
 : "${DOMINIO:?Falta DOMINIO en .env.prod}"
 
 PROYECTO=$(basename "$(pwd)")
@@ -35,9 +39,16 @@ case "$ACCION" in
     else
       CONTACTO="--register-unsafely-without-email"
     fi
+    NOMBRES="-d $DOMINIO"
+    for extra in $(echo "$DOMINIOS_EXTRA" | tr ',' ' '); do
+      NOMBRES="$NOMBRES -d $extra"
+    done
+    # El certificado se guarda con el nombre del primero (DOMINIO), que es la
+    # carpeta que busca nginx/certificado-prod.sh. --expand permite volver a
+    # correrlo agregando nombres.
     # shellcheck disable=SC2086
-    $CERTBOT certonly --webroot -w /var/www/certbot -d "$DOMINIO" \
-      $CONTACTO --agree-tos --non-interactive
+    $CERTBOT certonly --webroot -w /var/www/certbot $NOMBRES \
+      $CONTACTO --agree-tos --non-interactive --expand
     ;;
   comodin)
     # Let's Encrypt solo emite comodines validando por DNS: certbot crea el
