@@ -37,9 +37,12 @@ export default defineConfig({
     // filesystem no llegan de forma confiable a través del volumen
     // bind-mount de Docker Desktop en Windows; sin esto, guardar un archivo
     // en el host no dispara HMR.
+    // Cada 1 s (antes 300 ms): con 300 ms el polling solo gastaba ~50 % de
+    // CPU en reposo. Un cambio tarda como mucho 1 s en verse.
     watch: {
       usePolling: true,
-      interval: 300,
+      interval: 1000,
+      binaryInterval: 3000,
     },
   },
 })
