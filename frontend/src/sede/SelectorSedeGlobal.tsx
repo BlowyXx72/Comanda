@@ -9,7 +9,10 @@ export function SelectorSedeGlobal() {
   const { usuario } = useAuth();
   const { sedes, sede, seleccionarSede } = useSedeContext();
 
-  if (usuario?.rol !== 'ADMIN' || sedes.length <= 1) return null;
+  // Multisede para cualquier rol sin sede asignada (Fase 17: sedeId null =
+  // todas las sedes de la cadena, y el backend lo permite). Un mesero o cajero
+  // con sede asignada solo recibe esa en GET /sedes, así que no ve selector.
+  if (usuario?.sedeId || sedes.length <= 1) return null;
 
   return (
     <div className="selector-sede-global">
