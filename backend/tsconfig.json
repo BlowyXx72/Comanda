@@ -26,6 +26,12 @@
   "watchOptions": {
     "watchFile": "fixedPollingInterval",
     "watchDirectory": "fixedPollingInterval",
-    "fallbackPolling": "fixedInterval"
+    "fallbackPolling": "fixedInterval",
+    // Sin esto, el polling también revisaba sin parar los miles de .d.ts de
+    // node_modules: ~50 % de CPU en reposo por cada contenedor con --watch
+    // (backend-1, backend-2 y worker), y la app se ponía lenta. Lo que se
+    // edita es src/ y prisma/; un cambio de dependencias pide reiniciar igual.
+    "excludeDirectories": ["**/node_modules", "dist", "dist-2", "dist-worker"],
+    "excludeFiles": ["**/node_modules/**"]
   }
 }
