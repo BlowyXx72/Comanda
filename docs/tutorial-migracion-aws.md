@@ -1109,7 +1109,7 @@ REGION=us-east-1 INSTANCIA=<ID_INSTANCIA> CORREO=equipo.comanda@gmail.com \
    | Disco lleno | Más del 85 % |
    | Memoria alta | Más del 90 % por 10 minutos |
    | Cola fiscal atascada | Documentos PENDIENTE hace más de 5 minutos, o el worker dejó de reportar |
-   | Sin servicio | `https://<TU_DOMINIO>/api/health` no responde (chequeo de Route 53) |
+   | Sin servicio | `http://<TU_DOMINIO>/api/health` no responde (chequeo de Route 53 por el puerto 80: sus verificadores no hablan TLS 1.3) |
 
 **Importante:**
 
