@@ -61,9 +61,14 @@ dnf install -y amazon-cloudwatch-agent
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s   -c file:/opt/comanda/deploy/cloudwatch/agente.json
 
 # Renovación del certificado de Let's Encrypt dos veces al día (certbot solo
-# renueva si faltan menos de 30 días).
+# renueva si faltan menos de 30 días). cronie primero: en Amazon Linux 2023
+# /etc/cron.d no existe hasta instalarlo. El log es de ec2-user porque el cron
+# corre con ese usuario y no podría crearlo en /var/log.
+dnf install -y cronie
+mkdir -p /etc/cron.d
 cat > /etc/cron.d/comanda-certificado <<'CRON'
 17 3,15 * * * ec2-user /opt/comanda/deploy/certificado.sh renovar >> /var/log/comanda-certificado.log 2>&1
 CRON
-dnf install -y cronie
+touch /var/log/comanda-certificado.log
+chown ec2-user /var/log/comanda-certificado.log
 systemctl enable --now crond

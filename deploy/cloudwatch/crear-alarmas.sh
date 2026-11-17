@@ -60,15 +60,20 @@ alarma comanda-beta-cola-fiscal-atascada "Documentos fiscales PENDIENTE hace má
   Comanda DocumentosFiscalesAtascados Maximum 0 GreaterThanThreshold 2 breaching \
   "Name=Ambiente,Value=beta"
 
-echo "== Disponibilidad de https://$DOMINIO/api/health (Route 53) =="
+echo "== Disponibilidad de http://$DOMINIO/api/health (Route 53) =="
 # Las métricas de los chequeos de Route 53 solo existen en us-east-1: la
 # alarma (y su tema SNS) se crean ahí aunque la beta esté en otra región.
+# Por HTTP (puerto 80) y no HTTPS: los verificadores de Route 53 no hablan
+# TLS 1.3 y Nginx solo acepta TLS 1.3 (§5.2), así que el chequeo HTTPS
+# fallaba siempre ("protocol_version") y daba falsas alarmas. En el puerto 80
+# Nginx responde /api/health directo desde el backend, sin redirigir (ver
+# nginx/comanda.prod.conf.template).
 CHEQUEO=$(command aws route53 create-health-check \
-  --caller-reference "comanda-beta-$DOMINIO" \
-  --health-check-config "Type=HTTPS,FullyQualifiedDomainName=$DOMINIO,Port=443,ResourcePath=/api/health,RequestInterval=30,FailureThreshold=3" \
+  --caller-reference "comanda-beta-http-$DOMINIO" \
+  --health-check-config "Type=HTTP,FullyQualifiedDomainName=$DOMINIO,Port=80,ResourcePath=/api/health,RequestInterval=30,FailureThreshold=3" \
   --query HealthCheck.Id --output text 2>/dev/null \
   || command aws route53 list-health-checks \
-       --query "HealthChecks[?CallerReference=='comanda-beta-$DOMINIO'].Id | [0]" --output text)
+       --query "HealthChecks[?CallerReference=='comanda-beta-http-$DOMINIO'].Id | [0]" --output text)
 TEMA_USE1=$(command aws --region us-east-1 sns create-topic --name comanda-beta-alertas --query TopicArn --output text)
 if [ "$REGION" != "us-east-1" ]; then
   command aws --region us-east-1 sns subscribe --topic-arn "$TEMA_USE1" --protocol email --notification-endpoint "$CORREO" >/dev/null

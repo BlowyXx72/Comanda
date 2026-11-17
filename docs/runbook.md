@@ -31,7 +31,7 @@ fields @timestamp, context, message
 
 ## Sin servicio (`comanda-beta-sin-servicio`)
 
-`https://<dominio>/api/health` no responde desde internet.
+`http://<dominio>/api/health` no responde desde internet. El chequeo de Route 53 va por el puerto 80 porque no habla TLS 1.3; esa ruta la responde el backend sin redirigir a HTTPS.
 
 1. ¿Está viva la instancia? Si no hay Session Manager, ver
    [Instancia caída](#instancia-caída).
