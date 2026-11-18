@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import type { JwtPayload } from '../auth/jwt-payload.interface.js';
+import { cargarUsuarioVigente } from '../auth/usuario-vigente.js';
 import { origenesCors } from '../config/entorno.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -42,8 +43,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     try {
       if (!token) throw new Error('Falta token');
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
-      client.data.cadenaId = payload.cadenaId;
-      client.data.sedeId = payload.sedeId ?? null;
+      // Igual que en REST (JwtStrategy): la sede sale de la base, no del
+      // token, para que un cambio de sede en /usuarios aplique al reconectar.
+      const usuario = await cargarUsuarioVigente(this.prisma, payload);
+      if (!usuario) throw new Error('Usuario inactivo o inexistente');
+      client.data.cadenaId = usuario.cadenaId;
+      client.data.sedeId = usuario.sedeId;
       // Fase 9: a diferencia de `sede:unirse` (que exige elegir una sede),
       // todo socket autenticado se une de una vez a la room de su propia
       // cadena — ahí solo se emiten agregados de venta (`venta:registrada`),

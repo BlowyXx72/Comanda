@@ -12,6 +12,7 @@ import { MenuPublicoPage } from './pages/MenuPublico'
 import { MesasPage } from './pages/Mesas'
 import { PanelPage } from './pages/Panel'
 import { SimuladorPlataformaPage } from './pages/SimuladorPlataforma'
+import { UsuariosPage } from './pages/Usuarios'
 import { SedeProvider } from './sede/SedeProvider'
 
 function App() {
@@ -79,6 +80,14 @@ function App() {
               element={
                 <ProtectedRoute roles={['ADMIN']}>
                   <InventarioPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <UsuariosPage />
                 </ProtectedRoute>
               }
             />

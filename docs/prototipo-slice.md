@@ -22,8 +22,9 @@ Flujo demostrado end-to-end, en local, con dos pestañas del navegador:
 
 Módulos de backend que participan: `AuthModule`, `BranchesModule`,
 `CatalogModule`, `TablesModule`, `OrdersModule`, `PaymentsModule`,
-`RealtimeModule`, `ReportsModule`. (`TenantsModule`/`UsersModule` de la
-propuesta no se separaron en módulos propios — ver `CLAUDE.md`.)
+`RealtimeModule`, `ReportsModule`, `UsersModule` (gestión de usuarios en
+`/usuarios`, agregado después). (`TenantsModule` de la propuesta no se separó
+en un módulo propio — ver `CLAUDE.md`.)
 
 ## Los 8 casos de uso de la propuesta (§3.1) y su estado aquí
 

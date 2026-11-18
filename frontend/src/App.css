@@ -1082,8 +1082,14 @@
   box-shadow: var(--sombra-1);
 }
 
+/* /usuarios: correo, contraseña, rol, sede y botón. */
+.catalogo-form--usuarios {
+  grid-template-columns: 2fr 1.4fr 1fr 1.4fr auto;
+}
+
 @media (max-width: 760px) {
-  .catalogo-form {
+  .catalogo-form,
+  .catalogo-form--usuarios {
     grid-template-columns: 1fr;
   }
 }
