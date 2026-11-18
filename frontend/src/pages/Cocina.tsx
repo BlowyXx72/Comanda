@@ -11,10 +11,14 @@ export function CocinaPage() {
   const { sede, cargando: cargandoSede, error: errorSede } = useSedeActual();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
 
-  useEffect(() => {
+  const cargarPedidos = () => {
     if (!token || !sede) return;
-    listarPedidosActivos(sede.id, token).then(setPedidos);
-  }, [token, sede]);
+    listarPedidosActivos(sede.id, token)
+      .then(setPedidos)
+      .catch(() => undefined);
+  };
+
+  useEffect(cargarPedidos, [token, sede]);
 
   const upsertPedido = (pedido: Pedido) => {
     setPedidos((prev) => {
@@ -31,6 +35,9 @@ export function CocinaPage() {
     sedeId: sede?.id ?? null,
     onComandaNueva: upsertPedido,
     onPedidoActualizado: upsertPedido,
+    // Las comandas enviadas mientras el socket estuvo caído no llegan por
+    // evento: se recupera la lista completa.
+    onReconectado: cargarPedidos,
   });
 
   const marcarListo = async (pedido: Pedido) => {

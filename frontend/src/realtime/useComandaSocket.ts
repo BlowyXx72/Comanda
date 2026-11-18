@@ -23,6 +23,12 @@ interface UseComandaSocketOptions {
   onCatalogoActualizado?: (evento: CatalogoActualizado) => void;
   // Fase 11B: el worker terminó de validar un documento fiscal (lo usa /caja).
   onDocumentoActualizado?: (documento: DocumentoActualizado) => void;
+  // Se llama cuando el socket vuelve a conectarse tras un corte (no en la
+  // primera conexión). Los eventos emitidos mientras estuvo caído no se
+  // reenvían, así que la pantalla debe volver a pedir su lista por REST.
+  // DECISIÓN DE PROTOTIPO: recarga completa en vez de pedir solo lo perdido
+  // (no hay número de secuencia de eventos).
+  onReconectado?: () => void;
 }
 
 // Consumido por: /cocina (comanda:nueva + pedido:actualizado), /caja
@@ -35,11 +41,13 @@ export function useComandaSocket({
   onPedidoActualizado,
   onCatalogoActualizado,
   onDocumentoActualizado,
+  onReconectado,
 }: UseComandaSocketOptions) {
   const onComandaNuevaRef = useUltimoValor(onComandaNueva);
   const onPedidoActualizadoRef = useUltimoValor(onPedidoActualizado);
   const onCatalogoActualizadoRef = useUltimoValor(onCatalogoActualizado);
   const onDocumentoActualizadoRef = useUltimoValor(onDocumentoActualizado);
+  const onReconectadoRef = useUltimoValor(onReconectado);
 
   useEffect(() => {
     if (!token || !sedeId) {
@@ -47,9 +55,14 @@ export function useComandaSocket({
     }
 
     const socket: Socket = io(WS_URL, { auth: { token } });
+    let yaConecto = false;
 
+    // `connect` también se dispara en cada reconexión: hay que volver a
+    // unirse a la room (es por conexión) y recuperar lo que se perdió.
     socket.on('connect', () => {
       socket.emit('sede:unirse', { sedeId });
+      if (yaConecto) onReconectadoRef.current?.();
+      yaConecto = true;
     });
     socket.on('comanda:nueva', (pedido: Pedido) => onComandaNuevaRef.current?.(pedido));
     socket.on('pedido:actualizado', (pedido: Pedido) => onPedidoActualizadoRef.current?.(pedido));
@@ -59,5 +72,13 @@ export function useComandaSocket({
     return () => {
       socket.disconnect();
     };
-  }, [token, sedeId, onComandaNuevaRef, onPedidoActualizadoRef, onCatalogoActualizadoRef, onDocumentoActualizadoRef]);
+  }, [
+    token,
+    sedeId,
+    onComandaNuevaRef,
+    onPedidoActualizadoRef,
+    onCatalogoActualizadoRef,
+    onDocumentoActualizadoRef,
+    onReconectadoRef,
+  ]);
 }

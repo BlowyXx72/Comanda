@@ -249,7 +249,8 @@
   }
 
   .barra-usuario,
-  .selector-sede-global label {
+  .selector-sede-global label,
+  .selector-sede-etiqueta {
     display: none;
   }
 

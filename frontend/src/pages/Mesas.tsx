@@ -98,6 +98,11 @@ export function MesasPage() {
     // Fase 10 (CU-08): ADMIN crea/edita/desactiva un producto desde
     // /catalogo y el mesero ve el catálogo actualizado sin recargar.
     onCatalogoActualizado: () => cargarProductos(),
+    // Tras un corte del socket: lo que cambió mientras tanto no llegó por evento.
+    onReconectado: () => {
+      cargarProductos();
+      cargarMesas().catch(() => undefined);
+    },
   });
 
   const cola = useColaOffline(token, () => cargarMesas().catch(() => undefined));
