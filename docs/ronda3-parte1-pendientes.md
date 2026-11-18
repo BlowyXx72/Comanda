@@ -53,10 +53,11 @@ demás de esas fases está hecho y probado (ver el commit de cada fase).
   /documentos-fiscales/:id/xml` (`fiscal/`) y `POST /correo/resumen-diario`
   (`mail/`, solo ADMIN). El del XML conviene agregarlo en la Parte 2 con
   `verificarSedeDelUsuario`.
-- **Tokens viejos**: un JWT emitido antes de la Fase 17 no trae `sedeId` y no
-  queda restringido hasta que la sesión vence (8 h) o se vuelve a iniciar.
-- **No hay pantalla para asignar la sede**: se asigna en el seed o directo en
-  la base, igual que los usuarios (no hay gestión de usuarios, ver CLAUDE.md).
+- ~~**Tokens viejos**~~ (resuelto): rol y sede ya no salen del JWT sino de la
+  base en cada petición (`auth/usuario-vigente.ts`), así que un token viejo
+  queda restringido de inmediato.
+- ~~**No hay pantalla para asignar la sede**~~ (resuelto): `/usuarios` (solo
+  ADMIN, `UsersModule`) crea usuarios y les asigna sede, rol y estado.
 
 ## Fase 18
 

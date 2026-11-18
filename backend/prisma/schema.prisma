@@ -151,6 +151,10 @@ model Usuario {
   // auth/sede-usuario.ts).
   // DECISIÓN DE PROTOTIPO: la propuesta no lo fija; el ER no lo tiene.
   sedeId       String?    @map("sede_id")
+  // Gestión de usuarios (/usuarios): baja lógica. Un usuario inactivo no
+  // puede iniciar sesión y su JWT deja de valer (ver auth/usuario-vigente.ts).
+  // DECISIÓN DE PROTOTIPO: la propuesta no lo fija; el ER no lo tiene.
+  activo       Boolean    @default(true)
 
   cadena  Cadena   @relation(fields: [cadenaId], references: [id])
   sede    Sede?    @relation(fields: [sedeId], references: [id])

@@ -1,3 +1,4 @@
+import type { Rol } from '../auth/AuthContext';
 import { API_URL, ApiError, apiFetch, apiFetchTexto } from './client';
 
 export interface Sede {
@@ -155,6 +156,39 @@ export const actualizarProducto = (id: string, input: ActualizarProductoInput, t
 
 export const desactivarProducto = (id: string, token: string) =>
   apiFetch<Producto>(`/productos/${id}`, { method: 'DELETE' }, token);
+
+// Gestión de usuarios (/usuarios, ADMIN): crear meseros/cajeros y asignarles
+// sede. sedeId null = todas las sedes de la cadena (Fase 17).
+export interface UsuarioCadena {
+  id: string;
+  email: string;
+  rol: Rol;
+  sedeId: string | null;
+  activo: boolean;
+  sede: { id: string; nombre: string } | null;
+}
+
+export interface CrearUsuarioInput {
+  email: string;
+  password: string;
+  rol: Rol;
+  sedeId: string | null;
+}
+
+export interface ActualizarUsuarioInput {
+  rol?: Rol;
+  sedeId?: string | null;
+  activo?: boolean;
+  password?: string;
+}
+
+export const listarUsuarios = (token: string) => apiFetch<UsuarioCadena[]>('/usuarios', {}, token);
+
+export const crearUsuario = (input: CrearUsuarioInput, token: string) =>
+  apiFetch<UsuarioCadena>('/usuarios', { method: 'POST', body: JSON.stringify(input) }, token);
+
+export const actualizarUsuario = (id: string, input: ActualizarUsuarioInput, token: string) =>
+  apiFetch<UsuarioCadena>(`/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token);
 
 export const crearPedido = (input: CrearPedidoInput, token: string) =>
   apiFetch<Pedido>('/pedidos', { method: 'POST', body: JSON.stringify(input) }, token);

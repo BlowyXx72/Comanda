@@ -18,7 +18,8 @@ export class AuthService {
   // para no confirmar que el correo existe.
   async login(email: string, password: string, cadenaIdRequerida?: string) {
     const usuario = await this.prisma.usuario.findUnique({ where: { email } });
-    if (!usuario) {
+    // Un usuario desactivado en /usuarios recibe el mismo 401 genérico.
+    if (!usuario || !usuario.activo) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 

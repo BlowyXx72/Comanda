@@ -18,6 +18,7 @@ import { ReportsModule } from './reports/reports.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { TablesModule } from './tables/tables.module.js';
 import { TenancyModule } from './tenancy/tenancy.module.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TenancyModule } from './tenancy/tenancy.module.js';
     MailModule,
     ImagenesProductoModule,
     TenancyModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

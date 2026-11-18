@@ -55,6 +55,13 @@ export const DESTINOS: Destino[] = [
     icono: 'inventario',
     roles: ['ADMIN'],
   },
+  {
+    ruta: '/usuarios',
+    titulo: 'Usuarios',
+    descripcion: 'Meseros y cajeros, con su rol y sede.',
+    icono: 'usuarios',
+    roles: ['ADMIN'],
+  },
 ];
 
 export const destinosDeRol = (rol: Rol | undefined) => DESTINOS.filter((d) => rol && d.roles.includes(rol));

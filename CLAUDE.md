@@ -81,12 +81,15 @@ el mismo código del backend. Deben quedar
 desacoplados entre sí (import solo lo que cada uno expone explícitamente)
 aunque se desplieguen juntos.
 
-`TenantsModule` y `UsersModule` de la propuesta original **no se separaron**
-en módulos propios: `Cadena` y `Usuario` se manejan directo con Prisma desde
-`AuthModule` (login) y `prisma/seed.ts` (datos de demo), porque este
-prototipo no tiene ningún endpoint de gestión de cadenas/usuarios que
-justificara el módulo aparte. Si esa gestión se necesita más adelante, ahí
-sí vale la pena separarlos.
+`UsersModule` (`backend/src/users/`) sí existe: `GET/POST/PATCH /usuarios`,
+solo ADMIN, para crear meseros/cajeros, asignarles sede, cambiarles el rol o la
+contraseña y desactivarlos (baja lógica, `Usuario.activo`); lo usa la pantalla
+`/usuarios`. Rol y sede del usuario autenticado salen de la base en cada
+petición y en el handshake del WebSocket (`auth/usuario-vigente.ts`), no del
+JWT, para que esos cambios apliquen sin volver a iniciar sesión.
+`TenantsModule` de la propuesta original **no se separó**: `Cadena` se maneja
+directo con Prisma (login, tenancy y `prisma/seed.ts`), porque no hay ningún
+endpoint de gestión de cadenas.
 
 ## Eventos WebSocket
 

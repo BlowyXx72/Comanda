@@ -61,6 +61,9 @@ export function CajaPage() {
         return prev.map((p) => (p.id === pedido.id ? pedido : p));
       });
     },
+    // Tras un corte del socket: los pedidos que cambiaron mientras tanto no
+    // llegaron por evento.
+    onReconectado: cargarPedidos,
     // Fase 11B: el cobro ya respondió con el documento PENDIENTE; el worker
     // avisa aquí cuando termina de validarlo.
     onDocumentoActualizado: (doc) =>

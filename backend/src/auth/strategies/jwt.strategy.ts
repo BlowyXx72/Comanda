@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import type { JwtPayload, UsuarioAutenticado } from '../jwt-payload.interface.js';
+import { cargarUsuarioVigente } from '../usuario-vigente.js';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -16,14 +18,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   // El valor de retorno queda disponible como `req.user` en cualquier ruta
-  // protegida por JwtAuthGuard.
-  validate(payload: JwtPayload): UsuarioAutenticado {
-    return {
-      userId: payload.sub,
-      email: payload.email,
-      rol: payload.rol,
-      cadenaId: payload.cadenaId,
-      sedeId: payload.sedeId ?? null,
-    };
+  // protegida por JwtAuthGuard. Rol y sede salen de la base, no del token,
+  // para que los cambios hechos en /usuarios apliquen de inmediato.
+  async validate(payload: JwtPayload): Promise<UsuarioAutenticado> {
+    const usuario = await cargarUsuarioVigente(this.prisma, payload);
+    if (!usuario) {
+      throw new UnauthorizedException('La sesión ya no es válida');
+    }
+    return usuario;
   }
 }

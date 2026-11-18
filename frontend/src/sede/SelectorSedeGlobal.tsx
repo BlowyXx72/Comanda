@@ -9,10 +9,21 @@ export function SelectorSedeGlobal() {
   const { usuario } = useAuth();
   const { sedes, sede, seleccionarSede } = useSedeContext();
 
+  if (!sede) return null;
+
   // Multisede para cualquier rol sin sede asignada (Fase 17: sedeId null =
   // todas las sedes de la cadena, y el backend lo permite). Un mesero o cajero
-  // con sede asignada solo recibe esa en GET /sedes, así que no ve selector.
-  if (usuario?.sedeId || sedes.length <= 1) return null;
+  // con sede asignada solo recibe esa en GET /sedes, así que no elige: igual
+  // se le muestra en cuál está, para que un desajuste entre la pantalla de
+  // cocina y la del mesero (cada una en una sede) se note a simple vista.
+  if (usuario?.sedeId || sedes.length <= 1) {
+    return (
+      <div className="selector-sede-global" title={`Sede en la que opera esta pantalla: ${sede.nombre}`}>
+        <span className="selector-sede-etiqueta">Sede</span>
+        <strong>{sede.nombre}</strong>
+      </div>
+    );
+  }
 
   return (
     <div className="selector-sede-global">
