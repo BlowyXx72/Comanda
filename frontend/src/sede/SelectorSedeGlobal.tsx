@@ -18,7 +18,7 @@ export function SelectorSedeGlobal() {
   // cocina y la del mesero (cada una en una sede) se note a simple vista.
   if (usuario?.sedeId || sedes.length <= 1) {
     return (
-      <div className="selector-sede-global" title="Sede en la que opera esta pantalla">
+      <div className="selector-sede-global" title={`Sede en la que opera esta pantalla: ${sede.nombre}`}>
         <span className="selector-sede-etiqueta">Sede</span>
         <strong>{sede.nombre}</strong>
       </div>

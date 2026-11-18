@@ -1715,3 +1715,338 @@
   margin-left: var(--esp-3);
 }
 
+
+/* ============ Usuarios (pages/Usuarios.tsx) ============ */
+
+.usuarios-page h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.usuarios-alta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+/* Campos con etiqueta visible arriba y ayuda/error debajo (no solo placeholder). */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  min-width: 0;
+}
+
+.campo-etiqueta {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.campo-ayuda,
+.campo-error,
+.campo-aviso {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.campo-ayuda {
+  color: var(--color-text-muted);
+}
+
+.campo-error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.campo-aviso {
+  color: var(--color-warning-ink);
+  font-weight: 600;
+}
+
+.campo input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+/* El botón se alinea con los controles, no con las ayudas de debajo. */
+.catalogo-form--usuarios {
+  align-items: start;
+}
+
+.usuarios-crear {
+  margin-top: calc(0.875rem * 1.5 + var(--esp-1));
+}
+
+/* Aviso de éxito: reserva su línea para que la tabla no salte al aparecer. */
+.usuarios-aviso {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--color-success-ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.usuarios-encabezado-tabla {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.usuarios-encabezado-tabla .panel-nota {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.usuarios-correo {
+  min-width: 12rem;
+  overflow-wrap: break-word;
+}
+
+/* La contraseña se ve como campo (no como texto editable al pasar el mouse,
+   como en el catálogo): "Sin cambio" no debe parecer un valor fijo. */
+.catalogo-tabla.usuarios-tabla td input[type='password'] {
+  min-width: 9rem;
+  background: var(--color-bg);
+  border-color: var(--color-border-strong);
+}
+
+.usuarios-correo .chip {
+  margin-left: var(--esp-2);
+}
+
+.usuarios-tabla td .chip--aviso {
+  margin-top: var(--esp-1);
+}
+
+.usuarios-tabla-contenedor {
+  /* relative: que el texto solo-lector (absolute) quede recortado aquí y no
+     ensanche la página. */
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: var(--esp-2);
+}
+
+.usuarios-tabla-contenedor .catalogo-tabla.usuarios-tabla {
+  min-width: 100%;
+}
+
+/* Etiquetas de estado: siempre con texto, el color solo refuerza. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radio-total);
+  border: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip--ok {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-border);
+  color: var(--color-success-ink);
+}
+
+.chip--aviso {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-ink);
+}
+
+.chip--neutro {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+
+/* Acciones: la de peligro va en rojo y aparte; las secundarias, tonales.
+   Pueden pasar a otra línea para que la tabla no desborde en laptops. */
+.usuarios-tabla .catalogo-acciones {
+  white-space: normal;
+  min-width: 13rem;
+}
+
+.usuarios-tabla .catalogo-acciones button {
+  margin: var(--esp-1) var(--esp-2) var(--esp-1) 0;
+}
+
+.usuarios-tabla .catalogo-acciones button + button {
+  margin-left: 0;
+}
+.usuarios-tabla .catalogo-acciones button.boton-secundario {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.usuarios-tabla .catalogo-acciones button.boton-peligro {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.usuarios-tabla .catalogo-acciones button.boton-peligro:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+}
+
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* En pantallas angostas cada usuario es una tarjeta (sin scroll horizontal):
+   cada celda muestra su etiqueta con data-etiqueta. */
+@media (max-width: 760px) {
+  .usuarios-crear {
+    margin-top: 0;
+  }
+
+  .usuarios-tabla-contenedor {
+    overflow: visible;
+  }
+
+  .catalogo-tabla.usuarios-tabla {
+    display: block;
+    overflow: visible;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .usuarios-tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .usuarios-tabla tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-3);
+  }
+
+  .usuarios-tabla tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-2);
+    padding: var(--esp-4);
+    border: var(--borde);
+    border-radius: var(--radio-l);
+    background: var(--color-surface);
+    box-shadow: var(--sombra-1);
+  }
+
+  .catalogo-tabla.usuarios-tabla td {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-1);
+    padding: 0;
+    border: none;
+  }
+
+  .usuarios-tabla td[data-etiqueta]::before {
+    content: attr(data-etiqueta);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+  }
+
+  .usuarios-tabla td .chip {
+    align-self: flex-start;
+  }
+
+  .usuarios-correo .chip {
+    margin-left: 0;
+  }
+
+  /* Los campos vuelven a verse como campos dentro de la tarjeta. */
+  .usuarios-tabla td input:not([type='radio']):not([type='checkbox']),
+  .usuarios-tabla td select {
+    min-height: 44px;
+    background: var(--color-bg);
+    border-color: var(--color-border-strong);
+  }
+
+  .usuarios-tabla .catalogo-acciones {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--esp-2);
+    white-space: normal;
+    padding-top: var(--esp-2);
+  }
+
+  .usuarios-tabla .catalogo-acciones button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  .usuarios-tabla .catalogo-acciones button + button {
+    margin-left: 0;
+  }
+
+  /* Sin cambios pendientes, "Guardar" no aporta nada en la tarjeta. */
+  .usuarios-tabla .catalogo-acciones .usuarios-guardar:disabled {
+    display: none;
+  }
+
+  .usuarios-correo {
+    min-width: 0;
+  }
+
+  /* La franja de "cambios sin guardar" va en el borde de la tarjeta. */
+  .usuarios-tabla tbody tr.catalogo-fila--editando {
+    box-shadow: inset 6px 0 0 var(--color-primary), var(--sombra-1);
+  }
+
+  .usuarios-tabla tbody tr.catalogo-fila--editando td:first-child {
+    box-shadow: none;
+  }
+}
+
+/* Teléfonos angostos (≤ 400 px): la barra no cabe con marca, sede, tema y
+   salir. Queda el logo (el enlace conserva su aria-label) y el nombre de la
+   sede se recorta con puntos suspensivos; el title muestra el completo. */
+@media (max-width: 400px) {
+  .barra-marca-texto {
+    display: none;
+  }
+
+  .selector-sede-global select,
+  .selector-sede-global strong {
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Escritorio angosto (laptop): con 7 destinos la barra no cabe completa.
+   Se quitan los textos redundantes (la marca queda en el logo, el rol se ve
+   en el inicio) y, si aun así no cabe, la navegación se desplaza dentro de
+   sí misma en vez de empujar los botones de tema y salir fuera de la página. */
+@media (min-width: 861px) and (max-width: 1439px) {
+  .barra-marca-texto,
+  .barra-usuario,
+  .selector-sede-global label,
+  .selector-sede-etiqueta {
+    display: none;
+  }
+
+  .barra-nav {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .barra-enlace {
+    flex-shrink: 0;
+    padding: 0 var(--esp-2);
+  }
+}
