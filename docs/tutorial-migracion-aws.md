@@ -1170,6 +1170,13 @@ Luego **Add provider**.
    contenido de `deploy/iam/github-oidc-confianza.json`, reemplazando
    `CUENTA` por tu `<ID_CUENTA>`. Solo el *environment* `beta` del repo
    `BlowyXx72/Comanda` puede usar este rol.
+
+   La política acepta los dos formatos del `sub` que manda GitHub: el
+   clásico (`repo:BlowyXx72/Comanda:...`) y el de IDs inmutables
+   (`repo:BlowyXx72@128721743/Comanda@1391433868:...`), que es el que usa
+   este repo. Con solo el clásico, el despliegue falla con *Not authorized to
+   perform sts:AssumeRoleWithWebIdentity*. Para ver cuál usa un repo:
+   `gh api repos/BlowyXx72/Comanda/actions/oidc/customization/sub`.
 2. **Next** → sin políticas → **Next** → **Role name:**
    `comanda-github-despliegue` → **Create role**.
 3. Entra al rol → **Add permissions** → **Create inline policy** → **JSON** y
