@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { type Job, UnrecoverableError, Worker } from 'bullmq';
+import { prefijoDocumentosFiscales } from '../config/entorno.js';
 import { ColaCorreoService } from '../mail/cola-correo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { conexionRedis } from '../queue/conexion-redis.js';
@@ -83,7 +84,9 @@ export class ProcesadorFiscalService implements OnApplicationBootstrap, OnModule
     let urlXml = doc.urlXml;
     const xml = generarXmlSimulado(doc);
     if (!urlXml) {
-      const llave = `${cadenaId}/${doc.sedeId}/${doc.consecutivo}-${doc.id}.xml`;
+      // Bajo el prefijo fiscal/ para que les aplique la retención de 5 años.
+      // Los XML anteriores conservan su llave (urlXml guarda la URI completa).
+      const llave = `${prefijoDocumentosFiscales()}${cadenaId}/${doc.sedeId}/${doc.consecutivo}-${doc.id}.xml`;
       urlXml = await this.almacen.subir(llave, xml, 'application/xml');
       await this.prisma.conCadena(cadenaId, (tx) =>
         tx.documentoFiscal.update({ where: { id: doc.id }, data: { urlXml } }),

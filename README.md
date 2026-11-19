@@ -94,9 +94,13 @@ están en [`docs/datos-aws.md`](docs/datos-aws.md).
 
 Usuarios de prueba creados por el seed (contraseña de cada uno junto al
 correo): `admin@demo.com` / `admin123`, `cajero@demo.com` / `cajero123`,
-`mesero@demo.com` / `mesero123`. Desde la Fase 7 el seed crea **3 sedes**
-para la cadena demo: ADMIN ve un selector de sede en el encabezado;
-MESERO/CAJERO operan siempre en la última sede elegida en ese navegador.
+`mesero@demo.com` / `mesero123`. El seed crea **3 sedes** para la cadena
+demo (subdominio `demo`). Desde la Fase 17 cada usuario puede tener una sede
+asignada: en el seed, cajero y mesero quedan en la Sede Centro y solo operan
+ahí; quien no tiene sede asignada (el ADMIN) ve un selector de sede en la
+barra superior y opera en todas. La barra muestra siempre la sede activa.
+Los usuarios se crean y se les asigna rol y sede desde `/usuarios` (solo
+ADMIN); esos cambios aplican sin volver a iniciar sesión.
 
 Verifica que todo esté sano:
 
@@ -169,7 +173,10 @@ la mesa correspondiente se resalta unos segundos y suena un beep para
 avisarle al mesero que debe ir a recogerla, sin necesidad de tener esa mesa
 abierta en el panel de detalle.
 
-## Otras funcionalidades (Fases 7 a 10)
+Si el socket se cae y se reconecta, `/mesas`, `/cocina` y `/caja` vuelven a
+pedir su lista solas, para no perder las comandas emitidas mientras tanto.
+
+## Otras funcionalidades
 
 Además del flujo principal, el prototipo cubre estos casos de uso adicionales
 de la propuesta (detalle completo y estado de cada uno en
@@ -191,8 +198,32 @@ de la propuesta (detalle completo y estado de cada uno en
   sincronizan solos contra `POST /sync` (idempotente, no duplica si se
   reenvía el mismo lote).
 - **Catálogo centralizado (CU-08)** — `/catalogo` (solo ADMIN) permite
-  crear, editar y desactivar productos una sola vez; el cambio se propaga en
-  vivo a `/mesas` y al menú QR de las 3 sedes, sin recargar.
+  crear, editar y desactivar productos una sola vez; el cambio llega en vivo a
+  `/mesas` de las 3 sedes, sin recargar, y el menú QR lo muestra la próxima
+  vez que se abre (es público y no mantiene un socket). Desde la Fase
+  16B cada producto puede llevar foto, que se ve en el catálogo y en el menú
+  QR.
+- **Inventario y recetas (Fase 11, §6.2)** — `/inventario` maneja insumos,
+  recetas por producto y movimientos; la comanda descuenta inventario por
+  receta al entrar a cocina y las existencias se actualizan en vivo.
+- **Reportes (Fases 13–14)** — ventas por día/mes, producto y franja horaria
+  (zona America/Bogota), leídas de la réplica de lectura de Postgres.
+- **Documento fiscal en segundo plano (Fase 11B)** — al cobrar, un worker
+  valida el documento contra una DIAN **simulada** y guarda el XML en MinIO;
+  `/caja` ve el resultado en vivo y puede descargar el XML.
+- **Pedidos de plataformas (CU-05, Fase 12B)** — `/simulador-plataforma`
+  imita una plataforma de domicilios que manda pedidos por API con
+  `X-Api-Key` (no hay integración con Rappi real).
+- **Correo (Fase 14B)** — comprobante del pedido a domicilio y resumen diario
+  de ventas, entregados a Mailpit (http://localhost:8025).
+- **Cobro sin conexión (CU-07, Fase 16)** — la caja puede cobrar sin red con
+  un bloque de consecutivos fiscales reservado; el cobro se sincroniza por
+  `POST /sync` al volver la red.
+- **Gestión de usuarios** — `/usuarios` (solo ADMIN) crea meseros y cajeros,
+  les asigna sede, cambia rol o contraseña y los desactiva (baja lógica).
+- **Subdominio por cadena (Fase 20B, §5.2)** — por el subdominio de la
+  cadena, el menú QR, el domicilio y el login quedan restringidos a esa
+  cadena (se activa con `URL_PUBLICA_CADENA`).
 
 ## Pruebas
 
@@ -226,7 +257,14 @@ docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env
 # -> https://localhost:9443   (bajar: ... down -v)
 ```
 
-El despliegue en la EC2 está en `docs/fases-siguientes-3.md` (Fases 18B–21B).
+Documentación del despliegue en AWS (EC2, TLS, DNS, S3, SES, CloudWatch):
+
+- [`docs/tutorial-migracion-aws.md`](docs/tutorial-migracion-aws.md) — tutorial
+  paso a paso con el plan gratuito.
+- [`docs/despliegue-aws.md`](docs/despliegue-aws.md) — referencia del
+  despliegue (Fases 18B–21B).
+- [`docs/datos-aws.md`](docs/datos-aws.md) — respaldos y retención de datos.
+- [`docs/runbook.md`](docs/runbook.md) — operación y qué hacer ante alertas.
 
 ### CI/CD (GitHub Actions, Fase 18B)
 
@@ -251,11 +289,22 @@ El despliegue en la EC2 está en `docs/fases-siguientes-3.md` (Fases 18B–21B).
 
 ```
 comanda/
-├── docker-compose.yml
-├── .env.example
-├── docs/prototipo-slice.md   # alcance: propuesta vs. prototipo
-├── backend/                  # NestJS (monolito modular)
-└── frontend/                 # React + Vite + TS
+├── docker-compose.yml               # desarrollo local
+├── docker-compose.prod*.yml         # producción (local de prueba y AWS)
+├── .env.example / .env.prod.example
+├── .github/workflows/               # CI y despliegue (Fase 18B)
+├── backend/                         # NestJS (monolito modular) + worker
+│   ├── prisma/                      # esquema, migraciones y seed
+│   └── scripts/                     # prueba de integración de punta a punta
+├── frontend/                        # React + Vite + TS
+├── nginx/                           # proxy TLS local y de producción
+├── postgres/                        # réplica de lectura y respaldos
+├── deploy/                          # scripts de la EC2, IAM y CloudWatch
+└── docs/
+    ├── prototipo-slice.md           # alcance: propuesta vs. prototipo
+    ├── fases-siguientes*.md         # plan de cada ronda
+    ├── propuesta/                   # documentos fuente de la propuesta
+    └── ...                          # despliegue, runbook, evidencias
 ```
 
 ## Servicios telemáticos usados y por qué
@@ -290,19 +339,19 @@ infraestructura corresponde a un concepto telemático concreto:
   afinidad (`ip_hash`) a Socket.IO para el handshake por long-polling y
   limita la tasa de los endpoints públicos sin autenticación (menú QR y
   domicilio: `429` al pasarse). Ver `nginx/nginx.conf`.
-- **Multi-tenant / DNS (a futuro)** — el documento de propuesta plantea
-  resolver la cadena (tenant) por subdominio en producción (p. ej.
-  `cadena-x.comanda.app`), lo que depende de DNS y de un mecanismo de
-  enrutamiento por host. En este prototipo el tenant se resuelve de forma más
-  simple, a partir del `cadena_id` embebido en el JWT — ver
-  [`docs/prototipo-slice.md`](docs/prototipo-slice.md).
+- **Multi-tenant / DNS** — como plantea la propuesta (§5.2), desde la Fase
+  20B la cadena (tenant) se resuelve por subdominio (p. ej.
+  `demo.<dominio>`) a partir del encabezado `Host` en las rutas públicas
+  (menú QR, domicilio) y en el login; en AWS lo respaldan un DNS y un
+  certificado comodín. Las rutas privadas siguen tomando el tenant del
+  `cadena_id` del JWT — ver [`docs/prototipo-slice.md`](docs/prototipo-slice.md).
 - **NTP / orden de eventos** — el documento fiscal simulado y la máquina de
   estados del pedido dependen de marcas de tiempo consistentes entre
   servicios (fecha del pedido, consecutivo fiscal, orden de transiciones de
-  estado). En producción, con múltiples instancias de backend, esto exige que
-  todos los servidores tengan el reloj sincronizado vía NTP; en este
-  prototipo hay una sola instancia, así que el reloj del propio contenedor
-  basta, pero el requisito queda documentado.
+  estado). Con varias instancias del backend, esto exige que todos los
+  servidores tengan el reloj sincronizado vía NTP; en local las dos
+  instancias corren en la misma máquina y comparten su reloj, así que el
+  requisito queda documentado para un despliegue con varios servidores.
 
 ## Convenciones del código
 
@@ -345,14 +394,21 @@ continúa la numeración con la misma división en dos partes:
   CU-05), `Fase 13B` (Nginx con TLS 1.3/HTTP2/WSS y dos instancias del
   backend), `Fase 14B` (correo de comprobantes y resumen diario).
 
-La ronda 3 (propuesta, ver [`docs/fases-siguientes-3.md`](docs/fases-siguientes-3.md))
-cierra el proyecto y lo migra a AWS con su plan gratuito: `Fase 15` (cierre de
-la ronda 2 y deudas), Parte 1 `Fase 16`–`18` (cobro sin conexión, sede por
-usuario, datos y respaldos en AWS), Parte 2 `Fase 16B`–`21B` (imágenes de
-producto en el menú QR, imágenes de producción, CI/CD, despliegue en EC2 con
-TLS/DNS/S3/SES, subdominio por cadena y monitoreo en CloudWatch) y
-`Fase 19`–`20` (pruebas de carga y cierre). Antes de empezar hay que decidir
-región y dominio, y crear la cuenta de AWS cerca de la sustentación: el plan
-gratuito dura 6 meses.
+La ronda 3 (ver [`docs/fases-siguientes-3.md`](docs/fases-siguientes-3.md))
+cierra el proyecto y lo migra a AWS con su plan gratuito. Ya integradas en
+`main`:
+
+- `Fase 15` — cierre de la ronda 2 y deudas.
+- **Parte 1** — `Fase 16` (cobro sin conexión), `Fase 17` (sede por usuario,
+  ampliada después con la pantalla `/usuarios`), `Fase 18` (datos y
+  respaldos en AWS). Lo que quedó abierto está en
+  [`docs/ronda3-parte1-pendientes.md`](docs/ronda3-parte1-pendientes.md).
+- **Parte 2** — `Fase 16B` (imágenes de producto), `Fase 17B` (imágenes de
+  producción), `Fase 18B` (CI/CD), `Fase 19B` (despliegue en EC2 con
+  TLS/DNS/S3/SES), `Fase 20B` (subdominio por cadena), `Fase 21B` (monitoreo
+  en CloudWatch).
+
+Pendientes: `Fase 19` (pruebas de carga y medición de latencia) y `Fase 20`
+(cierre del proyecto).
 
 Ver el historial de `git log` para el detalle de qué trajo cada commit.

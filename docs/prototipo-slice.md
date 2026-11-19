@@ -160,6 +160,14 @@ validación vive en `OrdersModule`.
   antes de unir al cliente a la room `sede:{id}` — mismo aislamiento
   multi-tenant que ya aplicaba en REST, ahora también en el canal en tiempo
   real.
+- La autenticación corre en un middleware de Socket.IO (`afterInit` del
+  gateway), que también carga de la base la cadena y la sede vigentes del
+  usuario. El cliente recibe `connect` solo después de eso. Antes se hacía en
+  `handleConnection`, que es async y Socket.IO no espera: el `sede:unirse`
+  que el frontend envía apenas conecta llegaba a veces antes de conocer la
+  cadena y se rechazaba, y esa pantalla se quedaba sin eventos en vivo hasta
+  reconectarse. `sede:unirse` responde `{ ok }` como acuse si el cliente lo
+  pide. Lo cubre `backend/test/realtime-sede.spec.ts`.
 - Se agregó `GET /pedidos?sedeId=` (no estaba en la lista original del §5)
   para que `/cocina` pueda hidratar el tablero con los pedidos
   `EN_PREPARACION`/`LISTO` ya existentes al montar, antes de que empiecen a
@@ -202,8 +210,9 @@ segundo plano sin bloquear la caja". Así quedó:
 - El contenedor `worker` (misma imagen y código del backend, entrada
   `src/worker.ts`) toma cada trabajo y:
   - genera un XML propio y mínimo, sin firma (no es UBL 2.1);
-  - lo sube a MinIO (almacén de objetos S3, §5.1) y guarda en `urlXml` la URI
-    `s3://bucket/llave`;
+  - lo sube a MinIO (almacén de objetos S3, §5.1) bajo el prefijo
+    `DOCUMENTOS_PREFIJO_FISCAL` (por defecto `fiscal/`, el de la regla de
+    retención de 5 años) y guarda en `urlXml` la URI `s3://bucket/llave`;
   - lo "valida" contra `ProveedorDianSimuladoService`.
 - El simulador tiene latencia, tasa de caída y tasa de rechazo configurables
   por `.env` (`DIAN_SIMULADA_*`):
