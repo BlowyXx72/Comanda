@@ -60,12 +60,36 @@ describe('ProcesadorFiscalService', () => {
 
     const resultado = await procesar();
 
-    expect(almacen.subir).toHaveBeenCalledWith(`${CADENA}/sede-1/7-doc-1.xml`, expect.any(String), 'application/xml');
+    expect(almacen.subir).toHaveBeenCalledWith(
+      `fiscal/${CADENA}/sede-1/7-doc-1.xml`,
+      expect.any(String),
+      'application/xml',
+    );
     expect(resultado.estadoDian).toBe('VALIDADO_SIMULADO');
-    expect(resultado.urlXml).toBe(`s3://bucket/${CADENA}/sede-1/7-doc-1.xml`);
+    expect(resultado.urlXml).toBe(`s3://bucket/fiscal/${CADENA}/sede-1/7-doc-1.xml`);
     expect(update).toHaveBeenLastCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ estadoDian: 'VALIDADO_SIMULADO', mensajeDian: 'OK' }) }),
     );
+  });
+
+  it('guarda el XML bajo DOCUMENTOS_PREFIJO_FISCAL, el prefijo de la regla de retención de 5 años', async () => {
+    const original = process.env.DOCUMENTOS_PREFIJO_FISCAL;
+    try {
+      for (const [valor, llave] of [
+        ['documentos-fiscales', `documentos-fiscales/${CADENA}/sede-1/7-doc-1.xml`],
+        ['/otro/', `otro/${CADENA}/sede-1/7-doc-1.xml`],
+        ['', `${CADENA}/sede-1/7-doc-1.xml`],
+      ]) {
+        process.env.DOCUMENTOS_PREFIJO_FISCAL = valor;
+        const { procesar, almacen, proveedor } = armar(documento());
+        proveedor.validar.mockResolvedValue({ aceptado: true, mensaje: 'OK' });
+        await procesar();
+        expect(almacen.subir).toHaveBeenCalledWith(llave, expect.any(String), 'application/xml');
+      }
+    } finally {
+      if (original === undefined) delete process.env.DOCUMENTOS_PREFIJO_FISCAL;
+      else process.env.DOCUMENTOS_PREFIJO_FISCAL = original;
+    }
   });
 
   it('un rechazo de negocio queda RECHAZADO_SIMULADO sin reintentar', async () => {

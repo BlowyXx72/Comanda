@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comanda Central — Informe final del proyecto</title>
+<style>
+:root{
+  --ink:#23272f; --muted:#5E6472; --coral:#FFA69E; --coral-ink:#a8483e; --cream:#FAF3DD;
+  --mint:#B8F2E6; --sky:#AED9E0; --line:#cfd3d8; --soft:#f4f6f7;
+}
+@page{
+  size: Letter;
+  margin: 20mm 19mm 18mm 19mm;
+  @top-left{ content:"Comanda Central · Informe final del proyecto"; font-family:Calibri, sans-serif; font-size:8pt; color:#5E6472; vertical-align:bottom; padding-bottom:4mm; }
+  @top-right{ content:"Servicios Telemáticos · 2026"; font-family:Calibri, sans-serif; font-size:8pt; color:#5E6472; vertical-align:bottom; padding-bottom:4mm; }
+  @bottom-right{ content:counter(page); font-family:Calibri, sans-serif; font-size:9pt; color:#5E6472; vertical-align:top; padding-top:3mm; }
+}
+@page :first{
+  margin:0;
+  @top-left{content:none} @top-right{content:none} @bottom-right{content:none}
+}
+html{ font-family:Calibri, "Segoe UI", sans-serif; font-size:10.5pt; color:var(--ink); line-height:1.42; }
+body{ margin:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+a{ color:inherit; text-decoration:none; }
+
+/* Portada */
+.cover{ height:279mm; box-sizing:border-box; padding:24mm 22mm 18mm; position:relative; overflow:hidden; break-after:page; background:#fff; }
+.cover .band{ position:absolute; left:0; right:0; top:0; height:9mm; display:flex; }
+.cover .band i{ flex:1; }
+.cover .kicker{ font-size:9.5pt; letter-spacing:2.2pt; color:var(--muted); font-weight:700; margin-top:6mm; }
+.cover .brand{ display:flex; align-items:center; gap:5mm; margin-top:7mm; }
+.cover .brand svg{ width:20mm; height:20mm; }
+.cover h1.title{ font-size:40pt; line-height:1; margin:0; border:0; padding:0; letter-spacing:-0.5pt; break-before:auto; }
+.cover .subtitle{ font-size:15pt; font-style:italic; color:var(--ink); margin:6mm 0 2mm; max-width:150mm; }
+.cover .lead{ font-size:11.5pt; color:var(--muted); margin:0 0 8mm; }
+.cover .shot{ margin:4mm 0 0; border:0.8pt solid #23272f; border-radius:3mm; overflow:hidden; box-shadow:2.2mm 2.2mm 0 #23272f; width:150mm; }
+.cover .shot img{ display:block; width:100%; }
+.cover .shotcap{ font-size:8.5pt; color:var(--muted); margin-top:4.5mm; }
+.cover .meta{ position:absolute; left:22mm; right:22mm; bottom:18mm; display:grid; grid-template-columns: 1fr 1fr; gap:2mm 10mm; font-size:10pt; border-top:1.6pt solid var(--ink); padding-top:5mm; }
+.cover .meta b{ display:block; font-size:8pt; letter-spacing:1.2pt; color:var(--muted); font-weight:700; text-transform:uppercase; }
+
+/* Encabezados */
+h1{ break-before:page; font-size:20pt; line-height:1.15; margin:0 0 10pt; padding-bottom:6pt; border-bottom:2.4pt solid var(--coral); }
+h1 .num{ color:var(--coral-ink); margin-right:3pt; }
+h2{ font-size:13.5pt; margin:15pt 0 5pt; break-after:avoid; line-height:1.2; }
+h2 .num{ color:var(--coral-ink); margin-right:2pt; }
+h3{ font-size:11pt; margin:11pt 0 4pt; break-after:avoid; }
+p{ margin:0 0 7pt; text-align:justify; hyphens:auto; }
+ul, ol{ margin:0 0 8pt; padding-left:15pt; }
+li{ margin-bottom:2.5pt; }
+li > p{ margin:0; }
+strong{ font-weight:700; }
+.muted{ color:var(--muted); }
+.small{ font-size:9pt; }
+
+/* Tablas */
+table{ width:100%; border-collapse:collapse; font-size:9pt; margin:3pt 0 4pt; line-height:1.3; }
+th{ background:var(--sky); text-align:left; font-weight:700; padding:4pt 5pt; border:0.5pt solid #96b4bb; vertical-align:bottom; }
+td{ padding:3.4pt 5pt; border:0.5pt solid var(--line); vertical-align:top; }
+tbody tr:nth-child(even) td{ background:#fbfaf6; }
+tr{ break-inside:avoid; }
+thead{ display:table-header-group; }
+.tcap{ font-size:8.5pt; color:var(--muted); font-style:italic; margin:0 0 11pt; }
+.tlabel{ font-size:9pt; font-weight:700; margin:9pt 0 2pt; break-after:avoid; }
+td.c, th.c{ text-align:center; }
+td.n, th.n{ text-align:right; white-space:nowrap; }
+.nowrap{ white-space:nowrap; }
+
+/* Figuras */
+figure{ margin:8pt 0 11pt; break-inside:avoid; text-align:center; }
+figure img{ max-width:100%; border:0.6pt solid #c3c8ce; border-radius:3pt; }
+figcaption{ font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:center; line-height:1.3; }
+figcaption b{ color:var(--ink); }
+.duo{ display:grid; grid-template-columns:1fr 1fr; gap:6pt; align-items:start; }
+.duo img{ width:100%; }
+.quad{ display:grid; grid-template-columns:1fr 1fr; gap:6pt 8pt; }
+.quad div{ font-size:8.3pt; color:var(--muted); }
+.quad img{ width:100%; display:block; margin-bottom:2pt; }
+svg.diag{ width:100%; height:auto; display:block; }
+
+/* Código y cajas */
+code{ font-family:Consolas, monospace; font-size:8.7pt; background:#f1f3f5; padding:0 2pt; border-radius:2pt; }
+pre{ font-family:Consolas, monospace; font-size:8pt; line-height:1.38; background:#f6f7f9; border:0.5pt solid #dde1e5; border-left:3pt solid var(--sky); padding:6pt 8pt; white-space:pre-wrap; break-inside:avoid; margin:3pt 0 10pt; text-align:left; }
+pre .c{ color:#7a828c; }
+.callout{ background:var(--cream); border-left:3pt solid var(--coral); padding:6pt 10pt; margin:5pt 0 10pt; break-inside:avoid; font-size:9.8pt; }
+.callout p:last-child{ margin-bottom:0; }
+.callout .t{ display:block; font-weight:700; margin-bottom:2pt; }
+.chip{ display:inline-block; font-size:7.6pt; font-weight:700; padding:0.6pt 5pt; border-radius:8pt; border:0.6pt solid #23272f; white-space:nowrap; letter-spacing:0.1pt; }
+.chip.ok{ background:var(--mint); }
+.chip.sim{ background:var(--cream); }
+.chip.par{ background:#ffd9d4; }
+.chip.pend{ background:#eceef1; }
+.kpis{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6pt; margin:8pt 0 12pt; }
+.kpi{ border:0.6pt solid var(--line); border-top:3pt solid var(--sky); border-radius:3pt; padding:6pt 8pt; break-inside:avoid; }
+.kpi:nth-child(4n+1){ border-top-color:var(--coral); }
+.kpi:nth-child(4n+3){ border-top-color:var(--mint); }
+.kpi .n{ font-size:17pt; font-weight:700; line-height:1.05; }
+.kpi .l{ font-size:8.4pt; color:var(--muted); line-height:1.25; margin-top:2pt; }
+
+/* Índice */
+.toc{ columns:2; column-gap:9mm; font-size:9.3pt; }
+.toc a{ display:flex; align-items:baseline; break-inside:avoid; }
+.toc a.l1{ font-weight:700; margin-top:5pt; font-size:9.8pt; }
+.toc a.l2{ padding-left:11pt; line-height:1.36; }
+.toc .dots{ flex:1; border-bottom:0.7pt dotted #b0b6bd; margin:0 3pt 2.5pt; min-width:6pt; }
+.toc .pg{ font-variant-numeric:tabular-nums; }
+.refs li{ margin-bottom:4pt; text-align:left; }
+.sig{ font-size:9pt; color:var(--muted); }
+p.intro{ break-after:avoid; page-break-after:avoid; }
+</style>
+</head>
+<body>
+
+<!-- ======================= PORTADA ======================= -->
+<section class="cover">
+  <div class="band"><i style="background:#FFA69E"></i><i style="background:#FAF3DD"></i><i style="background:#B8F2E6"></i><i style="background:#AED9E0"></i><i style="background:#5E6472"></i></div>
+  <div class="kicker">INFORME FINAL DE PROYECTO · SERVICIOS TELEMÁTICOS</div>
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="2" width="44" height="44" rx="11" fill="#FFA69E" stroke="#23272f" stroke-width="2.2"/><g stroke="#23272f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M15 12v8a4 4 0 0 0 8 0v-8"/><path d="M19 12v24"/><path d="M33 36V12c-3.5 2-5 6-5 11h5"/></g></svg>
+    <h1 class="title">Comanda Central</h1>
+  </div>
+  <p class="subtitle">Plataforma web multi-sede de venta y control para micro-cadenas de restaurantes</p>
+  <p class="lead">Prototipo funcional, evidencia de pruebas y despliegue en la nube (AWS)</p>
+  <div class="shot"><img src="img/03-cocina.jpg" alt="Pantalla de cocina (KDS) del prototipo con comandas de mesa, domicilio y plataforma"></div>
+  <div class="shotcap">Pantalla de cocina (KDS) del prototipo: comandas de mesa, domicilio y plataforma llegan en tiempo real por WebSocket.</div>
+  <div class="meta">
+    <div><b>Estudiantes</b>Dikersson Alexis Cañón Vanegas<br>Miguel Jiménez</div>
+    <div><b>Curso y docente</b>Servicios Telemáticos<br>Mauricio Ochoa</div>
+    <div><b>Lugar y fecha</b>Bogotá D.C. — 19 de noviembre de 2026</div>
+    <div><b>Repositorio y beta</b>github.com/BlowyXx72/Comanda<br>https://comanda-dk26.duckdns.org</div>
+  </div>
+</section>
+
+<!-- ======================= ÍNDICE ======================= -->
+<h1 id="indice">Contenido</h1>
+<nav class="toc">
+  <a class="l1" href="#resumen"><span>Resumen ejecutivo</span><span class="dots"></span><span class="pg" data-h="Resumen ejecutivo">00</span></a>
+
+  <a class="l1" href="#s1"><span>1. Introducción</span><span class="dots"></span><span class="pg" data-h="1. Introducción">00</span></a>
+  <a class="l2" href="#s1-1"><span>1.1 Contexto y problema</span><span class="dots"></span><span class="pg" data-h="1.1 Contexto y problema">00</span></a>
+  <a class="l2" href="#s1-2"><span>1.2 Objetivos</span><span class="dots"></span><span class="pg" data-h="1.2 Objetivos">00</span></a>
+  <a class="l2" href="#s1-3"><span>1.3 Alcance y reglas del proyecto</span><span class="dots"></span><span class="pg" data-h="1.3 Alcance y reglas del proyecto">00</span></a>
+  <a class="l2" href="#s1-4"><span>1.4 Metodología de trabajo</span><span class="dots"></span><span class="pg" data-h="1.4 Metodología de trabajo">00</span></a>
+
+  <a class="l1" href="#s2"><span>2. De la propuesta al prototipo</span><span class="dots"></span><span class="pg" data-h="2. De la propuesta al prototipo">00</span></a>
+  <a class="l2" href="#s2-1"><span>2.1 Estado de los casos de uso</span><span class="dots"></span><span class="pg" data-h="2.1 Estado de los casos de uso">00</span></a>
+  <a class="l2" href="#s2-2"><span>2.2 Elementos simulados</span><span class="dots"></span><span class="pg" data-h="2.2 Elementos simulados">00</span></a>
+  <a class="l2" href="#s2-3"><span>2.3 Decisiones de prototipo</span><span class="dots"></span><span class="pg" data-h="2.3 Decisiones de prototipo">00</span></a>
+
+  <a class="l1" href="#s3"><span>3. Arquitectura telemática</span><span class="dots"></span><span class="pg" data-h="3. Arquitectura telemática">00</span></a>
+  <a class="l2" href="#s3-1"><span>3.1 Vista general</span><span class="dots"></span><span class="pg" data-h="3.1 Vista general">00</span></a>
+  <a class="l2" href="#s3-2"><span>3.2 Componentes de la propuesta</span><span class="dots"></span><span class="pg" data-h="3.2 Componentes de la propuesta y su implementación">00</span></a>
+  <a class="l2" href="#s3-3"><span>3.3 Recorrido de una comanda</span><span class="dots"></span><span class="pg" data-h="3.3 Recorrido de una comanda">00</span></a>
+  <a class="l2" href="#s3-4"><span>3.4 Backend: monolito modular</span><span class="dots"></span><span class="pg" data-h="3.4 Backend: monolito modular">00</span></a>
+  <a class="l2" href="#s3-5"><span>3.5 Frontend y pantallas</span><span class="dots"></span><span class="pg" data-h="3.5 Frontend y pantallas">00</span></a>
+
+  <a class="l1" href="#s4"><span>4. Protocolos y servicios de red</span><span class="dots"></span><span class="pg" data-h="4. Protocolos y servicios de red">00</span></a>
+  <a class="l2" href="#s4-1"><span>4.1 HTTPS: TLS 1.3 sobre HTTP/2</span><span class="dots"></span><span class="pg" data-h="4.1 HTTPS: TLS 1.3 sobre HTTP/2">00</span></a>
+  <a class="l2" href="#s4-2"><span>4.2 Tiempo real: WebSocket y Redis</span><span class="dots"></span><span class="pg" data-h="4.2 Tiempo real: WebSocket y Redis">00</span></a>
+  <a class="l2" href="#s4-3"><span>4.3 API REST</span><span class="dots"></span><span class="pg" data-h="4.3 API REST">00</span></a>
+  <a class="l2" href="#s4-4"><span>4.4 Proxy inverso, balanceo y límite de tasa</span><span class="dots"></span><span class="pg" data-h="4.4 Proxy inverso, balanceo y límite de tasa">00</span></a>
+  <a class="l2" href="#s4-5"><span>4.5 DNS y subdominio por cadena</span><span class="dots"></span><span class="pg" data-h="4.5 DNS y subdominio por cadena">00</span></a>
+  <a class="l2" href="#s4-6"><span>4.6 Correo (SMTP)</span><span class="dots"></span><span class="pg" data-h="4.6 Correo (SMTP)">00</span></a>
+  <a class="l2" href="#s4-7"><span>4.7 Administración, hora y registros</span><span class="dots"></span><span class="pg" data-h="4.7 Administración remota, hora y registros">00</span></a>
+
+  <a class="l1" href="#s5"><span>5. Diseño de datos</span><span class="dots"></span><span class="pg" data-h="5. Diseño de datos">00</span></a>
+  <a class="l2" href="#s5-1"><span>5.1 PostgreSQL y transacciones</span><span class="dots"></span><span class="pg" data-h="5.1 PostgreSQL y transacciones">00</span></a>
+  <a class="l2" href="#s5-2"><span>5.2 Modelo entidad-relación</span><span class="dots"></span><span class="pg" data-h="5.2 Modelo entidad-relación implementado">00</span></a>
+  <a class="l2" href="#s5-3"><span>5.3 Multi-tenant con Row Level Security</span><span class="dots"></span><span class="pg" data-h="5.3 Aislamiento multi-tenant con Row Level Security">00</span></a>
+  <a class="l2" href="#s5-4"><span>5.4 Réplica de lectura para reportes</span><span class="dots"></span><span class="pg" data-h="5.4 Réplica de lectura para reportes">00</span></a>
+  <a class="l2" href="#s5-5"><span>5.5 Numeración fiscal</span><span class="dots"></span><span class="pg" data-h="5.5 Numeración fiscal por sede y por dispositivo">00</span></a>
+  <a class="l2" href="#s5-6"><span>5.6 Máquina de estados del pedido</span><span class="dots"></span><span class="pg" data-h="5.6 Máquina de estados del pedido">00</span></a>
+  <a class="l2" href="#s5-7"><span>5.7 Inventario por receta</span><span class="dots"></span><span class="pg" data-h="5.7 Inventario por receta">00</span></a>
+  <a class="l2" href="#s5-8"><span>5.8 Respaldos y retención</span><span class="dots"></span><span class="pg" data-h="5.8 Respaldos y retención">00</span></a>
+
+  <a class="l1" href="#s6"><span>6. Funcionalidad por caso de uso</span><span class="dots"></span><span class="pg" data-h="6. Funcionalidad por caso de uso">00</span></a>
+  <a class="l2" href="#s6-1"><span>6.1 CU-01 Pedido en mesa</span><span class="dots"></span><span class="pg" data-h="6.1 CU-01 Pedido en mesa">00</span></a>
+  <a class="l2" href="#s6-2"><span>6.2 CU-02 Cobro y documento fiscal</span><span class="dots"></span><span class="pg" data-h="6.2 CU-02 Cobro y documento fiscal">00</span></a>
+  <a class="l2" href="#s6-3"><span>6.3 CU-03 Menú QR</span><span class="dots"></span><span class="pg" data-h="6.3 CU-03 Menú QR">00</span></a>
+  <a class="l2" href="#s6-4"><span>6.4 CU-04 Domicilio web</span><span class="dots"></span><span class="pg" data-h="6.4 CU-04 Domicilio web">00</span></a>
+  <a class="l2" href="#s6-5"><span>6.5 CU-05 Pedido de plataforma</span><span class="dots"></span><span class="pg" data-h="6.5 CU-05 Pedido de plataforma">00</span></a>
+  <a class="l2" href="#s6-6"><span>6.6 CU-06 Panel multi-sede</span><span class="dots"></span><span class="pg" data-h="6.6 CU-06 Panel multi-sede">00</span></a>
+  <a class="l2" href="#s6-7"><span>6.7 CU-07 Operación sin conexión</span><span class="dots"></span><span class="pg" data-h="6.7 CU-07 Operación sin conexión">00</span></a>
+  <a class="l2" href="#s6-8"><span>6.8 CU-08 Catálogo, inventario y usuarios</span><span class="dots"></span><span class="pg" data-h="6.8 CU-08 Catálogo centralizado, inventario y usuarios">00</span></a>
+
+  <a class="l1" href="#s7"><span>7. Despliegue en la nube (AWS)</span><span class="dots"></span><span class="pg" data-h="7. Despliegue en la nube (AWS)">00</span></a>
+  <a class="l2" href="#s7-1"><span>7.1 Arquitectura de la beta</span><span class="dots"></span><span class="pg" data-h="7.1 Arquitectura de la beta">00</span></a>
+  <a class="l2" href="#s7-2"><span>7.2 Del entorno local a AWS</span><span class="dots"></span><span class="pg" data-h="7.2 Del entorno local a AWS">00</span></a>
+  <a class="l2" href="#s7-3"><span>7.3 Imágenes de producción</span><span class="dots"></span><span class="pg" data-h="7.3 Imágenes de producción y endurecimiento">00</span></a>
+  <a class="l2" href="#s7-4"><span>7.4 Integración y despliegue continuos</span><span class="dots"></span><span class="pg" data-h="7.4 Integración y despliegue continuos">00</span></a>
+  <a class="l2" href="#s7-5"><span>7.5 Seguridad de la operación</span><span class="dots"></span><span class="pg" data-h="7.5 Seguridad de la operación">00</span></a>
+  <a class="l2" href="#s7-6"><span>7.6 Monitoreo, alertas y runbook</span><span class="dots"></span><span class="pg" data-h="7.6 Monitoreo, alertas y runbook">00</span></a>
+  <a class="l2" href="#s7-7"><span>7.7 Costos</span><span class="dots"></span><span class="pg" data-h="7.7 Costos">00</span></a>
+  <a class="l2" href="#s7-8"><span>7.8 Lecciones de la migración real</span><span class="dots"></span><span class="pg" data-h="7.8 Lecciones de la migración real">00</span></a>
+
+  <a class="l1" href="#s8"><span>8. Pruebas y evidencia</span><span class="dots"></span><span class="pg" data-h="8. Pruebas y evidencia">00</span></a>
+  <a class="l2" href="#s8-1"><span>8.1 Pruebas automáticas</span><span class="dots"></span><span class="pg" data-h="8.1 Pruebas automáticas">00</span></a>
+  <a class="l2" href="#s8-2"><span>8.2 Prueba de punta a punta</span><span class="dots"></span><span class="pg" data-h="8.2 Prueba de punta a punta">00</span></a>
+  <a class="l2" href="#s8-3"><span>8.3 Pruebas de resiliencia</span><span class="dots"></span><span class="pg" data-h="8.3 Pruebas de resiliencia">00</span></a>
+
+  <a class="l1" href="#s9"><span>9. Dimensionamiento</span><span class="dots"></span><span class="pg" data-h="9. Dimensionamiento: propuesta frente a prototipo">00</span></a>
+  <a class="l1" href="#s10"><span>10. Limitaciones y trabajo futuro</span><span class="dots"></span><span class="pg" data-h="10. Limitaciones y trabajo futuro">00</span></a>
+  <a class="l1" href="#s11"><span>11. Conclusiones</span><span class="dots"></span><span class="pg" data-h="11. Conclusiones">00</span></a>
+  <a class="l1" href="#refs"><span>Referencias</span><span class="dots"></span><span class="pg" data-h="Referencias">00</span></a>
+  <a class="l1" href="#anexoA"><span>Anexo A. Endpoints de la API REST</span><span class="dots"></span><span class="pg" data-h="Anexo A. Endpoints de la API REST">00</span></a>
+  <a class="l1" href="#anexoB"><span>Anexo B. Cómo ejecutar el prototipo</span><span class="dots"></span><span class="pg" data-h="Anexo B. Cómo ejecutar el prototipo">00</span></a>
+</nav>
+
+<!-- ======================= RESUMEN ======================= -->
+<h1 id="resumen">Resumen ejecutivo</h1>
+<p>El 24 de agosto de 2026 se propuso <strong>Comanda Central</strong>: un servicio telemático (SaaS) para micro-cadenas de restaurantes de 2 a 8 sedes en Bogotá. Las sedes, los comensales y el dueño se conectan por internet a un servidor central que registra cada venta, la valida fiscalmente en segundo plano, mantiene sincronizadas las sedes, entrega un panel consolidado en tiempo real y deja seguir vendiendo cuando una sede pierde la conexión.</p>
+<p>Este informe presenta el resultado: un prototipo funcional construido por fases entre el 17 de septiembre y el 19 de noviembre de 2026. Implementa el flujo de los ocho casos de uso de la propuesta y la arquitectura telemática de sus secciones 5 y 6, y corre igual en un computador con Docker Compose y en una beta pública en AWS con dominio, HTTPS, despliegue continuo, respaldos y monitoreo. Las dos integraciones externas, la DIAN y Rappi, se implementaron contra simuladores locales por regla del proyecto: no hay habilitación ante la DIAN ni acceso aprobado a la API de Rappi.</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">8 de 8</div><div class="l">casos de uso con su flujo funcionando (6 completos y 2 contra simulador)</div></div>
+  <div class="kpi"><div class="n">101 / 101</div><div class="l">pruebas automáticas en verde, en 20 archivos (19/11/2026)</div></div>
+  <div class="kpi"><div class="n">44</div><div class="l">rutas de la API REST, documentadas con Swagger</div></div>
+  <div class="kpi"><div class="n">6</div><div class="l">eventos en tiempo real por WebSocket seguro (WSS)</div></div>
+  <div class="kpi"><div class="n">2</div><div class="l">instancias del backend balanceadas por Nginx, sincronizadas por Redis</div></div>
+  <div class="kpi"><div class="n">15</div><div class="l">tablas con Row Level Security por cadena en PostgreSQL</div></div>
+  <div class="kpi"><div class="n">3</div><div class="l">colas de trabajo asíncrono: fiscal, acuses a plataformas y correo</div></div>
+  <div class="kpi"><div class="n">≈ USD 21</div><div class="l">costo mensual estimado de la beta encendida 24/7, cubierto por créditos</div></div>
+</div>
+
+<h3>Resultados principales</h3>
+<ul>
+  <li><strong>Mesa, cocina y caja en tiempo real.</strong> La comanda aparece en la pantalla de cocina sin recargar, por WebSocket sobre TLS. Dos instancias del backend comparten los eventos a través de Redis, y si una cae, Nginx envía el tráfico a la otra.</li>
+  <li><strong>La caja nunca espera a un tercero.</strong> El cobro responde de inmediato y el documento fiscal se genera, se guarda y se valida en segundo plano (cola y worker), con reintentos ante fallas del proveedor.</li>
+  <li><strong>Aislamiento entre cadenas en dos capas.</strong> Filtro por cadena en la aplicación y Row Level Security en el motor de base de datos. Pruebas automáticas lo verifican sobre la base principal y sobre la réplica.</li>
+  <li><strong>Operación sin conexión.</strong> El mesero y la caja siguen trabajando sin red. La sincronización es idempotente por UUID y los consecutivos fiscales salen de bloques reservados por dispositivo.</li>
+  <li><strong>Panel del dueño.</strong> Consolidado por sede, día o mes y canal, por producto y por franja horaria, en hora de Bogotá. Lee de una réplica de lectura y envía un resumen diario por correo.</li>
+  <li><strong>Beta en AWS</strong> (región us-east-1): TLS 1.3 y HTTP/2, subdominio por cadena, secretos en SSM Parameter Store, logs y alarmas en CloudWatch, respaldo diario a S3 y despliegue desde GitHub Actions con OIDC, sin llaves ni SSH.</li>
+</ul>
+<div class="callout"><span class="t">Pendiente a la fecha de este informe</span>
+<p>Siguen pendientes las pruebas de carga y la medición de la latencia real desde Bogotá (Fase 19 del plan), la consolidación del costo real consumido (Fase 20) y algunos ajustes menores que se listan en la sección 10. La integración real con la DIAN y con Rappi queda fuera del alcance del prototipo.</p></div>
+
+<!-- ======================= 1. INTRODUCCIÓN ======================= -->
+<h1 id="s1"><span class="num">1.</span> Introducción</h1>
+
+<h2 id="s1-1"><span class="num">1.1</span> Contexto y problema</h2>
+<p>El dueño de una micro-cadena opera con información fragmentada. Cada sede registra sus ventas en un sistema local, los pedidos de las plataformas de domicilio llegan por portales separados y la facturación electrónica exige validación en línea ante la DIAN. Consolidar el resultado del día es trabajo manual, propenso a errores, y no permite decidir a tiempo. Además, buena parte del software del mercado deja de vender cuando falla internet.</p>
+<p>El benchmark de la propuesta comparó tres soluciones vigentes en Colombia (Gestro, Fudo y Siigo POS Gastrobar). Las tres dependen de conexión permanente y tratan la multi-sede como un plan superior, no como el centro del diseño. Comanda Central se diferencia en esos dos puntos: <strong>operación sin conexión con sincronización automática</strong> y <strong>consolidación multi-sede nativa</strong>. Por eso la solución es un servicio telemático puro: las sedes no tienen servidor propio, sino que son clientes de un servidor central en la nube, y el comensal entra por QR desde el navegador, sin instalar nada.</p>
+
+<h2 id="s1-2"><span class="num">1.2</span> Objetivos</h2>
+<p><strong>Objetivo general.</strong> Construir y desplegar un prototipo funcional de Comanda Central que demuestre de punta a punta los servicios telemáticos planteados en la propuesta: tiempo real entre las áreas de la sede, validación fiscal asíncrona, operación sin conexión, aislamiento entre clientes y consolidación multi-sede.</p>
+<p><strong>Objetivos específicos.</strong></p>
+<ol>
+  <li>Implementar los flujos de los ocho casos de uso de la propuesta (§3.1) sobre una arquitectura cliente-servidor centralizada.</li>
+  <li>Materializar la arquitectura de §5.1 y los protocolos de §5.2 en componentes reales, verificables con herramientas de red.</li>
+  <li>Aplicar el diseño de datos de §6: PostgreSQL transaccional, aislamiento multi-tenant con Row Level Security, réplica de lectura y numeración fiscal por sede.</li>
+  <li>Garantizar la operación de la sede sin conexión (§6.3) con idempotencia por identificador único.</li>
+  <li>Desplegar una beta en la nube con HTTPS real, despliegue continuo, respaldos y monitoreo, y documentar las pruebas que sustentan cada afirmación.</li>
+</ol>
+
+<h2 id="s1-3"><span class="num">1.3</span> Alcance y reglas del proyecto</h2>
+<p>El alcance es el de la propuesta (§1.4): punto de venta web por sede (caja, comandas a cocina y mesas), documento equivalente electrónico, menú digital por QR, domicilio por web, recepción de pedidos de plataformas por API y panel consolidado con reportes. Como en la propuesta, quedan fuera la aplicación móvil de descarga y la realidad aumentada. También queda fuera el hardware de sede: impresora de comandas, tablet dedicada y router con respaldo 4G.</p>
+<p>Tres reglas guiaron el trabajo:</p>
+<ol>
+  <li><strong>DIAN y Rappi reales, nunca.</strong> Bajo ninguna circunstancia se integran los servicios reales. Sus "proveedores" son simuladores locales que reproducen el comportamiento relevante: latencia, fallas, rechazos y acuses.</li>
+  <li><strong>Regla de oro: no inventar.</strong> Nada se presenta como parte de la propuesta si no está en ella. Lo agregado por el equipo está marcado en el código como <code>// DECISIÓN DE PROTOTIPO</code>. Lo que la propuesta pide y el prototipo no implementa de verdad queda como un punto de extensión marcado <code>// TODO PRODUCCIÓN</code>.</li>
+  <li><strong>Configuración fuera del código.</strong> Secretos y URLs viven solo en variables de entorno (<code>.env</code> en local y SSM Parameter Store en la nube), y <code>.env.example</code> documenta cada variable.</li>
+</ol>
+
+<h2 id="s1-4"><span class="num">1.4</span> Metodología de trabajo</h2>
+<p>El trabajo se organizó en <strong>fases secuenciales</strong>: cada fase es un commit independiente, con una pausa de revisión antes de pasar a la siguiente. Las Fases 0 a 6 construyeron el flujo principal. Desde la Fase 7 el trabajo se dividió en dos partes paralelas, cada una en su rama. Antes de cada ronda se escribieron <em>contratos de integración</em> (propiedad de archivos, formato de eventos y endpoints compartidos) para que las partes no se pisaran. Todo se integró a <code>main</code> mediante pull requests revisados por el otro integrante (12 en total), y cada ronda cerró con una prueba de integración de punta a punta.</p>
+<p>El desarrollo se apoyó en un asistente de programación con IA (Claude Code). Su contexto persistente fueron las reglas del proyecto, escritas en el archivo <code>CLAUDE.md</code> del repositorio: no inventar funcionalidades, marcar decisiones y stubs, y trabajar por fases con pausa para revisión.</p>
+<div class="tlabel">Tabla 1. Rondas y fases del desarrollo</div>
+<table>
+  <thead><tr><th style="width:17%">Ronda y fechas</th><th style="width:41.5%">Parte 1 — Miguel Jiménez<br><span class="muted" style="font-weight:400">operación interna, datos y reportes</span></th><th>Parte 2 — Dikersson Cañón<br><span class="muted" style="font-weight:400">canales, integraciones e infraestructura</span></th></tr></thead>
+  <tbody>
+    <tr><td><strong>Base</strong><br>17–21 sep</td><td colspan="2">Fases 0–6: entorno dockerizado, modelo de datos con Prisma, login con JWT y roles, API REST, WebSocket con <code>/mesas</code> y <code>/cocina</code>, cobro con documento fiscal simulado y <code>/caja</code>, reporte de ventas y Swagger.</td></tr>
+    <tr><td><strong>Ronda 1</strong><br>27 sep</td><td>7 multi-sede real · 8 rangos de numeración fiscal · 9 panel multi-sede (CU-06) · 10 catálogo centralizado (CU-08)</td><td>7B menú QR (CU-03) · 8B domicilio web (CU-04) · 9B modo sin conexión del mesero (CU-07)</td></tr>
+    <tr><td><strong>Ronda 2</strong><br>4–19 oct</td><td>11 inventario y recetas · 12 Row Level Security · 13 réplica de lectura · 14 reportes por día/mes, producto y franja horaria</td><td>11B cola de trabajos y DIAN simulada · 12B pedidos de plataforma (CU-05) · 13B Nginx con TLS 1.3, HTTP/2, WSS y dos instancias · 14B correo SMTP</td></tr>
+    <tr><td><strong>Ronda 3</strong><br>26–27 oct</td><td>15 deudas técnicas · 16 cobro y numeración sin conexión · 17 sede asignada al usuario · 18 respaldos y retención</td><td>15 prueba de integración final · 16B fotos de producto · 17B imágenes de producción · 18B CI/CD · 19B despliegue en AWS · 20B subdominio por cadena · 21B monitoreo</td></tr>
+    <tr><td><strong>Migración</strong><br>17–19 nov</td><td colspan="2">Migración real a AWS y correcciones encontradas en ella; selector de sede para usuarios sin sede fija; gestión de usuarios con sede asignada (<code>/usuarios</code>).</td></tr>
+  </tbody>
+</table>
+<p class="tcap">Fuente: historial de commits del repositorio y planes <code>docs/fases-siguientes*.md</code>.</p>
+
+<!-- ======================= 2. PROPUESTA → PROTOTIPO ======================= -->
+<h1 id="s2"><span class="num">2.</span> De la propuesta al prototipo</h1>
+
+<h2 id="s2-1"><span class="num">2.1</span> Estado de los casos de uso</h2>
+<p>La Tabla 2 resume cómo quedó cada caso de uso de §3.1. "Implementado" significa que el flujo corre de punta a punta con datos reales en la base. "Con simulador" significa que el flujo corre completo, pero el sistema externo es un simulador local.</p>
+<div class="tlabel">Tabla 2. Casos de uso de la propuesta y su estado final</div>
+<table>
+  <thead><tr><th style="width:17%">Caso de uso</th><th style="width:13%">Estado</th><th>Cómo quedó</th><th style="width:11%">Ver</th></tr></thead>
+  <tbody>
+    <tr><td><strong>CU-01</strong> Pedido en mesa</td><td><span class="chip ok">Implementado</span></td><td>El mesero arma el pedido en <code>/mesas</code> (tablet o navegador) y lo envía con un UUID generado en el cliente; la comanda llega a <code>/cocina</code> por WebSocket sin recargar. Sin impresora de comandas (hardware fuera de alcance).</td><td>§6.1, Fig. 5–6</td></tr>
+    <tr><td><strong>CU-02</strong> Cobro y documento fiscal</td><td><span class="chip sim">Con simulador</span></td><td>El cobro es una sola transacción (pago, consecutivo por sede, pedido pagado y mesa libre). Un worker genera el XML, lo guarda en el almacén de objetos y lo valida en segundo plano contra una DIAN simulada, con reintentos; el estado llega a la caja en vivo.</td><td>§6.2, Fig. 7</td></tr>
+    <tr><td><strong>CU-03</strong> Menú QR</td><td><span class="chip ok">Implementado</span></td><td>QR por mesa generado en el navegador; menú público sin login ni aplicación, con fotos optimizadas (WebP de 400 y 800 px) y límite de tasa en el proxy.</td><td>§6.3, Fig. 8</td></tr>
+    <tr><td><strong>CU-04</strong> Domicilio web</td><td><span class="chip ok">Implementado</span></td><td>Pedido desde el menú público, sin JWT e idempotente por UUID; llega a cocina como "Domicilio" y el cliente recibe el comprobante por correo. Sin pago en línea ni seguimiento del repartidor.</td><td>§6.4, Fig. 9</td></tr>
+    <tr><td><strong>CU-05</strong> Pedido de plataforma</td><td><span class="chip sim">Con simulador</span></td><td>API autenticada con <code>X-Api-Key</code>, idempotente por el id del pedido en la plataforma, con acuse por webhook desde el worker. La "plataforma" es un simulador con formato propio.</td><td>§6.5, Fig. 6</td></tr>
+    <tr><td><strong>CU-06</strong> Panel multi-sede</td><td><span class="chip ok">Implementado</span></td><td><code>/panel</code> consolida las sedes por día o mes y canal, por producto y por franja horaria, en hora de Bogotá; lee de la réplica, se actualiza en vivo y envía un resumen diario por correo.</td><td>§6.6, Fig. 10</td></tr>
+    <tr><td><strong>CU-07</strong> Operación sin conexión</td><td><span class="chip ok">Implementado</span></td><td>PWA con service worker. Mesero y caja encolan en IndexedDB y sincronizan con <code>POST /sync</code>, idempotente por UUID. Los consecutivos fiscales sin red salen de bloques reservados por dispositivo.</td><td>§6.7, Fig. 11</td></tr>
+    <tr><td><strong>CU-08</strong> Catálogo centralizado</td><td><span class="chip ok">Implementado</span></td><td><code>/catalogo</code> (administrador): un cambio de producto, precio o foto se hace una vez y llega a las tres sedes; <code>/mesas</code> lo recibe en vivo y el menú QR al cargarse.</td><td>§6.8, Fig. 12</td></tr>
+  </tbody>
+</table>
+<p class="tcap">CU-07: la operación sin conexión del mesero se verificó en un navegador real; la de la caja, con pruebas de integración (ver §6.7).</p>
+
+<h2 id="s2-2"><span class="num">2.2</span> Elementos simulados</h2>
+<p>Los simuladores reproducen lo que importa para el servicio telemático (tiempos de respuesta, caídas, rechazos, reintentos e idempotencia) sin conectarse a sistemas reales. Todo documento y correo del prototipo dice explícitamente que es <em>simulado y sin validez fiscal</em>.</p>
+<div class="tlabel">Tabla 3. Qué se simuló y por qué</div>
+<table>
+  <thead><tr><th style="width:20%">Elemento</th><th style="width:26%">En la propuesta</th><th>En el prototipo</th></tr></thead>
+  <tbody>
+    <tr><td>Proveedor tecnológico DIAN</td><td>Validación en línea del documento equivalente electrónico</td><td><code>ProveedorDianSimuladoService</code> con latencia (2 s), tasa de caída (20 %) y tasa de rechazo (10 %) configurables por variables de entorno. Una caída se reintenta con backoff; un rechazo es de negocio y no se reintenta.</td></tr>
+    <tr><td>Documento XML</td><td>Documento firmado ante la DIAN, con CUDE/CUFE</td><td>XML propio y mínimo, sin firma digital (no sigue UBL 2.1) y sin CUDE/CUFE, que no aplica a un documento simulado.</td></tr>
+    <tr><td>API de Rappi</td><td>Pedidos de plataforma por API de aliados</td><td>Simulador con formato JSON propio (en inglés, distinto del de Comanda), página <code>/simulador-plataforma</code> y webhook de acuses. No copia la API de Rappi: no hay acceso aprobado.</td></tr>
+    <tr><td>Entrega de correo</td><td>SMTP hacia comensales y dueño</td><td>En local, Mailpit (captura los correos y no los entrega). En la beta, Amazon SES en modo <em>sandbox</em>, que solo entrega a direcciones verificadas.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s2-3"><span class="num">2.3</span> Decisiones de prototipo</h2>
+<p>La propuesta fija la arquitectura y el comportamiento, pero no las herramientas concretas. Estas decisiones son del equipo y están marcadas como <code>// DECISIÓN DE PROTOTIPO</code> donde aplican:</p>
+<ul>
+  <li><strong>Pila:</strong> backend en NestJS con TypeScript, organizado como monolito modular (la sustentación planteó "monolito modular primero, microservicios después"); frontend en React con Vite; ORM Prisma 7; Socket.IO para WebSocket; BullMQ sobre Redis para las colas; MinIO como almacén compatible con S3 en local; Mailpit como SMTP de pruebas.</li>
+  <li><strong>Autenticación con JWT.</strong> El token se guarda en el navegador. El rol, la sede y el estado del usuario se leen de la base en cada petición y en el handshake del WebSocket, no del token, para que un cambio de sede o una desactivación apliquen sin volver a iniciar sesión.</li>
+  <li><strong>Sede asignada al usuario</strong> (<code>Usuario.sedeId</code>, opcional) y <strong>baja lógica</strong> de usuarios y productos. Ninguno de los dos está en el ER de la propuesta.</li>
+  <li><strong>Bloques de 20 consecutivos por dispositivo</strong> para cobrar sin conexión dentro del rango de la sede. Un bloque reservado y no usado deja huecos en la numeración.</li>
+  <li><strong>RLS con <code>EXISTS</code> contra la tabla padre</strong> en las tablas hijas, en vez de copiar <code>cadena_id</code> en todas (§5.3).</li>
+  <li><strong>Existencias negativas permitidas.</strong> No bloquean la venta: quedan visibles como alerta en <code>/inventario</code>.</li>
+  <li><strong>Zona horaria fija</strong> <code>America/Bogota</code> para los reportes, en vez de una por sede.</li>
+  <li><strong>Nube y dominio:</strong> AWS por su plan gratuito y DuckDNS como dominio gratuito. El código no depende de AWS: todo lo específico va en variables y en la configuración de despliegue.</li>
+</ul>
+
+<!-- ======================= 3. ARQUITECTURA ======================= -->
+<h1 id="s3"><span class="num">3.</span> Arquitectura telemática</h1>
+
+<h2 id="s3-1"><span class="num">3.1</span> Vista general</h2>
+<p>La Figura 1 muestra el prototipo tal como corre. Todo el tráfico de los clientes entra por un único punto, <strong>Nginx</strong>, que termina TLS y reparte las peticiones entre <strong>dos instancias del backend</strong>. Las instancias no guardan estado de sesión: la identidad viaja en el JWT y los eventos en tiempo real se reparten por <strong>Redis</strong>, así que cualquier instancia puede atender a cualquier cliente.</p>
+<p>El trabajo que depende de terceros (validación fiscal, acuses a plataformas y correo) sale del flujo de la petición. El backend lo deja en colas y lo procesa un proceso aparte, el <strong>worker</strong>, que usa el mismo código del backend. <strong>PostgreSQL</strong> guarda los datos de negocio, una <strong>réplica de lectura</strong> atiende los reportes y el <strong>almacén de objetos</strong> (API S3) guarda los XML fiscales y las fotos de producto.</p>
+<figure>
+<svg class="diag" viewBox="0 0 760 452" role="img" aria-label="Arquitectura del prototipo">
+<defs><marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5E6472"/></marker></defs>
+<style>
+.f1 .pn{fill:#FAF3DD} .f1 .dk{fill:#f4f6f7; stroke:#b8bec6; stroke-dasharray:4 3}
+.f1 .bx{fill:#fff; stroke:#5E6472; stroke-width:1.1}
+.f1 .gp{fill:#eef7f8; stroke:#5E6472; stroke-width:1.1}
+.f1 .t{font:700 11.5px Calibri, sans-serif; fill:#23272f}
+.f1 .s{font:10px Calibri, sans-serif; fill:#5E6472}
+.f1 .h{font:700 9.5px Calibri, sans-serif; fill:#5E6472; letter-spacing:.6px}
+.f1 .ln{stroke:#5E6472; stroke-width:1.2; fill:none}
+.f1 .lb{font:9.5px Calibri, sans-serif; fill:#5E6472; paint-order:stroke; stroke:#f4f6f7; stroke-width:3px}
+</style>
+<g class="f1">
+<rect class="pn" x="4" y="24" width="152" height="420" rx="10"/>
+<text class="h" x="12" y="16">CLIENTES · NAVEGADOR</text>
+<rect class="dk" x="180" y="24" width="576" height="420" rx="10"/>
+<text class="h" x="190" y="16">SERVIDOR CENTRAL · DOCKER COMPOSE (LOCAL) / EC2 (BETA)</text>
+
+<rect class="bx" x="14" y="40" width="134" height="50" rx="7"/><text class="t" x="23" y="61">Mesero</text><text class="s" x="23" y="78">/mesas · sin conexión</text>
+<rect class="bx" x="14" y="104" width="134" height="50" rx="7"/><text class="t" x="23" y="125">Cocina (KDS)</text><text class="s" x="23" y="142">/cocina · en vivo</text>
+<rect class="bx" x="14" y="168" width="134" height="50" rx="7"/><text class="t" x="23" y="189">Caja</text><text class="s" x="23" y="206">/caja · cobro y factura</text>
+<rect class="bx" x="14" y="232" width="134" height="50" rx="7"/><text class="t" x="23" y="253">Dueño</text><text class="s" x="23" y="270">/panel · consolidado</text>
+<rect class="bx" x="14" y="296" width="134" height="50" rx="7"/><text class="t" x="23" y="317">Comensal</text><text class="s" x="23" y="334">menú QR · domicilio</text>
+<rect class="bx" x="14" y="360" width="134" height="50" rx="7"/><text class="t" x="23" y="381">Plataforma externa</text><text class="s" x="23" y="398">API REST · X-Api-Key</text>
+
+<path class="ln" d="M148,65 H168 M148,129 H168 M148,193 H168 M148,257 H168 M148,321 H168 M148,385 H168 M168,65 V385"/>
+<path class="ln" d="M168,225 H192" marker-end="url(#ah1)"/>
+<text class="lb" x="194" y="150">entrada única</text>
+
+<rect class="bx" x="194" y="160" width="122" height="132" rx="8"/>
+<text class="t" x="204" y="180">Nginx</text>
+<text class="s" x="204" y="197">TLS 1.3 · HTTP/2 · gzip</text>
+<text class="s" x="204" y="212">límite de tasa (429)</text>
+<text class="s" x="204" y="227">/api → round robin</text>
+<text class="s" x="204" y="242">/socket.io → ip_hash</text>
+<text class="s" x="204" y="257">/ → frontend</text>
+<text class="s" x="204" y="272">failover entre instancias</text>
+
+<rect class="gp" x="346" y="40" width="166" height="178" rx="9"/>
+<text class="h" x="356" y="57">2 INSTANCIAS DEL BACKEND</text>
+<rect class="bx" x="356" y="66" width="146" height="64" rx="7"/><text class="t" x="366" y="87">backend-1</text><text class="s" x="366" y="103">NestJS · API REST</text><text class="s" x="366" y="118">Socket.IO (WSS)</text>
+<rect class="bx" x="356" y="140" width="146" height="64" rx="7"/><text class="t" x="366" y="161">backend-2</text><text class="s" x="366" y="177">NestJS · API REST</text><text class="s" x="366" y="192">Socket.IO (WSS)</text>
+
+<rect class="bx" x="346" y="236" width="166" height="46" rx="7"/><text class="t" x="356" y="256">frontend</text><text class="s" x="356" y="272">React + Vite · PWA</text>
+
+<rect class="bx" x="346" y="314" width="166" height="112" rx="8"/>
+<text class="t" x="356" y="334">worker</text>
+<text class="s" x="356" y="351">cola fiscal: XML y DIAN</text>
+<text class="s" x="356" y="366">cola de acuses a plataformas</text>
+<text class="s" x="356" y="381">cola de correo (SMTP)</text>
+<text class="s" x="356" y="396">métricas de las colas</text>
+<text class="s" x="356" y="411">mismo código del backend</text>
+
+<rect class="bx" x="598" y="40" width="152" height="52" rx="7"/><text class="t" x="608" y="61">PostgreSQL primario</text><text class="s" x="608" y="78">ACID · RLS por cadena</text>
+<rect class="bx" x="598" y="110" width="152" height="48" rx="7"/><text class="t" x="608" y="130">Réplica de lectura</text><text class="s" x="608" y="147">streaming · reportes</text>
+<rect class="bx" x="598" y="178" width="152" height="52" rx="7"/><text class="t" x="608" y="199">Redis</text><text class="s" x="608" y="216">pub/sub WS · colas BullMQ</text>
+<rect class="bx" x="598" y="250" width="152" height="48" rx="7"/><text class="t" x="608" y="270">MinIO · API S3</text><text class="s" x="608" y="287">XML fiscales · fotos</text>
+<rect class="bx" x="598" y="318" width="152" height="48" rx="7"/><text class="t" x="608" y="338">Mailpit · SMTP</text><text class="s" x="608" y="355">comprobantes · resumen</text>
+<rect class="bx" x="598" y="386" width="152" height="48" rx="7" style="stroke-dasharray:4 3"/><text class="t" x="608" y="406">DIAN y plataforma</text><text class="s" x="608" y="423">simuladores (no reales)</text>
+
+<path class="ln" d="M316,205 L344,172" marker-end="url(#ah1)"/>
+<path class="ln" d="M316,262 L344,259" marker-end="url(#ah1)"/>
+<path class="ln" d="M512,66 H596" marker-end="url(#ah1)"/><text class="lb" x="554" y="61" text-anchor="middle">SQL</text>
+<path class="ln" d="M512,134 H596" marker-end="url(#ah1)"/><text class="lb" x="554" y="129" text-anchor="middle">solo lectura</text>
+<path class="ln" d="M512,204 H596" marker-start="url(#ah1)" marker-end="url(#ah1)"/><text class="lb" x="554" y="199" text-anchor="middle">pub/sub · encolar</text>
+<path class="ln" d="M512,332 L596,226" marker-start="url(#ah1)" marker-end="url(#ah1)"/><text class="lb" x="566" y="258">BullMQ</text>
+<path class="ln" d="M512,346 L596,284" marker-end="url(#ah1)"/><text class="lb" x="572" y="309">S3</text>
+<path class="ln" d="M512,362 L596,346" marker-end="url(#ah1)"/><text class="lb" x="540" y="349">SMTP</text>
+<path class="ln" d="M512,402 L596,410" marker-end="url(#ah1)"/><text class="lb" x="534" y="398">HTTPS</text>
+<path class="ln" d="M674,92 V108" marker-end="url(#ah1)"/><text class="lb" x="680" y="105">WAL</text>
+</g>
+</svg>
+<figcaption><b>Figura 1.</b> Arquitectura del prototipo. En la beta en AWS el mismo conjunto corre en una instancia EC2, MinIO se reemplaza por Amazon S3 y Mailpit por Amazon SES (§7). Los simuladores corren dentro del worker y del backend; se dibujan aparte para marcar que representan sistemas externos.</figcaption>
+</figure>
+
+<h2 id="s3-2"><span class="num">3.2</span> Componentes de la propuesta y su implementación</h2>
+<p>Cada componente de §5.1 tiene una contraparte concreta. Salvo donde se indica, el prototipo usa una sola instancia de cada pieza.</p>
+<div class="tlabel">Tabla 4. Componentes de §5.1, en local y en la beta</div>
+<table>
+  <thead><tr><th style="width:21%">Componente (§5.1)</th><th style="width:41%">En el prototipo (Docker Compose)</th><th>En la beta (AWS)</th></tr></thead>
+  <tbody>
+    <tr><td>Proxy inverso (Nginx)</td><td>Contenedor <code>nginx</code>: solo TLS 1.3, HTTP/2, gzip, límite de tasa en rutas públicas y balanceo entre instancias.</td><td>El mismo, en los puertos 80 y 443, con certificado de Let's Encrypt, redirección a HTTPS y HSTS.</td></tr>
+    <tr><td>CDN</td><td>No hay. Nginx guarda en caché las fotos del menú.</td><td>Preparado como opción: CloudFront delante del bucket de fotos (<code>URL_PUBLICA_IMAGENES</code>).</td></tr>
+    <tr><td>Servidores de aplicación ×2</td><td><code>backend-1</code> y <code>backend-2</code> (NestJS: API REST y WebSocket), con Redis como canal común de eventos.</td><td>Dos contenedores en la misma EC2.</td></tr>
+    <tr><td>Trabajador asíncrono y cola</td><td><code>worker</code> con BullMQ: colas fiscal, de acuses a plataformas y de correo, con reintentos y backoff.</td><td>Igual.</td></tr>
+    <tr><td>Base de datos y réplica</td><td><code>postgres</code> (primario, con RLS) y <code>postgres-replica</code> (streaming), solo para reportes.</td><td>Contenedores con volúmenes en el disco EBS y respaldo diario a S3.</td></tr>
+    <tr><td>Caché y Pub/Sub (Redis)</td><td><code>redis</code>: adaptador de Socket.IO y colas.</td><td><code>redis</code> con persistencia AOF.</td></tr>
+    <tr><td>Almacén de objetos</td><td>MinIO (API S3): XML fiscales y fotos de producto.</td><td>Amazon S3, con tres buckets privados (documentos, fotos y respaldos).</td></tr>
+    <tr><td>Monitoreo y respaldos</td><td>Logs de los contenedores; servicio <code>respaldo</code> con <code>pg_dump</code> programado.</td><td>CloudWatch (logs, métricas y alarmas) y respaldo diario a S3 con retención.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3-3"><span class="num">3.3</span> Recorrido de una comanda</h2>
+<p>La Figura 2 sigue el flujo estrella de la propuesta, del pedido en la mesa al documento fiscal. Hay dos transacciones en la base (pasos 2 y 8). Hay tres empujes del servidor al cliente (pasos 4, 6 y 16) que evitan que alguna pantalla tenga que preguntar. Y el trabajo con el tercero (pasos 10 a 15) ocurre después de que la caja ya recibió su respuesta.</p>
+<figure>
+<svg class="diag" viewBox="0 0 760 474" role="img" aria-label="Diagrama de secuencia del flujo principal">
+<defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#23272f"/></marker></defs>
+<style>
+.f2 .hd{stroke:#23272f; stroke-width:1.1}
+.f2 .ht{font:700 11px Calibri, sans-serif; fill:#23272f}
+.f2 .ll{stroke:#9aa1a9; stroke-width:1; stroke-dasharray:3 3}
+.f2 .m{stroke:#23272f; stroke-width:1.2; fill:none}
+.f2 .r{stroke:#23272f; stroke-width:1.1; fill:none; stroke-dasharray:5 3}
+.f2 .lb{font:10px Calibri, sans-serif; fill:#23272f; paint-order:stroke; stroke:#fff; stroke-width:3.5px}
+.f2 .nt{font:9.6px Calibri, sans-serif; fill:#23272f}
+</style>
+<g class="f2">
+<line class="ll" x1="50" y1="36" x2="50" y2="468"/><line class="ll" x1="136" y1="36" x2="136" y2="468"/><line class="ll" x1="222" y1="36" x2="222" y2="468"/><line class="ll" x1="320" y1="36" x2="320" y2="468"/><line class="ll" x1="418" y1="36" x2="418" y2="468"/><line class="ll" x1="510" y1="36" x2="510" y2="468"/><line class="ll" x1="606" y1="36" x2="606" y2="468"/><line class="ll" x1="706" y1="36" x2="706" y2="468"/>
+<rect class="hd" x="8" y="6" width="84" height="30" rx="6" fill="#FAF3DD"/><text class="ht" x="50" y="25" text-anchor="middle">Mesero</text>
+<rect class="hd" x="94" y="6" width="84" height="30" rx="6" fill="#FAF3DD"/><text class="ht" x="136" y="25" text-anchor="middle">Cocina</text>
+<rect class="hd" x="180" y="6" width="84" height="30" rx="6" fill="#FAF3DD"/><text class="ht" x="222" y="25" text-anchor="middle">Caja</text>
+<rect class="hd" x="272" y="6" width="96" height="30" rx="6" fill="#B8F2E6"/><text class="ht" x="320" y="25" text-anchor="middle">Backend ×2</text>
+<rect class="hd" x="376" y="6" width="84" height="30" rx="6" fill="#AED9E0"/><text class="ht" x="418" y="25" text-anchor="middle">Redis</text>
+<rect class="hd" x="468" y="6" width="84" height="30" rx="6" fill="#AED9E0"/><text class="ht" x="510" y="25" text-anchor="middle">Worker</text>
+<rect class="hd" x="560" y="6" width="92" height="30" rx="6" fill="#AED9E0"/><text class="ht" x="606" y="25" text-anchor="middle">PostgreSQL</text>
+<rect class="hd" x="662" y="6" width="88" height="30" rx="6" fill="#fff" style="stroke-dasharray:4 3"/><text class="ht" x="706" y="25" text-anchor="middle">DIAN (sim.)</text>
+
+<path class="m" d="M50,60 H318" marker-end="url(#ah2)"/><text class="lb" x="56" y="56">1. POST /pedidos (UUID generado en el navegador)</text>
+<path class="m" d="M320,85 H604" marker-end="url(#ah2)"/><text class="lb" x="326" y="81">2. INSERT pedido + detalle + SALIDA de inventario</text>
+<path class="m" d="M320,110 H416" marker-end="url(#ah2)"/><text class="lb" x="326" y="106">3. publicar</text>
+<path class="m" d="M320,135 H138" marker-end="url(#ah2)"/><text class="lb" x="142" y="131">4. comanda:nueva (WSS)</text>
+<path class="m" d="M136,163 H318" marker-end="url(#ah2)"/><text class="lb" x="142" y="159">5. PATCH /pedidos/:id/estado → LISTO</text>
+<path class="m" d="M320,188 H52" marker-end="url(#ah2)"/><text class="lb" x="56" y="184">6. pedido:actualizado (WSS) → caja y mesero</text>
+<path class="m" d="M222,216 H318" marker-end="url(#ah2)"/><text class="lb" x="228" y="212">7. POST /pagos</text>
+<path class="m" d="M320,241 H604" marker-end="url(#ah2)"/><text class="lb" x="326" y="237">8. pago + consecutivo atómico + PAGADO + mesa LIBRE</text>
+<path class="r" d="M320,266 H224" marker-end="url(#ah2)"/><text class="lb" x="216" y="262" text-anchor="end">9. 201: documento PENDIENTE</text>
+<path class="m" d="M320,291 H416" marker-end="url(#ah2)"/><text class="lb" x="326" y="287">10. encolar</text>
+<path class="m" d="M418,316 H508" marker-end="url(#ah2)"/><text class="lb" x="424" y="312">11. trabajo</text>
+<path class="m" d="M510,341 H704" marker-end="url(#ah2)"/><text class="lb" x="516" y="337">12. XML a S3 y validación</text>
+<path class="r" d="M706,366 H512" marker-end="url(#ah2)"/><text class="lb" x="516" y="362">13. VALIDADO_SIMULADO</text>
+<path class="m" d="M510,391 H604" marker-end="url(#ah2)"/><text class="lb" x="516" y="387">14. estado_dian</text>
+<path class="m" d="M418,416 H322" marker-end="url(#ah2)"/><text class="lb" x="326" y="412">15. completed</text>
+<path class="m" d="M320,441 H224" marker-end="url(#ah2)"/><text class="lb" x="216" y="437" text-anchor="end">16. documento:actualizado (WSS)</text>
+<rect x="560" y="406" width="192" height="56" rx="5" fill="#FAF3DD" stroke="#FFA69E" stroke-width="1.3"/>
+<text class="nt" x="569" y="422">Si la DIAN simulada falla, BullMQ</text>
+<text class="nt" x="569" y="436">reintenta con backoff (hasta 5 intentos).</text>
+<text class="nt" x="569" y="450">La caja ya respondió en el paso 9.</text>
+</g>
+</svg>
+<figcaption><b>Figura 2.</b> Secuencia del flujo principal (CU-01 y CU-02). Los eventos de los pasos 4, 6 y 16 se emiten a la sala de la sede; con dos instancias, Redis los reparte para que lleguen a los sockets conectados a cualquiera de ellas.</figcaption>
+</figure>
+
+<h2 id="s3-4"><span class="num">3.4</span> Backend: monolito modular</h2>
+<p>El backend es un solo programa dividido en módulos con fronteras explícitas: cada módulo importa solo lo que el otro exporta. Así se puede desplegar como una unidad hoy y extraer un módulo como servicio cuando haya una razón para escalarlo por separado, como planteó la sustentación. El worker es otro punto de entrada (<code>src/worker.ts</code>) sobre el mismo código, con sus propios módulos de procesamiento.</p>
+<div class="tlabel">Tabla 5. Módulos del backend</div>
+<table>
+  <thead><tr><th style="width:24%">Módulo</th><th>Responsabilidad</th><th style="width:12%" class="c">Fase</th></tr></thead>
+  <tbody>
+    <tr><td><code>AuthModule</code></td><td>Login con JWT, guardas de rol, usuario vigente (rol, sede y estado leídos de la base)</td><td class="c">2, 17</td></tr>
+    <tr><td><code>UsersModule</code></td><td>Usuarios de la cadena: crear, asignar sede y rol, cambiar contraseña, desactivar</td><td class="c">nov.</td></tr>
+    <tr><td><code>BranchesModule</code> · <code>TablesModule</code></td><td>Sedes y mesas de la cadena</td><td class="c">3, 7</td></tr>
+    <tr><td><code>CatalogModule</code></td><td>Catálogo centralizado de productos, con baja lógica</td><td class="c">3, 10</td></tr>
+    <tr><td><code>ImagenesProductoModule</code> · <code>StorageModule</code></td><td>Fotos de producto procesadas con <code>sharp</code>; almacén de objetos S3/MinIO compartido</td><td class="c">16B</td></tr>
+    <tr><td><code>OrdersModule</code></td><td>Pedidos, máquina de estados y pedido de domicilio público</td><td class="c">3, 8B</td></tr>
+    <tr><td><code>PaymentsModule</code></td><td>Cobro, consecutivo fiscal atómico y bloques para cobrar sin conexión</td><td class="c">5, 8, 16</td></tr>
+    <tr><td><code>RealtimeModule</code></td><td>Gateway de Socket.IO: salas por sede y por cadena</td><td class="c">4</td></tr>
+    <tr><td><code>ReportsModule</code></td><td>Ventas del día, consolidado, ventas por producto y por franja horaria</td><td class="c">6, 9, 14</td></tr>
+    <tr><td><code>PublicMenuModule</code></td><td>Menú QR sin autenticación</td><td class="c">7B</td></tr>
+    <tr><td><code>SyncModule</code></td><td><code>POST /sync</code>: lotes de pedidos y pagos hechos sin conexión</td><td class="c">9B, 16</td></tr>
+    <tr><td><code>InventoryModule</code></td><td>Insumos, recetas y movimientos de inventario</td><td class="c">11</td></tr>
+    <tr><td><code>FiscalModule</code></td><td>Cola fiscal, XML, DIAN simulada y reenvío del resultado a la caja</td><td class="c">11B</td></tr>
+    <tr><td><code>IntegracionesModule</code></td><td>Pedidos de plataforma por API, acuses y simulador</td><td class="c">12B</td></tr>
+    <tr><td><code>MailModule</code></td><td>Comprobantes y resumen diario por SMTP</td><td class="c">14B</td></tr>
+    <tr><td><code>TenancyModule</code></td><td>Resolución de la cadena por subdominio (<code>Host</code>)</td><td class="c">20B</td></tr>
+    <tr><td><code>Health</code> · <code>Monitoring</code> · <code>Prisma</code></td><td>Salud real de Postgres y Redis; métricas de las colas; acceso a datos con <code>conCadena()</code> y cliente de la réplica</td><td class="c">0, 12, 13, 21B</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3-5"><span class="num">3.5</span> Frontend y pantallas</h2>
+<p>El frontend es una aplicación web progresiva (PWA) en React, con service worker y manifiesto, para que la sede funcione sin red (§6.7). Llama a la API por rutas relativas, del mismo origen que la página, y abre un único socket por pantalla. La interfaz usa la paleta del equipo como tokens de color, con modo claro y oscuro.</p>
+<div class="tlabel">Tabla 6. Pantallas del prototipo</div>
+<table>
+  <thead><tr><th style="width:24%">Ruta</th><th style="width:20%">Quién la usa</th><th>Función</th></tr></thead>
+  <tbody>
+    <tr><td><code>/mesas</code></td><td>Mesero, administrador</td><td>Estado de las mesas, toma de pedidos con catálogo, códigos QR por mesa y cola sin conexión</td></tr>
+    <tr><td><code>/cocina</code></td><td>Cualquier usuario de la sede</td><td>Tablero de comandas (KDS) en vivo, con alerta de demora; marca pedidos como LISTO</td></tr>
+    <tr><td><code>/caja</code></td><td>Cajero, administrador</td><td>Pedidos listos para cobrar, cobro, recibo con estado DIAN en vivo, XML y cobro sin conexión</td></tr>
+    <tr><td><code>/panel</code></td><td>Administrador</td><td>Consolidado multi-sede, ventas por producto y por franja; envío del resumen diario</td></tr>
+    <tr><td><code>/catalogo</code> · <code>/inventario</code> · <code>/usuarios</code></td><td>Administrador</td><td>Productos y fotos; insumos, existencias y recetas; usuarios con rol y sede</td></tr>
+    <tr><td><code>/menu/:cadena/:sede</code></td><td>Comensal (público)</td><td>Menú QR por sede y pedido a domicilio; por subdominio, <code>/menu/:sede</code></td></tr>
+    <tr><td><code>/simulador-plataforma</code></td><td>Simulador</td><td>Plataforma de domicilios simulada: envía pedidos por API y muestra los acuses</td></tr>
+  </tbody>
+</table>
+
+<!-- ======================= 4. PROTOCOLOS ======================= -->
+<h1 id="s4"><span class="num">4.</span> Protocolos y servicios de red</h1>
+<p>La Tabla 7 recorre los protocolos de §5.2 de la propuesta y muestra cómo se materializó cada uno. Las subsecciones siguientes dan el detalle y la evidencia.</p>
+<div class="tlabel">Tabla 7. Protocolos de §5.2 en el prototipo</div>
+<table>
+  <thead><tr><th style="width:17%">Protocolo</th><th style="width:25%">Uso según la propuesta</th><th>Implementación</th></tr></thead>
+  <tbody>
+    <tr><td>HTTPS (TLS 1.3 sobre HTTP/2)</td><td>Todo el tráfico cliente-servidor cifrado</td><td>Nginx acepta solo TLS 1.3 y negocia HTTP/2 por ALPN; en la beta redirige HTTP a HTTPS (301) y envía HSTS.</td></tr>
+    <tr><td>WebSocket (WSS)</td><td>Estado en tiempo real dentro de la sede</td><td>Socket.IO por <code>/socket.io/</code> con upgrade a WSS; salas por sede y por cadena; backplane en Redis.</td></tr>
+    <tr><td>DNS</td><td>Dominio y subdominio por cadena</td><td>DuckDNS: dominio de la beta y subdominio <code>demo.</code> hacia la IP elástica; la cadena se resuelve por el <code>Host</code>.</td></tr>
+    <tr><td>REST / SOAP sobre HTTPS</td><td>Integración con DIAN y Rappi</td><td>REST/JSON: API de plataformas con <code>X-Api-Key</code> y acuse por webhook (simulados); DIAN simulada desde el worker.</td></tr>
+    <tr><td>SSH</td><td>Administración remota solo con llaves</td><td>Sustituido por AWS Systems Manager Session Manager: el servidor no abre el puerto 22.</td></tr>
+    <tr><td>NTP</td><td>Reloj sincronizado para marcas fiscales y orden de eventos</td><td>chrony con Amazon Time Sync Service en la EC2; las marcas de tiempo las pone el servidor.</td></tr>
+    <tr><td>SMTP</td><td>Comprobantes y resúmenes diarios</td><td>Cola de correo con <code>nodemailer</code>: Mailpit en local y Amazon SES (587, STARTTLS) en la beta.</td></tr>
+    <tr><td>Syslog / métricas</td><td>Registro y telemetría centralizados</td><td>Logs JSON de todos los contenedores en CloudWatch Logs; métricas de colas y del sistema; alarmas.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4-1"><span class="num">4.1</span> HTTPS: TLS 1.3 sobre HTTP/2</h2>
+<p>Nginx es el único punto de entrada y la única configuración TLS del sistema: <code>ssl_protocols TLSv1.3</code>, <code>http2 on</code> y compresión gzip. En la beta, además, el puerto 80 redirige a HTTPS (301), las respuestas llevan <code>Strict-Transport-Security</code> por un año y los archivos estáticos con hash se sirven con caché inmutable. HTTP/2 importa sobre todo para el menú QR, que trae muchas imágenes pequeñas multiplexadas en una sola conexión. Un efecto colateral necesario: un service worker solo funciona bajo HTTPS, así que el certificado es requisito de la PWA.</p>
+<p class="intro">La verificación se hizo desde ambos extremos el 20/10/2026, contra el entorno local:</p>
+<pre><span class="c">$ echo | openssl s_client -connect localhost:8443 -tls1_3</span>
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+<span class="c">$ echo | openssl s_client -connect localhost:8443 -alpn h2 -tls1_3</span>
+ALPN protocol: h2
+<span class="c">$ echo | openssl s_client -connect localhost:8443 -tls1_2      # TLS 1.2 rechazado</span>
+... tlsv1 alert protocol version ... SSL alert number 70
+<span class="c"># Navegador real (Edge controlado por DevTools), carga completa de la aplicación:</span>
+protocolos en las 55 respuestas de la carga: ["h2"]</pre>
+<p>Además, se capturó con Wireshark/<code>tshark</code> el tráfico de un inicio de sesión y de la creación de un pedido: 109 tramas, de las cuales 37 son registros TLS. El Server Hello negoció la versión <code>0x0304</code> (TLS 1.3), <code>tshark</code> no pudo reconocer HTTP por encima de TLS y ninguna trama contiene en claro la contraseña, el token ni el encabezado <code>Authorization</code>. El canal está cifrado de verdad; no es solo el candado del navegador.</p>
+<div class="callout"><span class="t">Límite conocido</span><p>Solo el tramo navegador–Nginx va cifrado. Dentro de la red de Docker (Nginx–backend, backend–PostgreSQL, worker–Redis), el tráfico viaja en claro. En producción se cifraría también (mTLS o una red privada administrada).</p></div>
+
+<h2 id="s4-2"><span class="num">4.2</span> Tiempo real: WebSocket y Redis</h2>
+<p>La propuesta exige que la comanda aparezca en cocina "sin recargar la página". Con <em>polling</em>, el cliente pregunta cada N segundos: si N es grande la comanda tarda, y si es pequeño se satura el servidor con preguntas que casi siempre responden "nada nuevo". Con WebSocket la conexión queda abierta (full-duplex) y el servidor empuja el evento en el instante en que ocurre.</p>
+<p>El handshake exige el JWT. Lo valida un middleware de Socket.IO que además carga de la base la cadena y la sede vigentes del usuario; el cliente recibe la confirmación de conexión solo después, así que, cuando la pantalla pide unirse a su sede, el servidor ya sabe quién es. Al conectarse, cada socket entra a la sala de su cadena (<code>cadena:{id}</code>) y, cuando la pantalla lo pide, a la de una sede (<code>sede:{id}</code>). Para entrar a una sede, esta debe ser de su cadena y, si el usuario tiene sede asignada, debe ser la suya. Al reconectarse, el cliente vuelve a unirse a su sala y recarga los pedidos que pudo perder. Con dos instancias, el adaptador de Redis (pub/sub) hace que un evento emitido en una instancia llegue a los sockets de la otra. Nginx da afinidad por IP (<code>ip_hash</code>) a <code>/socket.io/</code>, porque el handshake inicial por <em>long-polling</em> debe llegar siempre a la misma instancia.</p>
+<div class="tlabel">Tabla 8. Eventos en tiempo real</div>
+<table>
+  <thead><tr><th style="width:22%">Evento</th><th style="width:14%">Sala</th><th>Se emite cuando</th><th style="width:20%">Lo escucha</th></tr></thead>
+  <tbody>
+    <tr><td><code>comanda:nueva</code></td><td><code>sede:{id}</code></td><td>Entra un pedido a cocina por cualquier canal: mesa, sincronización, domicilio o plataforma</td><td><code>/cocina</code>, <code>/caja</code>, <code>/mesas</code></td></tr>
+    <tr><td><code>pedido:actualizado</code></td><td><code>sede:{id}</code></td><td>Cambia el estado de un pedido (LISTO, PAGADO)</td><td><code>/mesas</code>, <code>/caja</code>, <code>/cocina</code></td></tr>
+    <tr><td><code>documento:actualizado</code></td><td><code>sede:{id}</code></td><td>El worker terminó de validar un documento fiscal; cada instancia lo emite solo a sus sockets para no duplicarlo</td><td><code>/caja</code></td></tr>
+    <tr><td><code>venta:registrada</code></td><td><code>cadena:{id}</code></td><td>Se completa un cobro</td><td><code>/panel</code></td></tr>
+    <tr><td><code>catalogo:actualizado</code></td><td><code>cadena:{id}</code></td><td>Se crea, edita o desactiva un producto</td><td><code>/mesas</code></td></tr>
+    <tr><td><code>inventario:actualizado</code></td><td><code>cadena:{id}</code></td><td>Movimiento manual o descuento automático por receta</td><td><code>/inventario</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4-3"><span class="num">4.3</span> API REST</h2>
+<p>Las operaciones que no necesitan empuje del servidor van por REST sobre HTTPS: 44 rutas agrupadas por recurso (Tabla 9; lista completa en el Anexo A), documentadas de forma interactiva con Swagger en desarrollo y apagadas en producción. Cuatro reglas aplican a todas:</p>
+<ul>
+  <li>Las rutas privadas exigen JWT y rol. La cadena se toma del token, nunca de un parámetro que envíe el cliente.</li>
+  <li>Un recurso de otra cadena responde <code>404</code> y no <code>403</code>, para no confirmar que existe.</li>
+  <li>Las rutas públicas (menú, domicilio, fotos y cadena por subdominio) no llevan JWT, y por eso tienen límite de tasa en Nginx.</li>
+  <li>La API de plataformas se autentica con <code>X-Api-Key</code>. En la base solo queda el hash SHA-256 de la llave, y la cadena sale de la integración, no del cuerpo del pedido.</li>
+</ul>
+<div class="tlabel">Tabla 9. Grupos de la API</div>
+<table>
+  <thead><tr><th style="width:26%">Grupo</th><th>Rutas principales</th><th style="width:22%">Acceso</th></tr></thead>
+  <tbody>
+    <tr><td>Autenticación y usuarios</td><td><code>POST /auth/login</code>, <code>GET /auth/me</code>, <code>/usuarios</code>, <code>/cadena</code></td><td>Público / JWT / administrador</td></tr>
+    <tr><td>Sedes y catálogo</td><td><code>/sedes</code>, <code>/sedes/:id/mesas</code>, <code>/productos</code>, <code>/productos/:id/imagen</code></td><td>JWT; escritura solo administrador</td></tr>
+    <tr><td>Operación de la sede</td><td><code>/pedidos</code>, <code>/pagos</code>, <code>/pagos/rangos-offline</code>, <code>/sync</code>, <code>/documentos-fiscales/:id/xml</code></td><td>Mesero, cajero o administrador según la ruta</td></tr>
+    <tr><td>Canales públicos</td><td><code>GET /menu/:cadena/:sede</code>, <code>/menu/imagenes/*</code>, <code>POST /public/pedidos/domicilio</code></td><td>Público, con límite de tasa</td></tr>
+    <tr><td>Integraciones</td><td><code>/integraciones/plataformas/pedidos</code>, <code>/integraciones/plataformas/catalogo</code></td><td><code>X-Api-Key</code></td></tr>
+    <tr><td>Inventario, reportes y correo</td><td><code>/insumos</code>, <code>/productos/:id/receta</code>, <code>/inventario/movimientos</code>, <code>/reportes/*</code>, <code>/correo/resumen-diario</code></td><td>Administrador (ventas del día: cajero)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4-4"><span class="num">4.4</span> Proxy inverso, balanceo y límite de tasa</h2>
+<p>Nginx define dos grupos de servidores sobre las mismas instancias: <code>/api/</code> se reparte en <em>round robin</em> y <code>/socket.io/</code> usa <code>ip_hash</code>. Con <code>max_fails=1</code> y <code>fail_timeout=10s</code>, una instancia que no responde sale del balanceo, y <code>resolve</code> vuelve a consultar el DNS interno de Docker para notar cuando regresa. Las rutas públicas tienen límite de tasa por IP: 5 peticiones por segundo con ráfaga de 10 para el menú y el domicilio, y 30 por segundo para las fotos. Al pasarse, Nginx responde <code>429</code>.</p>
+<p class="intro">Prueba de caída (20/10/2026): con <code>backend-2</code> detenido, la primera petición tardó 2 s porque Nginx intentó la instancia caída y reintentó en la otra dentro de la misma petición. Las siguientes fueron directas:</p>
+<pre>172.19.0.1 "GET /api/health HTTP/1.1" 200 -&gt; 172.19.0.8:3000, 172.19.0.7:3000 (2.016 s)
+172.19.0.1 "GET /api/health HTTP/1.1" 200 -&gt; 172.19.0.7:3000 (0.006 s)</pre>
+<p>Un KDS conectado a la instancia detenida se reconectó a la otra y siguió recibiendo comandas. Con las dos instancias detenidas, la API responde <code>502</code>: la tolerancia a fallos cubre la caída de una instancia, no de ambas. La prueba de punta a punta (§8.2) verifica en cada ejecución que, de 40 peticiones seguidas al menú, algunas reciben <code>429</code>.</p>
+
+<h2 id="s4-5"><span class="num">4.5</span> DNS y subdominio por cadena</h2>
+<p>La propuesta resuelve cada cadena por un subdominio, por ejemplo <code>lacadena.comandacentral.co</code>. En el prototipo, cada cadena puede tener un subdominio (<code>Cadena.subdominio</code>), y el backend resuelve la cadena por el encabezado <code>Host</code> en las rutas públicas y en el login. Por el subdominio de una cadena, el menú QR y el domicilio solo aceptan esa cadena (otra devuelve <code>404</code>) y el login solo acepta a sus usuarios (otro recibe el mismo <code>401</code> de una clave errada). Los QR de las mesas apuntan al subdominio, con la URL armada por el backend. Las rutas privadas siguen resolviendo la cadena por el JWT.</p>
+<p class="intro">En local se prueba con <code>*.localhost</code>, que los navegadores resuelven solos. En la beta, DuckDNS publica el dominio del servicio y el subdominio de la cadena de demostración hacia la IP elástica de la instancia, y el certificado cubre ambos nombres. Verificación del 19/11/2026:</p>
+<pre><span class="c">$ nslookup comanda-dk26.duckdns.org 8.8.8.8</span>
+Address:  34.228.46.136
+<span class="c">$ nslookup demo.comanda-dk26.duckdns.org 8.8.8.8</span>
+Address:  34.228.46.136
+<span class="c">$ curl http://34.228.46.136/api/health     # chequeo por el puerto 80 (ver §7.8)</span>
+{"status":"ok","dependencies":{"postgres":"up","redis":"up"},...}
+<span class="c"># certificado: CN=comanda-dk26.duckdns.org · SAN: comanda-dk26.duckdns.org, demo.comanda-dk26.duckdns.org
+# vigencia: 17/11/2026 – 15/02/2027 (90 días, renovación automática programada)</span></pre>
+
+<h2 id="s4-6"><span class="num">4.6</span> Correo (SMTP)</h2>
+<p>El backend nunca envía correo directamente: encola el trabajo y lo envía el worker por SMTP con <code>nodemailer</code>, con reintentos. Hay dos correos:</p>
+<ul>
+  <li><strong>Comprobante del domicilio.</strong> Si el cliente dejó su correo, sale cuando la DIAN simulada valida el documento. El trabajo tiene un id fijo, así un reintento no envía dos correos.</li>
+  <li><strong>Resumen diario.</strong> Un trabajo repetible de BullMQ lo envía a las 23:00 (hora de Bogotá) a los administradores de cada cadena, con el consolidado del día. Desde <code>/panel</code> también se dispara a mano.</li>
+</ul>
+<p>En local, Mailpit muestra los correos en una bandeja web sin entregarlos (Figura 9). En la beta, Amazon SES recibe por el puerto 587 con STARTTLS; en modo <em>sandbox</em> solo entrega a direcciones verificadas, lo cual basta para la demostración.</p>
+
+<h2 id="s4-7"><span class="num">4.7</span> Administración remota, hora y registros</h2>
+<ul>
+  <li><strong>SSH → Session Manager.</strong> La propuesta pide SSH solo con llaves. La beta va un paso más allá: no tiene SSH. Se administra con AWS Systems Manager Session Manager desde la consola, sin par de llaves, y el grupo de seguridad solo abre los puertos 80 y 443.</li>
+  <li><strong>NTP.</strong> La instancia sincroniza su reloj con chrony contra el Amazon Time Sync Service. Las marcas de tiempo fiscales y de eventos las asigna el servidor. En el cobro sin conexión se conserva la hora de la caja, pero se recorta a la hora del servidor si llega en el futuro.</li>
+  <li><strong>Syslog → CloudWatch Logs.</strong> Los logs de todos los contenedores van al grupo <code>/comanda/beta</code>, con un stream por contenedor y retención de 7 días. Backend y worker escriben JSON estructurado, que se consulta por campo con Logs Insights.</li>
+</ul>
+
+<!-- ======================= 5. DATOS ======================= -->
+<h1 id="s5"><span class="num">5.</span> Diseño de datos</h1>
+
+<h2 id="s5-1"><span class="num">5.1</span> PostgreSQL y transacciones</h2>
+<p>La propuesta eligió una base relacional porque una venta toca a la vez pedido, detalle, pago, documento fiscal e inventario, y debe confirmarse completa o no confirmarse (§6.1). El prototipo lo cumple con dos transacciones:</p>
+<ul>
+  <li><strong>Crear el pedido</strong> (<code>POST /pedidos</code>, <code>/sync</code>, domicilio o plataforma) inserta el pedido, su detalle y las salidas de inventario por receta en una sola transacción, y ocupa la mesa.</li>
+  <li><strong>Cobrar</strong> (<code>POST /pagos</code>) verifica que el pedido esté LISTO y que el monto coincida con el total. Luego crea el pago, toma el consecutivo de la sede con un <code>UPDATE</code> atómico, crea el documento fiscal en PENDIENTE, pasa el pedido a PAGADO y libera la mesa. Si algo falla, no queda nada a medias.</li>
+</ul>
+<p>Solo después de confirmar el cobro se encola el documento para su validación. Si Redis fallara justo en ese momento, el cobro ya quedó registrado: el documento sigue en PENDIENTE y el worker lo vuelve a encolar al arrancar. El id del trabajo es el del documento, así que no se duplica.</p>
+
+<h2 id="s5-2"><span class="num">5.2</span> Modelo entidad-relación implementado</h2>
+<p>La Figura 3 muestra el esquema de <code>backend/prisma/schema.prisma</code>. Las entidades de negocio conservan los nombres del ER de la propuesta, en español; los nombres técnicos van en inglés.</p>
+<p>El esquema implementado coincide con el ER de la propuesta en sus entidades centrales. Las diferencias son intencionales y responden al alcance:</p>
+<div class="tlabel">Tabla 10. Diferencias frente al ER de la propuesta (§6.2)</div>
+<table>
+  <thead><tr><th style="width:21%">Entidad</th><th>Diferencia y motivo</th></tr></thead>
+  <tbody>
+    <tr><td>Sede</td><td>El rango de numeración pasa de un campo a tres columnas reales (<code>rango_inicio</code>, <code>rango_fin</code> y <code>siguiente_consecutivo</code>) que el cobro usa de verdad (§5.5).</td></tr>
+    <tr><td>DocumentoFiscal</td><td>Sin CUDE/CUFE, que no aplica a un documento simulado. Gana <code>mensaje_dian</code> y <code>validado_en</code>, y el estado DIAN pasa a PENDIENTE, VALIDADO_SIMULADO o RECHAZADO_SIMULADO.</td></tr>
+    <tr><td>Pedido</td><td>El canal admite salón, domicilio y plataforma. Gana <code>integracion_id</code> y <code>referencia_externa</code>, únicos en pareja, para la idempotencia de las plataformas.</td></tr>
+    <tr><td>Cliente</td><td>Se usa en domicilios y plataformas. Agrega dirección y correo opcional (para el comprobante); no guarda preferencias.</td></tr>
+    <tr><td>Producto · Usuario</td><td>Producto agrega <code>activo</code> (baja lógica) e <code>imagen_url</code>. Usuario agrega <code>sede_id</code> opcional y <code>activo</code>.</td></tr>
+    <tr><td>MovimientoInventario</td><td>Agrega <code>pedido_id</code> opcional: identifica qué pedido originó cada salida y evita descontar dos veces.</td></tr>
+    <tr><td>Nuevas</td><td><code>IntegracionPlataforma</code> (plataformas conectadas a una cadena, con el hash de su API key) y <code>RangoDispositivo</code> (bloques de consecutivos para cobrar sin conexión).</td></tr>
+  </tbody>
+</table>
+<figure>
+<svg class="diag" viewBox="0 0 760 562" role="img" aria-label="Modelo entidad-relación implementado">
+<style>
+.f3 .bx{fill:none; stroke:#5E6472; stroke-width:1.1}
+.f3 .tt{font:700 11px Calibri, sans-serif; fill:#23272f}
+.f3 .fd{font:10px Calibri, sans-serif; fill:#23272f}
+.f3 .k{font:700 7.6px Calibri, sans-serif; fill:#a8483e}
+.f3 .ln{stroke:#5E6472; stroke-width:1.1; fill:none}
+.f3 .cd{font:700 9px Calibri, sans-serif; fill:#5E6472}
+.f3 .lg{font:9.6px Calibri, sans-serif; fill:#23272f}
+</style>
+<g class="f3">
+<!-- Cadena (tenant) -->
+<rect x="4" y="6" width="752" height="44" rx="6" fill="#5E6472"/>
+<text x="16" y="24" style="font:700 12px Calibri, sans-serif; fill:#fff">CADENA (tenant)</text>
+<text x="16" y="41" style="font:10px Calibri, sans-serif; fill:#fff">PK id · nit · nombre · plan · subdominio — todas las tablas de negocio quedan aisladas por cadena: filtro de aplicación + Row Level Security</text>
+<!-- conectores a la barra -->
+<path class="ln" d="M64,50 V86 M190,50 V86 M316,50 V86 M442,50 V86 M568,50 V86 M694,50 V86"/>
+<text class="cd" x="68" y="60">1</text><text class="cd" x="68" y="83">N</text>
+<text class="cd" x="194" y="60">1</text><text class="cd" x="194" y="83">N</text>
+<text class="cd" x="320" y="60">1</text><text class="cd" x="320" y="83">N</text>
+<text class="cd" x="446" y="60">1</text><text class="cd" x="446" y="83">N</text>
+<text class="cd" x="572" y="60">1</text><text class="cd" x="572" y="83">N</text>
+<text class="cd" x="698" y="60">1</text><text class="cd" x="698" y="83">N</text>
+
+<!-- Fila 1 -->
+<g><rect x="6" y="86" width="116" height="20" rx="5" fill="#AED9E0"/><rect x="6" y="96" width="116" height="10" fill="#AED9E0"/><rect class="bx" x="6" y="86" width="116" height="106" rx="5" fill="none"/>
+<text class="tt" x="13" y="100">Usuario</text>
+<text class="fd" x="13" y="118"><tspan class="k">PK </tspan>id</text><text class="fd" x="13" y="131"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="13" y="144"><tspan class="k">FK </tspan>sede_id (opc.)</text><text class="fd" x="13" y="157">rol</text><text class="fd" x="13" y="170">email</text><text class="fd" x="13" y="183">activo</text></g>
+
+<g><rect x="132" y="86" width="116" height="20" rx="5" fill="#AED9E0"/><rect x="132" y="96" width="116" height="10" fill="#AED9E0"/><rect class="bx" x="132" y="86" width="116" height="106" rx="5" fill="none"/>
+<text class="tt" x="139" y="100">Sede</text>
+<text class="fd" x="139" y="118"><tspan class="k">PK </tspan>id</text><text class="fd" x="139" y="131"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="139" y="144">nombre</text><text class="fd" x="139" y="157">rango_inicio</text><text class="fd" x="139" y="170">rango_fin</text><text class="fd" x="139" y="183">siguiente_consecutivo</text></g>
+
+<g><rect x="258" y="86" width="116" height="20" rx="5" fill="#AED9E0"/><rect x="258" y="96" width="116" height="10" fill="#AED9E0"/><rect class="bx" x="258" y="86" width="116" height="106" rx="5" fill="none"/>
+<text class="tt" x="265" y="100">Cliente</text>
+<text class="fd" x="265" y="118"><tspan class="k">PK </tspan>id</text><text class="fd" x="265" y="131"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="265" y="144">nombre</text><text class="fd" x="265" y="157">telefono</text><text class="fd" x="265" y="170">direccion</text><text class="fd" x="265" y="183">email (opc.)</text></g>
+
+<g><rect x="384" y="86" width="116" height="30" rx="5" fill="#d9dce1"/><rect x="384" y="100" width="116" height="16" fill="#d9dce1"/><rect class="bx" x="384" y="86" width="116" height="116" rx="5" fill="none" style="stroke-dasharray:4 2.5"/>
+<text class="tt" x="391" y="99">Integración</text><text class="tt" x="391" y="111">Plataforma †</text>
+<text class="fd" x="391" y="128"><tspan class="k">PK </tspan>id</text><text class="fd" x="391" y="141"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="391" y="154">nombre</text><text class="fd" x="391" y="167">api_key_hash</text><text class="fd" x="391" y="180">url_acuse</text><text class="fd" x="391" y="193">activa</text></g>
+
+<g><rect x="510" y="86" width="116" height="20" rx="5" fill="#AED9E0"/><rect x="510" y="96" width="116" height="10" fill="#AED9E0"/><rect class="bx" x="510" y="86" width="116" height="119" rx="5" fill="none"/>
+<text class="tt" x="517" y="100">Producto</text>
+<text class="fd" x="517" y="118"><tspan class="k">PK </tspan>id</text><text class="fd" x="517" y="131"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="517" y="144">nombre</text><text class="fd" x="517" y="157">precio</text><text class="fd" x="517" y="170">categoria</text><text class="fd" x="517" y="183">activo</text><text class="fd" x="517" y="196">imagen_url</text></g>
+
+<g><rect x="636" y="86" width="116" height="20" rx="5" fill="#FAF3DD"/><rect x="636" y="96" width="116" height="10" fill="#FAF3DD"/><rect class="bx" x="636" y="86" width="116" height="93" rx="5" fill="none"/>
+<text class="tt" x="643" y="100">Insumo</text>
+<text class="fd" x="643" y="118"><tspan class="k">PK </tspan>id</text><text class="fd" x="643" y="131"><tspan class="k">FK </tspan>cadena_id</text><text class="fd" x="643" y="144">nombre</text><text class="fd" x="643" y="157">unidad</text><text class="fd" x="643" y="170">costo_unitario</text></g>
+
+<!-- Fila 2 -->
+<g><rect x="6" y="250" width="116" height="20" rx="5" fill="#FFA69E"/><rect x="6" y="260" width="116" height="10" fill="#FFA69E"/><rect class="bx" x="6" y="250" width="116" height="93" rx="5" fill="none" style="stroke-dasharray:4 2.5"/>
+<text class="tt" x="13" y="264">RangoDispositivo †</text>
+<text class="fd" x="13" y="282"><tspan class="k">PK </tspan>id</text><text class="fd" x="13" y="295"><tspan class="k">FK </tspan>sede_id</text><text class="fd" x="13" y="308">dispositivo_id</text><text class="fd" x="13" y="321">inicio</text><text class="fd" x="13" y="334">fin</text></g>
+
+<g><rect x="132" y="250" width="116" height="20" rx="5" fill="#AED9E0"/><rect x="132" y="260" width="116" height="10" fill="#AED9E0"/><rect class="bx" x="132" y="250" width="116" height="80" rx="5" fill="none"/>
+<text class="tt" x="139" y="264">Mesa</text>
+<text class="fd" x="139" y="282"><tspan class="k">PK </tspan>id</text><text class="fd" x="139" y="295"><tspan class="k">FK </tspan>sede_id</text><text class="fd" x="139" y="308">numero</text><text class="fd" x="139" y="321">estado</text></g>
+
+<g><rect x="290" y="250" width="226" height="20" rx="5" fill="#B8F2E6"/><rect x="290" y="260" width="226" height="10" fill="#B8F2E6"/><rect class="bx" x="290" y="250" width="226" height="106" rx="5" fill="none"/>
+<text class="tt" x="297" y="264">Pedido</text>
+<text class="fd" x="297" y="282"><tspan class="k">PK </tspan>id (UUID del cliente)</text><text class="fd" x="297" y="295"><tspan class="k">FK </tspan>sede_id</text><text class="fd" x="297" y="308"><tspan class="k">FK </tspan>mesa_id (opc.)</text><text class="fd" x="297" y="321"><tspan class="k">FK </tspan>usuario_id (opc.)</text><text class="fd" x="297" y="334"><tspan class="k">FK </tspan>cliente_id (opc.)</text><text class="fd" x="297" y="347"><tspan class="k">FK </tspan>integracion_id (opc.)</text>
+<text class="fd" x="418" y="282">referencia_externa</text><text class="fd" x="418" y="295">canal</text><text class="fd" x="418" y="308">estado</text><text class="fd" x="418" y="321">fecha_hora</text><text class="fd" x="418" y="334">total</text></g>
+
+<g><rect x="573" y="250" width="116" height="20" rx="5" fill="#FAF3DD"/><rect x="573" y="260" width="116" height="10" fill="#FAF3DD"/><rect class="bx" x="573" y="250" width="116" height="67" rx="5" fill="none"/>
+<text class="tt" x="580" y="264">Receta</text>
+<text class="fd" x="580" y="282"><tspan class="k">PK·FK </tspan>producto_id</text><text class="fd" x="580" y="295"><tspan class="k">PK·FK </tspan>insumo_id</text><text class="fd" x="580" y="308">cantidad</text></g>
+
+<!-- Fila 3 -->
+<g><rect x="290" y="420" width="100" height="20" rx="5" fill="#B8F2E6"/><rect x="290" y="430" width="100" height="10" fill="#B8F2E6"/><rect class="bx" x="290" y="420" width="100" height="80" rx="5" fill="none"/>
+<text class="tt" x="297" y="434">Pago</text>
+<text class="fd" x="297" y="452"><tspan class="k">PK </tspan>id</text><text class="fd" x="297" y="465"><tspan class="k">FK </tspan>pedido_id</text><text class="fd" x="297" y="478">medio</text><text class="fd" x="297" y="491">monto</text></g>
+
+<g><rect x="398" y="420" width="116" height="20" rx="5" fill="#FFA69E"/><rect x="398" y="430" width="116" height="10" fill="#FFA69E"/><rect class="bx" x="398" y="420" width="116" height="119" rx="5" fill="none"/>
+<text class="tt" x="405" y="434">DocumentoFiscal</text>
+<text class="fd" x="405" y="452"><tspan class="k">PK </tspan>id</text><text class="fd" x="405" y="465"><tspan class="k">FK </tspan>pedido_id (único)</text><text class="fd" x="405" y="478"><tspan class="k">FK </tspan>sede_id</text><text class="fd" x="405" y="491">consecutivo</text><text class="fd" x="405" y="504">estado_dian</text><text class="fd" x="405" y="517">url_xml</text><text class="fd" x="405" y="530">mensaje_dian</text></g>
+
+<g><rect x="522" y="420" width="116" height="20" rx="5" fill="#B8F2E6"/><rect x="522" y="430" width="116" height="10" fill="#B8F2E6"/><rect class="bx" x="522" y="420" width="116" height="106" rx="5" fill="none"/>
+<text class="tt" x="529" y="434">PedidoDetalle</text>
+<text class="fd" x="529" y="452"><tspan class="k">PK </tspan>id</text><text class="fd" x="529" y="465"><tspan class="k">FK </tspan>pedido_id</text><text class="fd" x="529" y="478"><tspan class="k">FK </tspan>producto_id</text><text class="fd" x="529" y="491">cantidad</text><text class="fd" x="529" y="504">precio_unitario</text><text class="fd" x="529" y="517">notas</text></g>
+
+<g><rect x="644" y="420" width="112" height="30" rx="5" fill="#FAF3DD"/><rect x="644" y="434" width="112" height="16" fill="#FAF3DD"/><rect class="bx" x="644" y="420" width="112" height="129" rx="5" fill="none"/>
+<text class="tt" x="651" y="433">Movimiento</text><text class="tt" x="651" y="445">Inventario</text>
+<text class="fd" x="651" y="462"><tspan class="k">PK </tspan>id</text><text class="fd" x="651" y="475"><tspan class="k">FK </tspan>sede_id</text><text class="fd" x="651" y="488"><tspan class="k">FK </tspan>insumo_id</text><text class="fd" x="651" y="501"><tspan class="k">FK </tspan>pedido_id (opc.)</text><text class="fd" x="651" y="514">tipo</text><text class="fd" x="651" y="527">cantidad</text><text class="fd" x="651" y="540">fecha</text></g>
+
+<!-- Relaciones -->
+<path class="ln" d="M190,192 V250"/><text class="cd" x="194" y="203">1</text><text class="cd" x="194" y="246">N</text>
+<path class="ln" d="M150,192 L80,250"/><text class="cd" x="140" y="206">1</text><text class="cd" x="86" y="246">N</text>
+<path class="ln" d="M236,192 L300,250"/><text class="cd" x="244" y="203">1</text><text class="cd" x="290" y="246">N</text>
+<path class="ln" d="M248,292 H290"/><text class="cd" x="251" y="288">1</text><text class="cd" x="281" y="288">N</text>
+<path class="ln" d="M330,192 V250"/><text class="cd" x="334" y="203">1</text><text class="cd" x="334" y="246">N</text>
+<path class="ln" d="M442,202 V250"/><text class="cd" x="446" y="213">1</text><text class="cd" x="446" y="246">N</text>
+<path class="ln" d="M560,205 V420"/><text class="cd" x="564" y="216">1</text><text class="cd" x="564" y="416">N</text>
+<path class="ln" d="M600,205 L612,250"/><text class="cd" x="594" y="216">1</text><text class="cd" x="614" y="246">N</text>
+<path class="ln" d="M660,179 V250"/><text class="cd" x="664" y="190">1</text><text class="cd" x="664" y="246">N</text>
+<path class="ln" d="M730,179 V420"/><text class="cd" x="734" y="190">1</text><text class="cd" x="734" y="416">N</text>
+<path class="ln" d="M340,356 V420"/><text class="cd" x="344" y="367">1</text><text class="cd" x="344" y="416">N</text>
+<path class="ln" d="M456,356 V420"/><text class="cd" x="460" y="367">1</text><text class="cd" x="460" y="416">1</text>
+<path class="ln" d="M500,356 L532,420"/><text class="cd" x="503" y="370">1</text><text class="cd" x="520" y="416">N</text>
+<path class="ln" d="M516,340 H700 V420" style="stroke-dasharray:4 3"/><text class="cd" x="520" y="336">1</text><text class="cd" x="704" y="416">N</text>
+
+<!-- Leyenda -->
+<g transform="translate(8,372)">
+<text class="tt" x="0" y="0">Convenciones</text>
+<rect x="0" y="9" width="14" height="10" fill="#AED9E0" stroke="#5E6472" stroke-width=".6"/><text class="lg" x="20" y="18">Configuración y maestros</text>
+<rect x="0" y="26" width="14" height="10" fill="#B8F2E6" stroke="#5E6472" stroke-width=".6"/><text class="lg" x="20" y="35">Transaccionales (operación)</text>
+<rect x="0" y="43" width="14" height="10" fill="#FFA69E" stroke="#5E6472" stroke-width=".6"/><text class="lg" x="20" y="52">Fiscales</text>
+<rect x="0" y="60" width="14" height="10" fill="#FAF3DD" stroke="#5E6472" stroke-width=".6"/><text class="lg" x="20" y="69">Inventario (Fase 11)</text>
+<rect x="0" y="77" width="14" height="10" fill="#d9dce1" stroke="#5E6472" stroke-width=".6"/><text class="lg" x="20" y="86">Integración (Fase 12B)</text>
+<text class="lg" x="0" y="104"><tspan class="k">PK / FK</tspan>  llave primaria / foránea</text>
+<text class="lg" x="0" y="119">† no está en el ER de la propuesta</text>
+<text class="lg" x="0" y="134">1 — N cardinalidad · línea punteada: opcional</text>
+</g>
+</g>
+</svg>
+<figcaption><b>Figura 3.</b> Modelo de datos implementado. Por legibilidad se omiten cuatro relaciones que sí existen: Usuario N:1 Sede (sede asignada, opcional), Usuario 1:N Pedido (quién tomó la comanda), Sede 1:N DocumentoFiscal (consecutivo único por sede) y Sede 1:N MovimientoInventario.</figcaption>
+</figure>
+
+<h2 id="s5-3"><span class="num">5.3</span> Aislamiento multi-tenant con Row Level Security</h2>
+<p>Un solo esquema atiende a todas las cadenas, y el aislamiento se aplica en dos capas:</p>
+<ol>
+  <li><strong>Aplicación</strong> (desde la Fase 0): todo servicio filtra por el <code>cadena_id</code> del JWT.</li>
+  <li><strong>Motor de base de datos</strong> (Fase 12): las 15 tablas de negocio tienen <code>ENABLE</code> y <code>FORCE ROW LEVEL SECURITY</code>, con una política <code>aislamiento_cadena</code> (<code>USING</code> y <code>WITH CHECK</code>) que compara contra <code>current_setting('app.cadena_id')</code>.</li>
+</ol>
+<p>El backend opera con un rol sin privilegios de dueño (<code>comanda_app</code>), y cada operación de negocio corre dentro de <code>PrismaService.conCadena()</code>. Esa función abre una transacción y fija <code>app.cadena_id</code> solo para ella (<code>set_config(..., true)</code>), así el valor no se filtra a otra petición del pool de conexiones. Sin esa variable, el rol de la aplicación no ve ni escribe ninguna fila. Este era el argumento de la propuesta: aunque un desarrollador olvide un filtro, la base filtra igual.</p>
+<p>Unas pocas consultas ocurren antes de conocer la cadena: el login por correo, la resolución de la API key y el re-encolado de documentos al arrancar. Esas usan el rol dueño, que tiene una política propia (<code>dueno_total</code>). En las tablas hijas, la política usa <code>EXISTS</code> contra la tabla padre en vez de copiar <code>cadena_id</code> en cada fila (decisión de prototipo); con volúmenes reales convendría denormalizar e indexar la columna.</p>
+<p>La prueba <code>rls-aislamiento.spec.ts</code> crea dos cadenas y verifica con el rol de la aplicación que:</p>
+<ol>
+  <li>sin <code>app.cadena_id</code> no se ve ninguna fila;</li>
+  <li>con la cadena A no aparece ninguna fila de la B, incluidas tablas protegidas por <code>EXISTS</code>;</li>
+  <li>insertar una fila de otra cadena falla por <code>WITH CHECK</code>;</li>
+  <li>un <code>UPDATE</code> no alcanza filas ajenas.</li>
+</ol>
+
+<h2 id="s5-4"><span class="num">5.4</span> Réplica de lectura para reportes</h2>
+<p>La propuesta separa los reportes en una réplica para que el panel del dueño no frene las cajas (§5.1). El prototipo corre <code>postgres-replica</code> en <em>streaming replication</em> física y asíncrona: se inicializa con <code>pg_basebackup</code> y arranca en <code>hot_standby</code>. Solo <code>ReportsService</code> la usa, mediante un cliente Prisma de solo lectura con el mismo rol y la misma función <code>conCadena()</code>. Como la réplica es una copia física, trae también las políticas de RLS. La prueba <code>replica-solo-lectura.spec.ts</code> confirma que la réplica está en recuperación, que escribir en ella falla con <em>read-only transaction</em> y que RLS aplica igual.</p>
+<p>Como la réplica es asíncrona, un pago recién hecho puede tardar milisegundos en aparecer. Por eso <code>/panel</code> no vuelve a consultar al recibir <code>venta:registrada</code>: suma la venta en memoria con los datos del evento, en centavos enteros para no arrastrar errores de punto flotante.</p>
+
+<h2 id="s5-5"><span class="num">5.5</span> Numeración fiscal por sede y por dispositivo</h2>
+<p>La propuesta pide numeración consecutiva por sede, con rangos pre-asignados para que dos sedes (o una sede sin conexión) nunca repitan un consecutivo (§6.3). El prototipo lo implementa en dos niveles:</p>
+<ul>
+  <li><strong>Por sede.</strong> Cada sede tiene su rango; las tres sedes de demostración tienen 1–1000, 1001–2000 y 2001–3000. El cobro toma el número con <code>UPDATE … SET siguiente_consecutivo = siguiente_consecutivo + 1</code> dentro de su transacción. PostgreSQL bloquea la fila de la sede, así que dos cajas que cobran a la vez quedan serializadas, sin la condición de carrera de un <code>MAX + 1</code>. Si el rango se agota, el cobro responde <code>409</code> y el incremento se revierte. Además, la pareja (sede, consecutivo) es única en la base.</li>
+  <li><strong>Por dispositivo</strong> (Fase 16). Mientras tiene red, cada caja reserva un bloque de 20 consecutivos dentro del rango de su sede (<code>POST /pagos/rangos-offline</code>). La reserva avanza el contador de la sede, así que el cobro en línea nunca usa esos números. Sin conexión, la caja numera desde su bloque y, al sincronizar, el servidor rechaza los números fuera del bloque, de otra caja o ya usados, sin tumbar el resto del lote.</li>
+</ul>
+<p>Un bloque reservado y no usado deja huecos en la numeración. Con la DIAN real habría que reportarlos o anularlos; queda marcado como pendiente de producción.</p>
+
+<h2 id="s5-6"><span class="num">5.6</span> Máquina de estados del pedido</h2>
+<figure>
+<svg class="diag" viewBox="0 0 760 132" role="img" aria-label="Máquina de estados del pedido">
+<defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#23272f"/></marker></defs>
+<style>
+.f4 .st{stroke:#23272f; stroke-width:1.3}
+.f4 .sn{font:700 12.5px Calibri, sans-serif; fill:#23272f}
+.f4 .ar{stroke:#23272f; stroke-width:1.4; fill:none}
+.f4 .lb{font:10px Calibri, sans-serif; fill:#5E6472}
+</style>
+<g class="f4">
+<rect class="st" x="10" y="44" width="122" height="40" rx="20" fill="#fff" style="stroke-dasharray:5 3"/><text class="sn" x="71" y="69" text-anchor="middle">ABIERTO</text>
+<rect class="st" x="208" y="44" width="170" height="40" rx="20" fill="#FFA69E"/><text class="sn" x="293" y="69" text-anchor="middle">EN_PREPARACIÓN</text>
+<rect class="st" x="454" y="44" width="110" height="40" rx="20" fill="#B8F2E6"/><text class="sn" x="509" y="69" text-anchor="middle">LISTO</text>
+<rect class="st" x="636" y="44" width="114" height="40" rx="20" fill="#AED9E0"/><text class="sn" x="693" y="69" text-anchor="middle">PAGADO</text>
+<path class="ar" d="M132,64 H206" marker-end="url(#ah4)"/>
+<path class="ar" d="M378,64 H452" marker-end="url(#ah4)"/>
+<path class="ar" d="M564,64 H634" marker-end="url(#ah4)"/>
+<path class="ar" d="M293,8 V42" marker-end="url(#ah4)"/><text class="lb" x="300" y="22">POST /pedidos, /sync, domicilio o plataforma</text>
+<text class="lb" x="170" y="104" text-anchor="middle">comanda enviada</text>
+<text class="lb" x="415" y="104" text-anchor="middle">cocina marca LISTO</text><text class="lb" x="415" y="117" text-anchor="middle">PATCH …/estado</text>
+<text class="lb" x="600" y="104" text-anchor="middle">caja cobra</text><text class="lb" x="600" y="117" text-anchor="middle">POST /pagos</text>
+<text class="lb" x="71" y="104" text-anchor="middle">estado del modelo;</text><text class="lb" x="71" y="117" text-anchor="middle">el flujo no lo usa</text>
+</g>
+</svg>
+<figcaption><b>Figura 4.</b> Máquina de estados del pedido. No se permiten saltos ni retrocesos. PAGADO solo lo asigna el cobro, nunca un cambio de estado suelto.</figcaption>
+</figure>
+<p>El pedido nace directamente en EN_PREPARACIÓN, porque "armar el pedido" ocurre en el carrito del navegador y enviarlo es la única llamada al backend. La validación de transiciones vive en <code>OrdersModule</code>. <code>PATCH /pedidos/:id/estado</code> no puede llevar un pedido a PAGADO: ese estado lo asigna <code>POST /pagos</code>, junto con el pago, el documento y la liberación de la mesa.</p>
+
+<h2 id="s5-7"><span class="num">5.7</span> Inventario por receta</h2>
+<p>La propuesta incluye insumos, recetas y movimientos en su ER (§6.2). En el prototipo, una receta dice cuánto de cada insumo lleva una unidad de un producto. No hay columna de existencias: la existencia de un insumo en una sede es la suma de sus movimientos (ENTRADA, SALIDA y MERMA).</p>
+<ul>
+  <li><strong>Descuento automático.</strong> Las salidas se crean cuando la comanda entra a cocina, dentro de la misma transacción del pedido y en los tres canales. Cada salida lleva el id del pedido, así que un reenvío o una sincronización repetida no descuenta dos veces.</li>
+  <li><strong>Movimientos manuales.</strong> El administrador registra entradas y mermas desde <code>/inventario</code>, que se actualiza en vivo.</li>
+  <li><strong>Existencias negativas.</strong> No bloquean la venta (decisión de prototipo): quedan visibles como alerta.</li>
+</ul>
+
+<h2 id="s5-8"><span class="num">5.8</span> Respaldos y retención</h2>
+<p>La propuesta pide respaldos diarios con retención, y cinco años para los documentos fiscales (§4.2, §5.1). Las migraciones corren una sola vez por despliegue, en un servicio de un solo uso, antes de que arranquen el backend y el worker. Los datos de demostración se niegan a cargarse si el ambiente es de producción. El servicio <code>respaldo</code> trae <code>pg_dump</code>, <code>pg_restore</code> y <code>aws-cli</code>:</p>
+<ul>
+  <li>respalda la base todos los días a las 03:00 de Bogotá, en formato comprimido, hacia S3 (MinIO en local); una regla de ciclo de vida borra cada respaldo a los 30 días;</li>
+  <li>usa <code>--enable-row-security</code>, necesario con tablas en <code>FORCE ROW LEVEL SECURITY</code> en motores administrados;</li>
+  <li>se niega a restaurar sobre la base de la aplicación si no se le pide de forma explícita.</li>
+</ul>
+<div class="tlabel">Tabla 11. Prueba de respaldo y restauración (26/10/2026, entorno local)</div>
+<table>
+  <thead><tr><th>Verificación</th><th class="c">Base original</th><th class="c">Base restaurada</th></tr></thead>
+  <tbody>
+    <tr><td>Políticas RLS</td><td class="c">30</td><td class="c">30</td></tr>
+    <tr><td>Tablas con FORCE RLS</td><td class="c">15</td><td class="c">15</td></tr>
+    <tr><td>Sedes / movimientos de inventario</td><td class="c">3 / 45</td><td class="c">3 / 45</td></tr>
+    <tr><td>Última migración aplicada</td><td class="c"><code>r3p1_usuario_sede</code></td><td class="c"><code>r3p1_usuario_sede</code></td></tr>
+    <tr><td><code>comanda_app</code> sin y con cadena fijada</td><td class="c">—</td><td class="c">0 y 3 sedes visibles</td></tr>
+  </tbody>
+</table>
+<p>La retención de cinco años es una regla de ciclo de vida sobre el prefijo <code>fiscal/</code> del bucket de documentos, y el worker guarda cada XML bajo ese prefijo (<code>fiscal/{cadena}/{sede}/…</code>), configurable con la misma variable que usa la regla. Los XML guardados antes de ese ajuste quedaron en la raíz del bucket: se siguen descargando, pero la regla no los alcanza, así que se conservan.</p>
+
+<!-- ======================= 6. CASOS DE USO ======================= -->
+<h1 id="s6"><span class="num">6.</span> Funcionalidad por caso de uso</h1>
+<p>Las capturas de esta sección se tomaron el 19/11/2026 del prototipo en ejecución (entorno local), con los datos de demostración: la cadena "Demo", con tres sedes en Bogotá y ocho productos.</p>
+
+<h2 id="s6-1"><span class="num">6.1</span> CU-01 Pedido en mesa</h2>
+<p>El mesero ve las mesas de su sede con su estado, toca una libre y arma el pedido con el catálogo, que incluye las fotos y permite notas por ítem (Figura 5). Al presionar <em>Enviar comanda</em>, el navegador genera el UUID del pedido y llama a <code>POST /pedidos</code>. El backend lo crea en EN_PREPARACIÓN, ocupa la mesa, descuenta inventario y emite <code>comanda:nueva</code> a la sala de la sede.</p>
+<p>La pantalla de cocina muestra la tarjeta al instante (Figura 6), con el canal (mesa, domicilio o plataforma), las notas y el tiempo transcurrido, que se resalta cuando el pedido se demora. Cuando cocina marca LISTO, la mesa correspondiente se resalta en <code>/mesas</code> y suena un aviso para el mesero.</p>
+<figure><img src="img/02-mesa-panel.jpg" alt="Toma del pedido en /mesas" style="width:72%"><figcaption><b>Figura 5.</b> <code>/mesas</code>: mesas de la Sede Centro y toma del pedido de la Mesa 6, con catálogo, carrito y notas por ítem.</figcaption></figure>
+<figure><img src="img/03-cocina.jpg" alt="Pantalla de cocina" style="width:80%"><figcaption><b>Figura 6.</b> <code>/cocina</code> (KDS): comandas en preparación y listas de mesa, de domicilio y de plataforma (<code>PLT-20482</code>), recibidas en vivo.</figcaption></figure>
+
+<h2 id="s6-2"><span class="num">6.2</span> CU-02 Cobro y documento fiscal</h2>
+<p>La caja separa los pedidos <em>listos para cobrar</em> de los que siguen en cocina. Al cobrar, el cajero elige el medio de pago (efectivo o tarjeta) y confirma. La respuesta es inmediata: muestra el número de factura de la sede y el estado DIAN <em>"Validando con la DIAN (simulada) en segundo plano…"</em>.</p>
+<p>El worker genera el XML, lo guarda en el almacén de objetos, lo envía al proveedor simulado y registra el resultado. El backend reenvía ese resultado a la caja con <code>documento:actualizado</code>, y el recibo cambia solo a <em>Validado (simulado)</em>, con el enlace para descargar el XML (Figura 7). El navegador nunca habla con el almacén: el XML se descarga por <code>GET /documentos-fiscales/:id/xml</code>, con control de cadena y de sede.</p>
+<figure><img src="img/05-caja-recibo.jpg" alt="Caja con recibo validado" style="width:80%"><figcaption><b>Figura 7.</b> <code>/caja</code>: después de cobrar la Mesa 5, el recibo pasa en vivo de PENDIENTE a "Validado (simulado)", con la factura N.° 370 de la Sede Centro.</figcaption></figure>
+<p>En los registros del worker de esa misma sesión se ve el comportamiento ante fallas del proveedor: un documento falló tres veces ("Proveedor DIAN (simulado) no disponible"), con esperas crecientes de 4 y 6 s, y se validó en el cuarto intento, sin que la caja esperara.</p>
+
+<h2 id="s6-3"><span class="num">6.3</span> CU-03 Menú QR</h2>
+<p>En <code>/mesas</code>, el botón <em>Códigos QR del menú</em> genera en el navegador un código por mesa, que apunta al menú público de la sede con el número de mesa. Si la cadena tiene subdominio, el código apunta a él. El comensal lo abre en su teléfono sin iniciar sesión ni instalar nada (Figura 8): ve los productos activos por categoría, con foto y precio, y puede pasar a pedir a domicilio.</p>
+<p>Las fotos las sube el administrador en <code>/catalogo</code> (JPEG, PNG o WebP de hasta 2 MB). El backend las recorta a 4:3, les quita los metadatos EXIF (por ejemplo, la ubicación del celular) y genera versiones WebP de 800 y 400 px con llaves inmutables. Se sirven con caché larga en Nginx y, opcionalmente, desde CloudFront en la nube. El service worker no las guarda en caché, para no llenar el teléfono.</p>
+<figure>
+  <div class="duo" style="grid-template-columns: 2.35fr 1fr; gap:8pt">
+    <img src="img/11-qr-mesas.jpg" alt="Códigos QR por mesa">
+    <img src="img/12-menu-qr-movil.jpg" alt="Menú público en el celular">
+  </div>
+  <figcaption><b>Figura 8.</b> Códigos QR por mesa en <code>/mesas</code> (izquierda) y menú público de la Sede Centro abierto desde el QR de la Mesa 3, en un viewport de celular (derecha).</figcaption>
+</figure>
+
+<h2 id="s6-4"><span class="num">6.4</span> CU-04 Domicilio web</h2>
+<p>Desde el menú público, el cliente arma su pedido y deja nombre, teléfono, dirección y, si quiere, su correo. El pedido viaja por <code>POST /public/pedidos/domicilio</code>, sin JWT, idempotente por UUID y con límite de tasa. La cadena se valida contra la sede y, por subdominio, contra el <code>Host</code>. Llega a cocina y a caja marcado como "Domicilio" (Figura 6). Cuando la DIAN simulada valida el documento del cobro, el worker envía el comprobante por correo (Figura 9). El prototipo no incluye pago en línea ni seguimiento del repartidor.</p>
+<figure><img src="img/15-mailpit-comprobante.jpg" alt="Comprobante por correo en Mailpit" style="width:78%"><figcaption><b>Figura 9.</b> Comprobante de un domicilio de la Sede Centro, capturado por Mailpit (SMTP local). El texto aclara que es un documento simulado sin validez fiscal.</figcaption></figure>
+
+<h2 id="s6-5"><span class="num">6.5</span> CU-05 Pedido de plataforma</h2>
+<p>Una plataforma de domicilios conectada a la cadena envía sus pedidos a <code>POST /integraciones/plataformas/pedidos</code> en su propio formato (<code>orderId</code>, <code>storeId</code>, <code>customer</code> e <code>items</code> con <code>sku</code> y <code>qty</code>), autenticada con <code>X-Api-Key</code>. El backend lo traduce a un pedido de canal PLATAFORMA en EN_PREPARACIÓN, con su cliente, y lo envía a cocina sin re-digitación. En la Figura 6 aparece como "Plataforma · PLT-20482".</p>
+<p>La idempotencia descansa en la pareja (integración, referencia externa), que es única en la base. Un reenvío devuelve el mismo pedido con <code>duplicate: true</code>, incluso si dos reenvíos llegan a la vez. El acuse de vuelta lo envía el worker al webhook de la integración, con reintentos: el pedido ya está en cocina pase lo que pase con el acuse. La plataforma es la página <code>/simulador-plataforma</code>, que envía pedidos, reenvía el último y muestra los acuses recibidos.</p>
+
+<h2 id="s6-6"><span class="num">6.6</span> CU-06 Panel multi-sede</h2>
+<p><code>/panel</code> (solo el administrador) consolida las ventas de todas las sedes de la cadena por sede, fecha y canal, con una opción para agrupar por día o por mes (Figura 10). Debajo muestra las ventas por producto y por franja horaria. Las fechas y horas se calculan en la zona <code>America/Bogota</code>.</p>
+<p>Los datos salen de la réplica de lectura, y cada cobro llega en vivo por <code>venta:registrada</code>, sin recargar ni hacer polling. El botón <em>Enviar resumen del día por correo</em> encola el mismo consolidado para los administradores de la cadena; a las 23:00 se envía de forma automática.</p>
+<figure><img src="img/07-panel.jpg" alt="Panel consolidado" style="width:80%"><figcaption><b>Figura 10.</b> <code>/panel</code>: consolidado del día de las tres sedes por canal (salón, domicilio y plataforma). Debajo, fuera del recorte, están las tablas por producto y por franja horaria.</figcaption></figure>
+
+<h2 id="s6-7"><span class="num">6.7</span> CU-07 Operación sin conexión</h2>
+<p>El frontend es una PWA: un service worker sirve la aplicación aunque no haya red, y el catálogo, las mesas y la sede quedan en IndexedDB.</p>
+<ul>
+  <li><strong>Mesero.</strong> Sin conexión, sus pedidos van a una cola local con el UUID generado en el navegador. La mesa se muestra "ocupada · sin sincronizar" y un aviso indica cuántos pedidos están pendientes. Al volver la red, la aplicación llama sola a <code>POST /sync</code>.</li>
+  <li><strong>Caja</strong> (Fase 16). Cobra sin red con un recibo provisional y numera desde el bloque reservado para el dispositivo (§5.5); el cobro se sincroniza igual que los pedidos.</li>
+</ul>
+<p><code>/sync</code> devuelve un resultado por elemento (CREADO, DUPLICADO o RECHAZADO), de modo que un lote reenviado no duplica nada y un elemento inválido no tumba al resto. El mesero solo envía pedidos, el cajero solo pagos y el administrador ambos.</p>
+<figure>
+  <div class="quad">
+    <div><img src="img/offline-01-en-linea.jpg" alt="En línea">1. En línea: mesas desde el servidor.</div>
+    <div><img src="img/offline-02-pedido-sin-red.jpg" alt="Pedido sin red">2. Sin red: pedido en cola local; Mesa 1 "sin sincronizar".</div>
+    <div><img src="img/offline-03-recarga-sin-red.jpg" alt="Recarga sin red">3. Recarga sin red: el service worker sirve la aplicación.</div>
+    <div><img src="img/offline-04-sincronizado.jpg" alt="Sincronizado">4. Vuelve la red: <code>/sync</code> responde 200 y la cola queda vacía.</div>
+  </div>
+  <figcaption><b>Figura 11.</b> Prueba del modo sin conexión del mesero en un navegador real (20/10/2026). El pedido llegó a la base con el mismo UUID que generó el navegador sin red.</figcaption>
+</figure>
+<p>El cobro sin conexión de la caja está cubierto por 11 pruebas de integración (<code>cobro-offline.spec.ts</code>), entre ellas:</p>
+<ul>
+  <li>dos cajas reciben bloques que no se cruzan;</li>
+  <li>el reintento de un cobro devuelve DUPLICADO;</li>
+  <li>una hora futura de la caja se recorta a la del servidor;</li>
+  <li>los consecutivos inválidos se rechazan sin afectar el lote.</li>
+</ul>
+<p>La prueba manual de la caja en modo avión, en un navegador, sigue pendiente. Sin conexión no cargan el menú QR ni entran pedidos de plataforma: lo que se protege es el salón y la caja, que es donde está el dinero.</p>
+
+<h2 id="s6-8"><span class="num">6.8</span> CU-08 Catálogo centralizado, inventario y usuarios</h2>
+<p>En <code>/catalogo</code>, el administrador crea, edita y desactiva productos y sus fotos una sola vez para toda la cadena (Figura 12). Desactivar es una baja lógica, porque los pedidos históricos siguen apuntando al producto. Un pedido con un producto ya desactivado se rechaza con <code>409</code>, aunque el mesero tenga el catálogo viejo en pantalla. El cambio llega en vivo a <code>/mesas</code> de las tres sedes con <code>catalogo:actualizado</code>, y el menú QR lo muestra al cargarse.</p>
+<p>Dos pantallas de administración completan la operación (Figura 13). <code>/inventario</code> maneja insumos, existencias por sede y recetas. <code>/usuarios</code> crea meseros y cajeros, les asigna rol y sede, cambia contraseñas y desactiva cuentas. Un usuario con sede asignada solo opera en esa sede; sin sede, elige cualquiera de su cadena.</p>
+<figure><img src="img/08-catalogo.jpg" alt="Catálogo centralizado" style="width:74%"><figcaption><b>Figura 12.</b> <code>/catalogo</code>: productos de la cadena con foto, categoría, precio y estado. Los cambios se aplican a las tres sedes al instante.</figcaption></figure>
+<figure>
+  <div class="duo">
+    <img src="img/09-inventario.jpg" alt="Existencias por sede">
+    <img src="img/10-usuarios.jpg" alt="Gestión de usuarios">
+  </div>
+  <figcaption><b>Figura 13.</b> <code>/inventario</code>: existencias de la Sede Centro, que bajan cuando la comanda entra a cocina (izquierda). <code>/usuarios</code>: equipo de la cadena con rol, sede y estado (derecha).</figcaption>
+</figure>
+
+<!-- ======================= 7. AWS ======================= -->
+<h1 id="s7"><span class="num">7.</span> Despliegue en la nube (AWS)</h1>
+<p>La sustentación planteó dos infraestructuras: una para desarrollar (Docker Compose en el PC) y "un VPS pequeño con HTTPS para la beta". Se eligió AWS por su plan gratuito: hasta USD 200 en créditos durante 6 meses. La regla fue que el código no dependa de AWS: lo único que cambia entre el PC y la nube son variables de entorno y archivos de despliegue.</p>
+
+<h2 id="s7-1"><span class="num">7.1</span> Arquitectura de la beta</h2>
+<figure>
+<svg class="diag" viewBox="0 0 760 500" role="img" aria-label="Arquitectura de la beta en AWS">
+<defs><marker id="ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5E6472"/></marker></defs>
+<style>
+.f5 .bx{fill:#fff; stroke:#5E6472; stroke-width:1.1}
+.f5 .t{font:700 11px Calibri, sans-serif; fill:#23272f}
+.f5 .s{font:9.6px Calibri, sans-serif; fill:#5E6472}
+.f5 .h{font:700 9.5px Calibri, sans-serif; fill:#5E6472; letter-spacing:.6px}
+.f5 .ln{stroke:#5E6472; stroke-width:1.2; fill:none}
+.f5 .lb{font:9.5px Calibri, sans-serif; fill:#5E6472; paint-order:stroke; stroke:#fff; stroke-width:3px}
+.f5 .ch{fill:#fff; stroke:#5E6472; stroke-width:.9}
+.f5 .ct{font:700 10px Calibri, sans-serif; fill:#23272f}
+.f5 .cs{font:8.8px Calibri, sans-serif; fill:#5E6472}
+</style>
+<g class="f5">
+<!-- GitHub -->
+<rect x="196" y="6" width="560" height="108" rx="10" fill="#f4f6f7" stroke="#b8bec6" style="stroke-dasharray:4 3"/>
+<text class="h" x="206" y="22">GITHUB</text>
+<rect class="bx" x="206" y="32" width="122" height="66" rx="7"/><text class="t" x="214" y="51">Pull request a main</text><text class="s" x="214" y="67">revisión entre las</text><text class="s" x="214" y="80">dos partes</text>
+<rect class="bx" x="342" y="32" width="128" height="66" rx="7"/><text class="t" x="350" y="51">Actions · CI</text><text class="s" x="350" y="67">lint · tipos · 101 pruebas</text><text class="s" x="350" y="80">stack + prueba e2e</text>
+<rect class="bx" x="484" y="32" width="124" height="66" rx="7"/><text class="t" x="492" y="51">Actions · Despliegue</text><text class="s" x="492" y="67">4 imágenes → GHCR</text><text class="s" x="492" y="80">(si el CI está en verde)</text>
+<rect class="bx" x="622" y="32" width="126" height="66" rx="7"/><text class="t" x="630" y="51">OIDC → rol IAM</text><text class="s" x="630" y="67">sin llaves de AWS</text><text class="s" x="630" y="80">SSM Run Command</text>
+<path class="ln" d="M328,65 H340 M470,65 H482 M608,65 H620" marker-end="url(#ah5)"/>
+
+<!-- AWS (panel de fondo, antes de las flechas que entran en él) -->
+<rect x="196" y="128" width="560" height="366" rx="10" fill="#fdf7ec" stroke="#e2c697" style="stroke-dasharray:5 3"/>
+<text class="h" x="206" y="144">AWS · US-EAST-1 (PLAN GRATUITO)</text>
+
+<!-- Izquierda -->
+<rect class="bx" x="6" y="176" width="164" height="58" rx="7"/><text class="t" x="15" y="197">Navegador / teléfono</text><text class="s" x="15" y="213">PWA · menú QR · panel</text><text class="s" x="15" y="226">personal de la sede</text>
+<text class="lb" x="8" y="168">HTTPS · TLS 1.3 · HTTP/2 · WSS</text>
+<rect class="bx" x="6" y="292" width="164" height="58" rx="7"/><text class="t" x="15" y="313">DuckDNS (DNS)</text><text class="s" x="15" y="329">comanda-dk26.duckdns.org</text><text class="s" x="15" y="342">demo.… (subdominio)</text>
+<rect class="bx" x="6" y="404" width="164" height="58" rx="7"/><text class="t" x="15" y="425">Let's Encrypt</text><text class="s" x="15" y="441">certificado TLS (90 días)</text><text class="s" x="15" y="454">renovación automática</text>
+<path class="ln" d="M88,234 V290" marker-start="url(#ah5)" marker-end="url(#ah5)"/><text class="lb" x="94" y="272">consulta DNS</text>
+<path class="ln" d="M170,205 H212" marker-end="url(#ah5)"/>
+<path class="ln" d="M170,433 H212" marker-start="url(#ah5)" marker-end="url(#ah5)"/><text class="lb" x="176" y="426">ACME</text>
+
+<!-- EC2 -->
+<rect class="bx" x="214" y="154" width="272" height="332" rx="9"/>
+<text class="t" x="224" y="173">EC2 t3.small · Amazon Linux 2023</text>
+<text class="s" x="224" y="188">IP elástica · grupo de seguridad: solo 80 y 443</text>
+<text class="s" x="224" y="201">Session Manager (sin SSH) · chrony (NTP)</text>
+<rect x="226" y="210" width="248" height="266" rx="7" fill="#f4f6f7" stroke="#b8bec6"/>
+<text class="h" x="236" y="226">DOCKER-COMPOSE.PROD.YML</text>
+<rect class="ch" x="236" y="236" width="112" height="44" rx="6"/><text class="ct" x="243" y="253">nginx</text><text class="cs" x="243" y="268">80/443 · Let's Encrypt</text>
+<rect class="ch" x="356" y="236" width="110" height="44" rx="6"/><text class="ct" x="363" y="253">backend-1</text><text class="cs" x="363" y="268">API + Socket.IO</text>
+<rect class="ch" x="236" y="288" width="112" height="44" rx="6"/><text class="ct" x="243" y="305">backend-2</text><text class="cs" x="243" y="320">API + Socket.IO</text>
+<rect class="ch" x="356" y="288" width="110" height="44" rx="6"/><text class="ct" x="363" y="305">worker</text><text class="cs" x="363" y="320">fiscal · acuses · correo</text>
+<rect class="ch" x="236" y="340" width="112" height="44" rx="6"/><text class="ct" x="243" y="357">postgres</text><text class="cs" x="243" y="372">RLS · volumen EBS</text>
+<rect class="ch" x="356" y="340" width="110" height="44" rx="6"/><text class="ct" x="363" y="357">postgres-replica</text><text class="cs" x="363" y="372">reportes</text>
+<rect class="ch" x="236" y="392" width="112" height="44" rx="6"/><text class="ct" x="243" y="409">redis</text><text class="cs" x="243" y="424">AOF · pub/sub · colas</text>
+<rect class="ch" x="356" y="392" width="110" height="44" rx="6"/><text class="ct" x="363" y="409">respaldo</text><text class="cs" x="363" y="424">pg_dump diario → S3</text>
+<text class="cs" x="236" y="456">migrate: migraciones y rol comanda_app,</text><text class="cs" x="236" y="468">una vez por despliegue</text>
+
+<rect class="bx" x="506" y="160" width="242" height="44" rx="7"/><text class="t" x="515" y="178">Amazon S3 · 3 buckets privados</text><text class="s" x="515" y="194">XML fiscales · fotos · respaldos</text>
+<rect class="bx" x="506" y="214" width="242" height="44" rx="7"/><text class="t" x="515" y="232">SSM Parameter Store</text><text class="s" x="515" y="248">secretos /comanda/beta/* (SecureString)</text>
+<rect class="bx" x="506" y="268" width="242" height="44" rx="7"/><text class="t" x="515" y="286">Amazon SES · SMTP 587</text><text class="s" x="515" y="302">comprobantes y resumen (sandbox)</text>
+<rect class="bx" x="506" y="322" width="242" height="44" rx="7"/><text class="t" x="515" y="340">CloudWatch</text><text class="s" x="515" y="356">logs JSON · métricas · alarmas</text>
+<rect class="bx" x="506" y="376" width="242" height="44" rx="7"/><text class="t" x="515" y="394">Route 53 · chequeo de salud</text><text class="s" x="515" y="410">HTTP :80 /api/health → alarma</text>
+<rect class="bx" x="506" y="430" width="242" height="44" rx="7"/><text class="t" x="515" y="448">IAM</text><text class="s" x="515" y="464">rol de la EC2 · rol OIDC de GitHub</text>
+<path class="ln" d="M486,182 H506 M486,236 H506 M486,290 H506 M486,344 H506 M486,398 H506 M486,452 H506"/>
+<path class="ln" d="M546,98 L470,154" marker-end="url(#ah5)"/><text class="lb" x="476" y="124">docker pull</text>
+<path class="ln" d="M685,98 V108 L480,160" marker-end="url(#ah5)" style="stroke-dasharray:4 3"/><text class="lb" x="612" y="124">desplegar.sh &lt;commit&gt;</text>
+</g>
+</svg>
+<figcaption><b>Figura 14.</b> Beta en AWS y su cadena de despliegue. La instancia descarga de GHCR las imágenes que publicó GitHub Actions. El despliegue se ordena por SSM Run Command, con un rol que GitHub asume por OIDC, sin llaves guardadas ni puerto 22.</figcaption>
+</figure>
+<p>Toda la beta corre en una sola instancia EC2 <code>t3.small</code> (2 vCPU y 2 GB de RAM, más 2 GB de swap) con disco gp3 de 20 GB, en la región <code>us-east-1</code>. Ahí corre el mismo conjunto de contenedores del entorno local, salvo MinIO y Mailpit, que se reemplazan por Amazon S3 y Amazon SES. La instancia tiene IP elástica; DuckDNS publica el dominio y Let's Encrypt emite el certificado, ambos sin costo. El servidor clona el repositorio público al arrancar y descarga las imágenes ya compiladas; desde el PC solo sale el contenido del archivo de variables, que va a SSM.</p>
+
+<h2 id="s7-2"><span class="num">7.2</span> Del entorno local a AWS</h2>
+<div class="tlabel">Tabla 12. Qué cambia entre el PC y la beta</div>
+<table>
+  <thead><tr><th style="width:24%">Pieza</th><th style="width:30%">Local</th><th>Beta en AWS</th></tr></thead>
+  <tbody>
+    <tr><td>Almacén de objetos</td><td>MinIO</td><td>Amazon S3. Solo cambian las variables <code>S3_*</code>; el acceso usa el rol de la instancia, sin llaves.</td></tr>
+    <tr><td>Correo</td><td>Mailpit</td><td>Amazon SES por SMTP 587 (STARTTLS), en <em>sandbox</em>.</td></tr>
+    <tr><td>Certificado TLS</td><td>Autofirmado, generado al arrancar el contenedor</td><td>Let's Encrypt, para el dominio y el subdominio de la cadena, con renovación programada.</td></tr>
+    <tr><td>DNS</td><td><code>localhost</code> y <code>*.localhost</code></td><td>DuckDNS hacia la IP elástica.</td></tr>
+    <tr><td>Secretos</td><td>Archivo <code>.env</code> (fuera del repositorio)</td><td>SSM Parameter Store. El despliegue arma el archivo de variables en cada ejecución.</td></tr>
+    <tr><td>Logs y métricas</td><td><code>docker compose logs</code></td><td>CloudWatch Logs, agente de CloudWatch y métricas propias de las colas.</td></tr>
+    <tr><td>Imágenes</td><td>Construidas en el PC, en modo desarrollo</td><td>Imágenes de producción publicadas en GHCR por el CI.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7-3"><span class="num">7.3</span> Imágenes de producción y endurecimiento</h2>
+<p>Los Dockerfiles de desarrollo recompilan al vuelo; los de producción son multi-etapa. La imagen del backend ejecuta el código compilado y la usan tanto el backend como el worker; la de Nginx trae el frontend ya compilado. El archivo <code>docker-compose.prod.yml</code> no monta carpetas del PC, no incluye MinIO ni Mailpit y solo publica los puertos 80 y 443. El endurecimiento se controla por variables, sin cambiar código, y se probó antes de subir:</p>
+<ul>
+  <li>Swagger responde 404 y CORS solo atiende al dominio configurado.</li>
+  <li>HTTP redirige a HTTPS (301) y los archivos estáticos se sirven con caché inmutable.</li>
+  <li>Los logs salen en JSON y el apagado ordenado de Socket.IO y las colas tarda menos de 1 s.</li>
+  <li>La imagen del backend pesa 618 MB y la de Nginx con el frontend, 84 MB.</li>
+</ul>
+<p>Las imágenes no contienen secretos (<code>.env*</code> está excluido del contexto de construcción), y por eso se publican como paquetes públicos.</p>
+
+<h2 id="s7-4"><span class="num">7.4</span> Integración y despliegue continuos</h2>
+<ul>
+  <li><strong>CI</strong> (en cada pull request y en cada push a <code>main</code>). Lint, tipos y pruebas unitarias del backend; lint y compilación del frontend; y el stack completo con Docker Compose: datos de demostración, todas las pruebas del backend contra la base real y la prueba de punta a punta por Nginx. En los pull requests verifica además que las imágenes de producción compilan. La guía del repositorio indica proteger <code>main</code> con estos trabajos como requisito, para que un pull request en rojo no se pueda integrar.</li>
+  <li><strong>Despliegue</strong> (cuando el CI de <code>main</code> queda en verde). Publica cuatro imágenes en GitHub Container Registry: backend, migraciones, Nginx y respaldo. Si el despliegue está habilitado, asume por OIDC un rol de IAM que solo puede enviar un comando de SSM a esa instancia, y ejecuta <code>deploy/desplegar.sh &lt;commit&gt;</code>: arma las variables desde SSM, descarga las imágenes, corre las migraciones y levanta todo con <code>--wait</code>.</li>
+</ul>
+<p>Cada commit de <code>main</code> deja imágenes etiquetadas, así que volver a una versión anterior es desplegar ese commit.</p>
+
+<h2 id="s7-5"><span class="num">7.5</span> Seguridad de la operación</h2>
+<ul>
+  <li><strong>Mínimo privilegio.</strong> El rol de la instancia solo puede leer y escribir en sus tres buckets, leer los parámetros <code>/comanda/beta/*</code> y escribir en sus grupos de logs. El rol de GitHub solo puede enviar comandos de SSM a esa instancia y leer su resultado. El rol de GitHub solo lo puede asumir el environment <code>beta</code> del repositorio.</li>
+  <li><strong>Superficie mínima.</strong> No hay puerto 22, ni par de llaves, ni llaves de AWS en GitHub o en el servidor. Los buckets bloquean todo acceso público. Los metadatos de la instancia exigen IMDSv2, con un salto extra para que los contenedores lleguen a las credenciales del rol.</li>
+  <li><strong>Secretos.</strong> JWT, contraseñas de base de datos, API key de la plataforma y credenciales SMTP viven como SecureString en SSM, nunca en el repositorio ni en las imágenes.</li>
+  <li><strong>Aplicación.</strong> TLS 1.3 con HSTS, límite de tasa en las rutas públicas, RLS en la base, contraseñas con bcrypt y roles verificados en cada petición.</li>
+</ul>
+
+<h2 id="s7-6"><span class="num">7.6</span> Monitoreo, alertas y runbook</h2>
+<p>Los logs de todos los contenedores van a CloudWatch Logs. El agente de CloudWatch reporta memoria y disco. El worker publica cada minuto, en formato EMF y sin SDK, cuántos documentos fiscales están atascados en PENDIENTE y cuántos trabajos hay en espera o fallidos en cada cola. Un script crea las alarmas, con aviso por correo vía SNS:</p>
+<div class="tlabel">Tabla 13. Alarmas de la beta</div>
+<table>
+  <thead><tr><th style="width:32%">Alarma</th><th>Condición y respuesta (según el runbook)</th></tr></thead>
+  <tbody>
+    <tr><td>Sin servicio</td><td>El chequeo de Route 53 a <code>/api/health</code> falla. Revisar contenedores; con un backend caído el servicio sigue por el otro.</td></tr>
+    <tr><td>Instancia caída</td><td>Fallan los chequeos de estado de EC2. Reiniciar; si no vuelve, detener y arrancar (cambia de host físico y conserva IP y volúmenes).</td></tr>
+    <tr><td>CPU alta · memoria alta</td><td>Identificar el contenedor con <code>docker stats</code>; si es carga real, subir el tipo de instancia.</td></tr>
+    <tr><td>Disco lleno</td><td>Limpiar imágenes de despliegues anteriores o ampliar el volumen EBS.</td></tr>
+    <tr><td>Cola fiscal atascada</td><td>Documentos en PENDIENTE por más de 5 minutos, o el worker dejó de reportar. Revisar worker y Redis; la caja no se bloquea.</td></tr>
+    <tr><td>Presupuesto (AWS Budgets)</td><td>Gasto sobre los umbrales definidos. Revisar Cost Explorer y apagar lo que no se use.</td></tr>
+  </tbody>
+</table>
+<p>El runbook (<code>docs/runbook.md</code>) describe qué hacer ante cada alarma y cómo restaurar la base desde un respaldo de S3. También cubre la recreación de la réplica y el regreso a una versión anterior.</p>
+
+<h2 id="s7-7"><span class="num">7.7</span> Costos</h2>
+<p>Se evitaron a propósito los servicios que consumen créditos aunque nadie los use: NAT Gateway, balanceador de carga administrado, RDS y ElastiCache. La alta disponibilidad administrada queda como trabajo futuro (§10).</p>
+<div class="tlabel">Tabla 14. Costo estimado de la beta (precios de referencia en us-east-1)</div>
+<table>
+  <thead><tr><th>Recurso</th><th class="n">Encendida 24/7 (mes)</th><th class="n">Apagada (mes)</th></tr></thead>
+  <tbody>
+    <tr><td>EC2 <code>t3.small</code> (USD 0,0208 por hora)</td><td class="n">≈ USD 15,20</td><td class="n">USD 0</td></tr>
+    <tr><td>Disco EBS gp3 de 20 GB</td><td class="n">≈ USD 1,60</td><td class="n">≈ USD 1,60</td></tr>
+    <tr><td>IP elástica (IPv4 pública)</td><td class="n">≈ USD 3,65</td><td class="n">≈ USD 3,65</td></tr>
+    <tr><td>S3, SES, SSM, transferencia</td><td class="n">&lt; USD 0,20</td><td class="n">&lt; USD 0,10</td></tr>
+    <tr><td>CloudWatch y chequeo de Route 53</td><td class="n">USD 0,50 – 3,50</td><td class="n">≈ USD 0,50</td></tr>
+    <tr><td>DuckDNS, Let's Encrypt, GitHub y GHCR</td><td class="n">USD 0</td><td class="n">USD 0</td></tr>
+    <tr><td><strong>Total aproximado</strong></td><td class="n"><strong>≈ USD 21</strong></td><td class="n"><strong>≈ USD 6</strong></td></tr>
+  </tbody>
+</table>
+<p class="tcap">Fuente: estimación de <code>docs/tutorial-migracion-aws.md</code>. Con los créditos del plan gratuito, la beta encendida 24/7 durante 6 meses cuesta ≈ USD 126 de los USD 200 disponibles. El costo real consumido no se ha consolidado aún (§10).</p>
+
+<h2 id="s7-8"><span class="num">7.8</span> Lecciones de la migración real</h2>
+<p>Todo lo que se podía preparar sin cuenta de AWS se probó antes en el PC: el compose de producción con la prueba de punta a punta en "TODO OK", los scripts con <code>shellcheck</code> y los workflows con <code>actionlint</code>. Aun así, la migración real (17–19 de noviembre) encontró tres problemas que solo aparecen contra la nube:</p>
+<ol>
+  <li><strong>Renovación del certificado.</strong> En Amazon Linux 2023, la carpeta <code>/etc/cron.d</code> no existe hasta instalar <code>cronie</code>, así que el script de arranque fallaba sin programar la renovación. Ahora instala <code>cronie</code> primero.</li>
+  <li><strong>Chequeo de salud y TLS 1.3.</strong> Los verificadores de Route 53 no hablan TLS 1.3, y Nginx solo acepta esa versión, así que el chequeo por HTTPS fallaba siempre. El chequeo pasó a HTTP en el puerto 80. Esa ruta la responde el backend sin redirigir, de modo que verifica la cadena completa hasta PostgreSQL y Redis y no solo que Nginx esté vivo.</li>
+  <li><strong>Formato del sujeto OIDC.</strong> GitHub enviaba el sujeto del token con identificadores inmutables (<code>repo:BlowyXx72@…/Comanda@…:environment:beta</code>), y la política de confianza solo aceptaba el formato clásico; el despliegue fallaba con "Not authorized to perform sts:AssumeRoleWithWebIdentity". La política ahora acepta ambos formatos (rama <code>fix/oidc-sub-inmutable</code>).</li>
+</ol>
+<p>En los tres casos, el tutorial y el runbook se corrigieron junto con el código.</p>
+
+<!-- ======================= 8. PRUEBAS ======================= -->
+<h1 id="s8"><span class="num">8.</span> Pruebas y evidencia</h1>
+
+<h2 id="s8-1"><span class="num">8.1</span> Pruebas automáticas</h2>
+<p class="intro">El backend tiene 101 pruebas con <code>vitest</code>. Las unitarias prueban la lógica aislada; las de integración corren contra la base real (y su réplica) y limpian lo que crean. Resultado de la ejecución del 19/11/2026:</p>
+<pre><span class="c">$ docker compose exec backend-1 npx vitest run</span>
+ Test Files  20 passed (20)
+      Tests  101 passed (101)
+   Duration  36.12s</pre>
+<div class="tlabel">Tabla 15. Pruebas automáticas por área</div>
+<table>
+  <thead><tr><th style="width:27%">Área</th><th>Qué verifican (archivos)</th><th class="n" style="width:9%">Pruebas</th></tr></thead>
+  <tbody>
+    <tr><td>Aislamiento de datos</td><td>RLS sin cadena, entre cadenas, <code>WITH CHECK</code> y <code>UPDATE</code>; réplica en recuperación, de solo lectura y con RLS (<code>rls-aislamiento</code>, <code>replica-solo-lectura</code>)</td><td class="n">9</td></tr>
+    <tr><td>Cobro, numeración e inventario</td><td>Bloques por caja, cobros sin conexión, duplicados, hora de la caja, descuento por receta al pedir y al cobrar (<code>cobro-offline</code>, <code>cobro-inventario</code>, <code>inventario-al-pedir</code>)</td><td class="n">18</td></tr>
+    <tr><td>Integraciones y sincronización</td><td>Idempotencia por <code>orderId</code>, API key inválida o ausente, lotes de <code>/sync</code> (<code>plataforma-idempotencia</code>, guard de API key, <code>sync.service</code>)</td><td class="n">9</td></tr>
+    <tr><td>Worker</td><td>Documento validado, rechazado y reintentado; comprobante solo con correo; XML bajo el prefijo de retención; métricas de colas (<code>procesador-fiscal</code>, <code>procesador-correo</code>, <code>monitor-colas</code>)</td><td class="n">15</td></tr>
+    <tr><td>Tiempo real</td><td>Quien pide <code>sede:unirse</code> apenas conecta recibe las comandas (10 conexiones seguidas); un mesero no entra a otra sede; token inválido rechazado en el handshake (<code>realtime-sede</code>)</td><td class="n">3</td></tr>
+    <tr><td>Multi-tenant por subdominio</td><td>Resolución del <code>Host</code>, menú, domicilio y login restringidos a la cadena (<code>subdominio</code>, <code>subdominio-cadena</code>)</td><td class="n">16</td></tr>
+    <tr><td>Usuarios, sede y catálogo</td><td>Gestión de usuarios, operación limitada a la sede asignada, validación de productos (<code>users.service</code>, <code>sede-usuario</code>, <code>producto-dto</code>)</td><td class="n">16</td></tr>
+    <tr><td>Imágenes y reportes</td><td>JPEG, PNG y WebP a WebP 4:3 de 800 y 400 px sin EXIF; reportes en hora de Bogotá (<code>procesar-imagen</code>, <code>reports.service</code>)</td><td class="n">14</td></tr>
+    <tr><td>Base</td><td>Controlador raíz (<code>app.controller</code>)</td><td class="n">1</td></tr>
+    <tr><td colspan="2"><strong>Total (20 archivos)</strong></td><td class="n"><strong>101</strong></td></tr>
+  </tbody>
+</table>
+
+<h2 id="s8-2"><span class="num">8.2</span> Prueba de punta a punta</h2>
+<p><code>backend/scripts/prueba-integracion.mjs</code> recorre el sistema como lo haría un usuario, pasando por Nginx y TLS, y termina en "TODO OK" o lista lo que falló. Corre en el CI en cada pull request y, con el stack de producción, también se puede lanzar contra la beta. Verifica:</p>
+<ol start="0">
+  <li><strong>Acceso:</strong> login de administrador, cajero y mesero; <code>/health</code>; sedes y productos activos.</li>
+  <li><strong>Mesa, cocina y cobro:</strong> el pedido se crea en EN_PREPARACIÓN, reenviar el mismo UUID no lo duplica, cocina lo marca LISTO y el cobro responde de inmediato con el documento en PENDIENTE.</li>
+  <li><strong>Plataforma:</strong> sin <code>X-Api-Key</code> responde 401; el pedido entra en otra sede y su reenvío es idempotente.</li>
+  <li><strong>Domicilio y correo:</strong> domicilio creado y cobrado, comprobante en la bandeja y resumen diario encolado por el administrador.</li>
+  <li><strong>Panel:</strong> el consolidado del día, leído de la réplica, es mayor que cero.</li>
+  <li><strong>Límite de tasa:</strong> de 40 peticiones seguidas al menú, algunas reciben 429.</li>
+</ol>
+<p>La última ejecución documentada con las dos partes integradas (27/10/2026) terminó en "TODO OK". Esa misma integración también pasó la compilación de tipos, el lint de backend y frontend y la compilación de producción del frontend.</p>
+
+<h2 id="s8-3"><span class="num">8.3</span> Pruebas de resiliencia</h2>
+<p>Las fallas se simularon deteniendo contenedores o cambiando la configuración, nunca el código.</p>
+<div class="tlabel">Tabla 16. Caídas simuladas y comportamiento observado</div>
+<table>
+  <thead><tr><th style="width:24%">Escenario</th><th>Resultado</th><th style="width:16%">Lectura</th></tr></thead>
+  <tbody>
+    <tr><td>Cae <code>backend-2</code></td><td>La API sigue respondiendo 200 por <code>backend-1</code>; la primera petición tarda 2 s (reintento dentro de Nginx) y las siguientes 6 ms. Los sockets se reconectan solos.</td><td><span class="chip ok">Tolerado</span></td></tr>
+    <tr><td>Caen las dos instancias</td><td>La API responde 502. Al levantarlas, vuelve a 200.</td><td><span class="chip pend">Esperado</span></td></tr>
+    <tr><td>DIAN simulada caída (tasa de falla 100 %)</td><td>El cobro responde de inmediato con el documento en PENDIENTE; el worker reintenta con esperas crecientes (+4 s, +6 s…). Al restaurar la configuración, los documentos se validan.</td><td><span class="chip ok">Tolerado</span></td></tr>
+    <tr><td>Se cae Redis</td><td>En la prueba del 20/10/2026 la API dejó de responder mientras Redis estuvo caído y se recuperó sola unos 20 s después de levantarlo. El runbook describe la recuperación; Redis guarda colas con AOF y los documentos PENDIENTE se re-encolan.</td><td><span class="chip par">Punto único de falla</span></td></tr>
+    <tr><td>Sede sin red (mesero)</td><td>Pedido en cola local, recarga sin red servida por el service worker y sincronización al volver la red con el mismo UUID en la base (Figura 11).</td><td><span class="chip ok">Tolerado</span></td></tr>
+  </tbody>
+</table>
+<p class="tcap">Fuente: <code>docs/EVIDENCIA_EXPOSICION.md</code> (salidas reales del 20/10/2026) y registros del worker del 19/11/2026.</p>
+
+<!-- ======================= 9. DIMENSIONAMIENTO ======================= -->
+<h1 id="s9"><span class="num">9.</span> Dimensionamiento: propuesta frente a prototipo</h1>
+<p>La propuesta dimensionó el servicio para el cierre del año 1: 20 cadenas y 60 sedes, unas 9.000 ventas al día, ~300 usuarios concurrentes en la hora pico y un diseño para 1.000 sesiones concurrentes (margen ×3). Su conclusión fue que "el reto del sistema es la disponibilidad y la sincronización, no el volumen". El prototipo se construyó sobre esa conclusión. La Tabla 17 muestra cómo responde a cada cifra y qué falta medir.</p>
+<div class="tlabel">Tabla 17. Cifras de §4 y su tratamiento en el prototipo</div>
+<table>
+  <thead><tr><th style="width:24%">Cifra de la propuesta</th><th>Cómo la aborda el prototipo</th><th style="width:15%">Verificación</th></tr></thead>
+  <tbody>
+    <tr><td>1.000 sesiones concurrentes de diseño (~300 en el pico, ~180 WebSocket persistentes)</td><td>Dos instancias detrás de Nginx; Redis permite agregar instancias sin cambiar código, porque comparten los eventos.</td><td><span class="chip pend">Sin medir</span></td></tr>
+    <tr><td>~2 TPS en ráfaga</td><td>El cobro no espera a terceros: el trabajo pesado va a colas. Los reportes van a la réplica.</td><td><span class="chip pend">Sin medir</span></td></tr>
+    <tr><td>~30 KB por venta (incluye XML firmado de ~20 KB)</td><td>El XML simulado pesa ≈ 0,5 KB ("556 bytes recibidos"). El firmado y real sería mayor; se guarda en el almacén de objetos, no en la base.</td><td><span class="chip ok">Observado</span></td></tr>
+    <tr><td>&lt; 100 kbps por sede; tráfico dominado por las imágenes del menú</td><td>Fotos en WebP de 400 y 800 px, caché inmutable y gzip; HTTP/2 multiplexa las peticiones; CDN preparada como opción.</td><td><span class="chip pend">Sin medir</span></td></tr>
+    <tr><td>80–120 ms de ida y vuelta Bogotá–nube ("a confirmar por medición")</td><td>Región <code>us-east-1</code>. La validación DIAN corre en segundo plano y la interacción crítica viaja por un WebSocket ya establecido.</td><td><span class="chip pend">Sin medir</span></td></tr>
+    <tr><td>Retención fiscal de 5 años</td><td>Regla de ciclo de vida en S3 sobre <code>fiscal/</code>, el prefijo bajo el que el worker guarda los XML (§5.8).</td><td><span class="chip ok">Implementado</span></td></tr>
+  </tbody>
+</table>
+<p>Las pruebas de carga sobre la beta y la medición de latencia desde Bogotá (Fase 19 del plan) no se ejecutaron a la fecha de este informe. Son el paso siguiente para validar estas cifras. Con una sola instancia <code>t3.small</code> no se espera sostener la meta completa de 1.000 sesiones: el objetivo de esa fase es medir hasta dónde llega y documentarlo.</p>
+
+<!-- ======================= 10. LIMITACIONES ======================= -->
+<h1 id="s10"><span class="num">10.</span> Limitaciones y trabajo futuro</h1>
+<h3>Pendientes del plan</h3>
+<ul>
+  <li>Pruebas de carga, repetición de la prueba de caída en AWS y medición de latencia desde Bogotá (Fase 19).</li>
+  <li>Consolidar el costo real consumido frente al dimensionamiento y decidir qué apagar al cerrar el proyecto (Fase 20).</li>
+  <li>Probar en un navegador la caja en modo avión; hoy el cobro sin conexión está cubierto por pruebas de integración.</li>
+</ul>
+<h3>Limitaciones conocidas del prototipo</h3>
+<ul>
+  <li><strong>Una sola instancia</strong> de PostgreSQL, Redis y Nginx, y una réplica asíncrona sin failover. Redis es punto único de falla para el tiempo real y las colas.</li>
+  <li><strong>Tolerancia a fallos de una instancia</strong> del backend, no de ambas. Todas las piezas comparten una sola EC2.</li>
+  <li><strong>Tráfico interno sin cifrar</strong> dentro de la red de Docker. Solo va cifrado el tramo navegador–Nginx.</li>
+  <li><strong>Huecos de numeración</strong> cuando un bloque de cobro sin conexión no se usa completo, y sin un procedimiento para cuando una sede agota su rango.</li>
+  <li><strong>Token en el navegador.</strong> El JWT se guarda en <code>localStorage</code>; en producción se evaluaría una cookie httpOnly.</li>
+  <li><strong>Hora fija de Bogotá</strong> en los reportes, en vez de una zona por sede.</li>
+</ul>
+<h3>Para llevarlo a producción</h3>
+<ul>
+  <li>DIAN real a través de un proveedor tecnológico autorizado: UBL 2.1, firma digital, CUDE y reporte de huecos de numeración.</li>
+  <li>API real de plataformas con credenciales aprobadas, firma HMAC de pedidos y acuses, y rotación de API keys.</li>
+  <li>Relay SMTP fuera del <em>sandbox</em>, con SPF y DKIM en un dominio propio, y baja de suscripción del resumen diario.</li>
+  <li>Datos administrados: RDS con réplica, ElastiCache y balanceador administrado. CloudFront para las fotos y S3 Object Lock para los documentos fiscales.</li>
+  <li>mTLS o red privada para el tráfico interno, y monitoreo del retraso de la réplica.</li>
+</ul>
+
+<!-- ======================= 11. CONCLUSIONES ======================= -->
+<h1 id="s11"><span class="num">11.</span> Conclusiones</h1>
+<ol>
+  <li><strong>El servicio telemático de la propuesta es viable con una arquitectura centralizada.</strong> El prototipo demuestra de punta a punta los ocho casos de uso sobre un servidor central: las sedes no necesitan infraestructura propia y el comensal no instala nada. La misma base de código corre en un PC y en la nube, y solo cambian variables de entorno.</li>
+  <li><strong>El tiempo real se resolvió con el protocolo adecuado.</strong> WebSocket sobre TLS, con salas por sede y por cadena, elimina el polling y hace que cocina, caja, mesero y dueño vean cada cambio en el momento en que ocurre. Redis como backplane permite escalar horizontalmente sin que los clientes lo noten, como se comprobó al detener una instancia.</li>
+  <li><strong>Desacoplar a los terceros fue la decisión que más protege la operación.</strong> Con la cola y el worker, una DIAN lenta o caída no detiene la caja. Las pruebas de falla lo confirmaron: el cobro respondió de inmediato mientras el worker reintentaba en segundo plano.</li>
+  <li><strong>El diseño de datos sostiene las garantías del negocio.</strong> Las transacciones ACID, el consecutivo atómico por sede, los bloques por dispositivo y la Row Level Security dan exactamente las propiedades que justificaron elegir PostgreSQL en la propuesta: atomicidad, numeración sin colisiones y aislamiento entre clientes que no depende de la disciplina del programador.</li>
+  <li><strong>La operación sin conexión exige diseñar el cliente, la numeración y la sincronización desde el principio.</strong> La idempotencia por UUID es lo que hace seguro reintentar, y es la barrera técnica de entrada que la sustentación señaló frente a la competencia.</li>
+  <li><strong>Queda por cuantificar lo que la propuesta dejó "a confirmar por medición".</strong> La carga soportada, la latencia real y el costo consumido son el cierre natural del proyecto, y la beta en AWS, con CI/CD, respaldos, monitoreo y runbook, ya es la base para medirlos.</li>
+</ol>
+<p>Trabajar por fases pequeñas, con contratos de integración escritos y una regla explícita contra inventar funcionalidades, permitió que dos personas avanzaran en paralelo sin perder trazabilidad entre lo propuesto y lo construido. Este documento es el resultado de esa trazabilidad.</p>
+
+<!-- ======================= REFERENCIAS ======================= -->
+<h1 id="refs">Referencias</h1>
+<ol class="refs">
+  <li>Cañón Vanegas, D. A. y Jiménez, M. (2026). <em>Comanda Central: plataforma web multi-sede de venta y control para micro-cadenas de restaurantes. Propuesta de proyecto, Servicios Telemáticos</em>. Bogotá D.C., 24 de agosto de 2026.</li>
+  <li>Repositorio del proyecto: <em>github.com/BlowyXx72/Comanda</em>. Documentos de apoyo: <code>docs/prototipo-slice.md</code>, <code>docs/EVIDENCIA_EXPOSICION.md</code>, <code>docs/despliegue-aws.md</code>, <code>docs/datos-aws.md</code>, <code>docs/runbook.md</code>, <code>docs/tutorial-migracion-aws.md</code>.</li>
+  <li>DIAN (2023). Resolución 000165 de 2023: sistema de facturación electrónica y documento equivalente electrónico.</li>
+  <li>Rappi. <em>Rappi Developer Portal</em> (dev-portal.rappi.com): API de integración para aliados.</li>
+  <li>Rescorla, E. (2018). <em>The Transport Layer Security (TLS) Protocol Version 1.3</em>. RFC 8446, IETF.</li>
+  <li>Thomson, M. y Benfield, C. (2022). <em>HTTP/2</em>. RFC 9113, IETF.</li>
+  <li>Fette, I. y Melnikov, A. (2011). <em>The WebSocket Protocol</em>. RFC 6455, IETF.</li>
+  <li>Jones, M., Bradley, J. y Sakimura, N. (2015). <em>JSON Web Token (JWT)</em>. RFC 7519, IETF.</li>
+  <li>Mockapetris, P. (1987). <em>Domain Names: Concepts and Facilities</em> y <em>Implementation and Specification</em>. RFC 1034 y RFC 1035, IETF.</li>
+  <li>Klensin, J. (2008). <em>Simple Mail Transfer Protocol</em>. RFC 5321, IETF.</li>
+  <li>Mills, D., Martin, J., Burbank, J. y Kasch, W. (2010). <em>Network Time Protocol Version 4</em>. RFC 5905, IETF.</li>
+  <li>Gerhards, R. (2009). <em>The Syslog Protocol</em>. RFC 5424, IETF.</li>
+  <li>PostgreSQL Global Development Group. <em>PostgreSQL 16 Documentation</em>: "Row Security Policies" y "High Availability, Load Balancing, and Replication".</li>
+  <li>Amazon Web Services. Documentación de Amazon EC2, Amazon S3, Amazon SES, AWS Systems Manager (Parameter Store y Session Manager), Amazon CloudWatch y AWS Free Tier.</li>
+  <li>GitHub. <em>Security hardening with OpenID Connect</em> (GitHub Actions).</li>
+  <li>Documentación oficial de NestJS, Socket.IO (adaptador de Redis), BullMQ, Prisma y Nginx (módulos <code>ngx_http_upstream_module</code> y <code>ngx_http_limit_req_module</code>).</li>
+</ol>
+
+<!-- ======================= ANEXO A ======================= -->
+<h1 id="anexoA">Anexo A. Endpoints de la API REST</h1>
+<p>Rutas del backend. Detrás de Nginx se publican con el prefijo <code>/api</code>. "JWT" significa cualquier usuario autenticado de la cadena; los roles son ADMIN, CAJERO y MESERO.</p>
+<table>
+  <thead><tr><th style="width:9%">Método</th><th style="width:34%">Ruta</th><th style="width:17%">Acceso</th><th>Descripción</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/auth/login</code></td><td>Público</td><td>Inicio de sesión; devuelve el JWT y el usuario</td></tr>
+    <tr><td>GET</td><td><code>/auth/me</code></td><td>JWT</td><td>Valida la sesión y devuelve el usuario vigente</td></tr>
+    <tr><td>GET</td><td><code>/usuarios</code></td><td>ADMIN</td><td>Usuarios de la cadena</td></tr>
+    <tr><td>POST</td><td><code>/usuarios</code></td><td>ADMIN</td><td>Crea un usuario con rol y sede</td></tr>
+    <tr><td>PATCH</td><td><code>/usuarios/:id</code></td><td>ADMIN</td><td>Cambia rol, sede, estado o contraseña</td></tr>
+    <tr><td>GET</td><td><code>/cadena</code></td><td>JWT</td><td>Cadena del usuario y URL pública de su subdominio</td></tr>
+    <tr><td>GET</td><td><code>/public/cadena</code></td><td>Público</td><td>Cadena del subdominio por el que se entró (404 si no existe)</td></tr>
+    <tr><td>GET</td><td><code>/sedes</code></td><td>JWT</td><td>Sedes de la cadena (solo la suya si tiene sede asignada)</td></tr>
+    <tr><td>GET</td><td><code>/sedes/:id/mesas</code></td><td>JWT</td><td>Mesas de una sede</td></tr>
+    <tr><td>GET</td><td><code>/productos</code></td><td>JWT</td><td>Productos activos (ADMIN puede incluir inactivos)</td></tr>
+    <tr><td>POST</td><td><code>/productos</code></td><td>ADMIN</td><td>Crea un producto</td></tr>
+    <tr><td>PATCH</td><td><code>/productos/:id</code></td><td>ADMIN</td><td>Edita un producto</td></tr>
+    <tr><td>DELETE</td><td><code>/productos/:id</code></td><td>ADMIN</td><td>Desactiva un producto (baja lógica)</td></tr>
+    <tr><td>POST</td><td><code>/productos/:id/imagen</code></td><td>ADMIN</td><td>Sube o reemplaza la foto (JPEG, PNG o WebP, máx. 2 MB)</td></tr>
+    <tr><td>DELETE</td><td><code>/productos/:id/imagen</code></td><td>ADMIN</td><td>Quita la foto</td></tr>
+    <tr><td>POST</td><td><code>/pedidos</code></td><td>MESERO, ADMIN</td><td>Crea un pedido (idempotente por UUID) en EN_PREPARACIÓN</td></tr>
+    <tr><td>GET</td><td><code>/pedidos?sedeId=</code></td><td>JWT</td><td>Pedidos activos de una sede</td></tr>
+    <tr><td>GET</td><td><code>/pedidos/:id</code></td><td>JWT</td><td>Detalle de un pedido</td></tr>
+    <tr><td>PATCH</td><td><code>/pedidos/:id/estado</code></td><td>JWT</td><td>Avanza un estado (nunca a PAGADO)</td></tr>
+    <tr><td>POST</td><td><code>/pagos</code></td><td>CAJERO, ADMIN</td><td>Cobra un pedido LISTO: pago, documento fiscal y mesa libre</td></tr>
+    <tr><td>POST</td><td><code>/pagos/rangos-offline</code></td><td>CAJERO, ADMIN</td><td>Reserva un bloque de consecutivos para cobrar sin conexión</td></tr>
+    <tr><td>POST</td><td><code>/sync</code></td><td>MESERO, CAJERO, ADMIN</td><td>Aplica un lote de pedidos o pagos hechos sin conexión</td></tr>
+    <tr><td>GET</td><td><code>/documentos-fiscales/:id/xml</code></td><td>CAJERO, ADMIN</td><td>Descarga el XML (simulado) del almacén de objetos</td></tr>
+    <tr><td>GET</td><td><code>/menu/:cadenaId/:sedeId</code></td><td>Público</td><td>Menú de una sede, por categoría</td></tr>
+    <tr><td>GET</td><td><code>/menu/imagenes/*</code></td><td>Público</td><td>Foto de un producto, con caché larga</td></tr>
+    <tr><td>POST</td><td><code>/public/pedidos/domicilio</code></td><td>Público</td><td>Pedido de domicilio (idempotente por UUID)</td></tr>
+    <tr><td>POST</td><td><code>/integraciones/plataformas/pedidos</code></td><td>X-Api-Key</td><td>Pedido de plataforma (idempotente por <code>orderId</code>)</td></tr>
+    <tr><td>GET</td><td><code>/integraciones/plataformas/catalogo</code></td><td>X-Api-Key</td><td>Sedes y productos activos para armar el menú de la plataforma</td></tr>
+    <tr><td>POST</td><td><code>/simulador-plataforma/:id/acuses</code></td><td>Interno (worker)</td><td>Webhook simulado de la plataforma</td></tr>
+    <tr><td>GET</td><td><code>/simulador-plataforma/acuses</code></td><td>X-Api-Key</td><td>Últimos acuses recibidos por la plataforma simulada</td></tr>
+    <tr><td>GET</td><td><code>/insumos</code></td><td>ADMIN</td><td>Insumos de la cadena</td></tr>
+    <tr><td>POST</td><td><code>/insumos</code></td><td>ADMIN</td><td>Crea un insumo</td></tr>
+    <tr><td>PATCH</td><td><code>/insumos/:id</code></td><td>ADMIN</td><td>Edita un insumo</td></tr>
+    <tr><td>GET</td><td><code>/productos/:productoId/receta</code></td><td>ADMIN</td><td>Receta de un producto</td></tr>
+    <tr><td>PUT</td><td><code>/productos/:productoId/receta</code></td><td>ADMIN</td><td>Reemplaza la receta completa</td></tr>
+    <tr><td>GET</td><td><code>/sedes/:sedeId/inventario</code></td><td>ADMIN</td><td>Existencias por insumo en una sede</td></tr>
+    <tr><td>POST</td><td><code>/inventario/movimientos</code></td><td>ADMIN</td><td>Movimiento manual (ENTRADA o MERMA)</td></tr>
+    <tr><td>GET</td><td><code>/reportes/ventas</code></td><td>CAJERO, ADMIN</td><td>Ventas del día de una sede</td></tr>
+    <tr><td>GET</td><td><code>/reportes/consolidado</code></td><td>ADMIN</td><td>Consolidado por sede, día o mes y canal</td></tr>
+    <tr><td>GET</td><td><code>/reportes/productos</code></td><td>ADMIN</td><td>Ventas por producto en un rango</td></tr>
+    <tr><td>GET</td><td><code>/reportes/franjas</code></td><td>ADMIN</td><td>Ventas por hora del día en un rango</td></tr>
+    <tr><td>POST</td><td><code>/correo/resumen-diario</code></td><td>ADMIN</td><td>Encola el resumen diario para los ADMIN de la cadena</td></tr>
+    <tr><td>GET</td><td><code>/health</code></td><td>Público</td><td>Salud real: consulta a PostgreSQL y PING a Redis</td></tr>
+    <tr><td>GET</td><td><code>/</code></td><td>Público</td><td>Respuesta base del servicio</td></tr>
+  </tbody>
+</table>
+
+<!-- ======================= ANEXO B ======================= -->
+<h1 id="anexoB">Anexo B. Cómo ejecutar el prototipo</h1>
+<p>Solo se necesitan Docker con Docker Compose y Git: backend y frontend corren en contenedores, sin Node instalado en el equipo.</p>
+<pre><span class="c"># 1. Configuración y arranque (espera a que todo esté sano)</span>
+cp .env.example .env
+docker compose up -d --wait
+
+<span class="c"># 2. Datos de demostración (solo la primera vez; borra y recrea los datos)</span>
+docker compose exec backend-1 npx prisma db seed
+docker compose exec backend-1 npm run seed:imagenes
+
+<span class="c"># 3. Pruebas</span>
+docker compose exec backend-1 npx vitest run
+docker compose exec -e NODE_TLS_REJECT_UNAUTHORIZED=0 backend-1 node scripts/prueba-integracion.mjs</pre>
+<table>
+  <thead><tr><th style="width:30%">Servicio</th><th style="width:30%">Dirección</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Aplicación (Nginx)</td><td><code>https://localhost:8443</code></td><td>Entrada única con TLS 1.3, HTTP/2 y WSS; certificado autofirmado (aceptar la advertencia)</td></tr>
+    <tr><td>Frontend directo</td><td><code>http://localhost:5173</code></td><td>Servidor de Vite, sin TLS</td></tr>
+    <tr><td>Swagger</td><td><code>http://localhost:3000/api/docs</code></td><td>Documentación interactiva de la API</td></tr>
+    <tr><td>Mailpit</td><td><code>http://localhost:8025</code></td><td>Bandeja de los correos enviados</td></tr>
+    <tr><td>MinIO</td><td><code>http://localhost:9001</code></td><td>Consola del almacén de objetos</td></tr>
+  </tbody>
+</table>
+<p><strong>Usuarios de demostración</strong> (creados por el seed, solo para el entorno local): <code>admin@demo.com</code> / <code>admin123</code>, <code>cajero@demo.com</code> / <code>cajero123</code> y <code>mesero@demo.com</code> / <code>mesero123</code>. La cadena "Demo" tiene tres sedes (Centro, Chapinero y Norte), seis mesas por sede y ocho productos con receta y foto.</p>
+<p><strong>Flujo sugerido para la demostración.</strong></p>
+<ol>
+  <li>Con el mesero, en <code>/mesas</code>, enviar una comanda.</li>
+  <li>En otra pestaña, verla aparecer en <code>/cocina</code> sin recargar y marcarla LISTO.</li>
+  <li>Con el cajero, en <code>/caja</code>, cobrarla y ver el documento pasar a "Validado (simulado)".</li>
+  <li>Con el administrador, ver la venta sumarse en vivo en <code>/panel</code>.</li>
+  <li>Para el modo sin conexión, cortar la red desde las herramientas del navegador en <code>/mesas</code>.</li>
+</ol>
+<p>El despliegue en AWS, paso a paso, está en <code>docs/tutorial-migracion-aws.md</code> (con la versión PDF en <code>docs/Migracion/</code>) y en <code>docs/despliegue-aws.md</code>.</p>
+
+</body>
+</html>

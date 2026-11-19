@@ -49,10 +49,10 @@ demás de esas fases está hecho y probado (ver el commit de cada fase).
 - **Sin política RLS por sede**: el filtro es solo de aplicación
   (`auth/sede-usuario.ts`), encima del de cadena. El documento la deja como
   opcional ("si se quiere").
-- **Endpoints de la Parte 2 sin el filtro por sede**: `GET
-  /documentos-fiscales/:id/xml` (`fiscal/`) y `POST /correo/resumen-diario`
-  (`mail/`, solo ADMIN). El del XML conviene agregarlo en la Parte 2 con
-  `verificarSedeDelUsuario`.
+- **Endpoints de la Parte 2 sin el filtro por sede**: ~~`GET
+  /documentos-fiscales/:id/xml`~~ (resuelto: `fiscal.controller.ts` ya llama
+  a `verificarSedeDelUsuario`) y `POST /correo/resumen-diario` (`mail/`, solo
+  ADMIN, que opera sobre toda la cadena).
 - ~~**Tokens viejos**~~ (resuelto): rol y sede ya no salen del JWT sino de la
   base en cada petición (`auth/usuario-vigente.ts`), así que un token viejo
   queda restringido de inmediato.
@@ -65,9 +65,9 @@ Hecho solo en el repo: todavía no hay cuenta de AWS y el documento pide no
 crear recursos sin confirmarlo. La lista de lo que falta correr en AWS está en
 [`datos-aws.md`](datos-aws.md#pendiente-en-aws). Además:
 
-- **Pedido a la Parte 2:** guardar los XML fiscales con el prefijo `fiscal/`
-  (`fiscal/procesador-fiscal.service.ts`) para que les aplique la regla de 5
-  años sin tocar las imágenes de producto. Detalle en `datos-aws.md`,
+- ~~**Pedido a la Parte 2:** guardar los XML fiscales con el prefijo `fiscal/`~~
+  (resuelto: el worker usa `DOCUMENTOS_PREFIJO_FISCAL`, por defecto `fiscal/`,
+  en `fiscal/procesador-fiscal.service.ts`). Detalle en `datos-aws.md`,
   sección 4.
 - **`docker-compose.prod.yml` (Fase 17B, Parte 2):** tiene que incluir los
   servicios `migrar` y `respaldo`. En la beta, `respaldo` no depende de
@@ -118,8 +118,9 @@ eso cerró o cambió de lo de arriba:
 - **El `docker compose up` completo ya se probó** con la rama integrada, y un
   `respaldar` subió el `.dump` a MinIO.
 
-Sigue pendiente: probar en el navegador la caja en modo avión (Fase 16), el
-prefijo `fiscal/` de los XML (Parte 2), el filtro por sede en `GET
-/documentos-fiscales/:id/xml` y todo lo que requiere la cuenta de AWS.
+Sigue pendiente: probar en el navegador la caja en modo avión (Fase 16) y lo
+que falta correr en AWS (lista en [`datos-aws.md`](datos-aws.md#pendiente-en-aws)).
+El prefijo `fiscal/` de los XML y el filtro por sede en `GET
+/documentos-fiscales/:id/xml` ya están resueltos.
 `docs/despliegue-aws.md` recomienda no correr el seed en la beta aunque
 `AMBIENTE=beta` lo permite.

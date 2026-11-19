@@ -98,10 +98,17 @@ escucha el KDS) y `pedido:actualizado` (cambio de estado, lo escuchan mesero y
 caja). Ver README, sección "Servicios telemáticos usados y por qué", para la
 justificación de por qué WebSocket y no polling.
 
+El handshake se autentica en un middleware de Socket.IO
+(`RealtimeGateway.afterInit`), no en `handleConnection`: el cliente emite
+`sede:unirse` apenas recibe `connect`, y Socket.IO no espera a un
+`handleConnection` async, así que la identidad tiene que estar en
+`socket.data` antes de aceptar la conexión (`test/realtime-sede.spec.ts`).
+
 Room por cadena: `cadena:{cadenaId}` (Fases 9–11). Eventos: `venta:registrada`
 (cobro completado, lo escucha `/panel` para actualizar el consolidado en vivo),
-`catalogo:actualizado` (producto creado/editado/desactivado, lo escuchan
-`/mesas` y el menú QR de todas las sedes de esa cadena) e
+`catalogo:actualizado` (producto creado/editado/desactivado o foto cambiada, lo
+escucha `/mesas` de todas las sedes de esa cadena; el menú QR público no abre
+socket y toma el cambio al cargarse) e
 `inventario:actualizado` (movimiento manual o descuento automático por venta,
 lo escucha `/inventario` para refrescar existencias).
 

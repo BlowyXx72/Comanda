@@ -26,3 +26,13 @@ export const swaggerHabilitado = () => (process.env.SWAGGER_HABILITADO ?? 'true'
 // para que CloudWatch (Fase 21B) los filtre por campo. Por defecto, el
 // formato de colores de Nest, más cómodo de leer en `docker compose logs`.
 export const logsEnJson = () => process.env.LOG_FORMATO === 'json';
+
+// Prefijo de los XML fiscales dentro del bucket de documentos (S3_BUCKET).
+// La retención de 5 años (§4.2, Fase 18) es una regla de ciclo de vida por
+// prefijo (postgres/respaldo/ciclo-de-vida.sh), así que el worker tiene que
+// guardar los XML bajo el mismo DOCUMENTOS_PREFIJO_FISCAL. Siempre termina en
+// "/" para que la llave quede `fiscal/{cadena}/...`; vacío = raíz del bucket.
+export function prefijoDocumentosFiscales(): string {
+  const valor = (process.env.DOCUMENTOS_PREFIJO_FISCAL ?? 'fiscal/').trim().replace(/^\/+/, '');
+  return valor === '' || valor.endsWith('/') ? valor : `${valor}/`;
+}

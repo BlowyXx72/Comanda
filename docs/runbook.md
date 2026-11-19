@@ -176,6 +176,19 @@ cat /var/log/comanda-certificado.log
 Si el dominio cambió, volver a emitir con `deploy/certificado.sh emitir`, o
 con `comodin` si hay subdominios (Fase 20B).
 
+**Si el certificado aparece emitido por un firewall** (p. ej. Fortinet) y no
+por Let's Encrypt, el problema no es la beta: la red (corporativa o de la
+universidad) inspecciona el TLS y vuelve a firmar los certificados. Detrás de
+esa inspección el navegador tampoco negocia HTTP/2 con el servidor. Para
+mostrar TLS 1.3, el certificado real o HTTP/2 (p. ej. en la sustentación),
+usar otra red, como los datos del celular. Se comprueba con:
+
+```bash
+echo | openssl s_client -connect <dominio>:443 -servername <dominio> -alpn h2 2>/dev/null \
+  | grep -E "^issuer=|Protocol|ALPN"
+# esperado: issuer de Let's Encrypt, TLSv1.3 y "ALPN protocol: h2"
+```
+
 ## Presupuesto (AWS Budgets)
 
 Llega un aviso de presupuesto:

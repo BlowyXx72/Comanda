@@ -108,13 +108,13 @@ Aplica dos reglas de ciclo de vida (probado contra MinIO):
 | `S3_BUCKET` (documentos) | `DOCUMENTOS_PREFIJO_FISCAL` (`fiscal/`) | 1827 días (5 años con bisiestos) |
 | `RESPALDO_S3_BUCKET` | `RESPALDO_S3_PREFIJO/` | `RESPALDO_RETENCION_DIAS` (30) |
 
-- **Prefijo de los XML: hay que pedirlo a la Parte 2.** Hoy el worker guarda
-  los XML en `{cadenaId}/{sedeId}/...` (`fiscal/procesador-fiscal.service.ts`),
-  en la raíz del bucket, junto a donde irán las imágenes de producto
-  (`productos/`, Fase 16B). Para que la regla aplique solo a los XML, la llave
-  tiene que empezar por `fiscal/`. Es un cambio de una línea en el código de
-  la Parte 2; los XML que ya existen siguen funcionando, porque `urlXml`
-  guarda la URI completa.
+- **Prefijo de los XML (resuelto).** El worker guarda los XML en
+  `{DOCUMENTOS_PREFIJO_FISCAL}{cadenaId}/{sedeId}/...`, por defecto
+  `fiscal/...` (`fiscal/procesador-fiscal.service.ts`, con el prefijo de
+  `config/entorno.ts`), así que la regla de 5 años solo alcanza a los XML.
+  Los XML guardados antes del cambio quedaron en la raíz del bucket: siguen
+  funcionando, porque `urlXml` guarda la URI completa, pero la regla no los
+  alcanza (se conservan; no se borran antes de tiempo).
 - **Antes de los 5 años no se borra nada sin querer:** la regla solo borra
   *después*. Para impedir un borrado manual antes de tiempo, AWS tiene S3
   Object Lock (modo *compliance*), que se activa al crear el bucket (TODO
